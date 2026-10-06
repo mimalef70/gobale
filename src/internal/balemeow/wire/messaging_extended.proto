@@ -1,0 +1,20 @@
+syntax = "proto3";
+package gobale.bale.reference;
+option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+import "wire/bale.proto";
+
+// Reviewed official web 5.7.0+173855, modules 18913/77108/5594.
+// Peer fields here named ex_peer use ExPeer semantics (channel=3), not legacy Peer.
+message ChatPeerRequest { Peer peer = 1; }
+message ChatPinRequest { Peer ex_peer = 1; MessagePosition message = 2; bool just_mine = 3; }
+message ChatUnpinRequest { Peer ex_peer = 1; repeated MessagePosition messages = 2; bool all = 3; }
+message ChatPinsResponse { repeated HistoryItem messages = 1; }
+message FolderListRequest { bool include_muted_unread_peers = 1; bool is_new_user = 2; }
+message ChatFolder { int32 id = 1; string name = 2; repeated Peer peers = 3; repeated Peer unread_peers = 4; bool is_reserved = 5; }
+message FolderUnreadPeer { Peer peer = 1; int64 last_message_date = 2; bool is_muted = 3; }
+message FolderListResponse { repeated ChatFolder folders = 1; repeated FolderUnreadPeer unread_peers = 2; }
+message FolderCreateRequest { string name = 1; repeated Peer peers = 2; }
+message FolderCreateResponse { int32 folder_id = 1; int32 index = 2; repeated Peer unread_peers = 3; }
+message FolderDeleteRequest { int32 folder_id = 1; }
+message FolderEditRequest { int32 folder_id = 1; string name = 2; repeated Peer added_peers = 3; repeated Peer deleted_peers = 4; }
+message FolderEditResponse { repeated Peer unread_peers = 1; }

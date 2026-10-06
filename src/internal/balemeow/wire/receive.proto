@@ -1,0 +1,52 @@
+// Receive-only extended updates, reviewed from official web 173855.
+// Separate union view avoids circular imports with optional RPC feature schemas.
+syntax = "proto3";
+package gobale.bale.reference;
+option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+import "wire/bale.proto";
+import "wire/groups_extended.proto";
+import "wire/account_extended.proto";
+message GroupUpdateUnion {
+ GroupNumberUpdate restriction = 723;
+ GroupStringUpdate title = 2609;
+ GroupIDUpdate avatar = 2610;
+ GroupBoolUpdate member = 2612;
+ GroupMembersUpdate members = 2614;
+ GroupIDUpdate async_members = 2615;
+ GroupTextUpdate topic = 2616;
+ GroupTextUpdate about = 2617;
+ GroupOwnerUpdate owner = 2619;
+ GroupIDUpdate history_shared = 2620;
+ GroupNumberUpdate count = 2622;
+ GroupBoolUpdate can_send = 2624;
+ GroupBoolUpdate can_view_members = 2625;
+ GroupBoolUpdate can_invite = 2626;
+ GroupAdminUpdate admin = 2627;
+ GroupIDUpdate orphaned = 2628;
+ GroupStringUpdate username = 2880;
+ GroupMemberPermissionUpdate member_permissions = 52804;
+ GroupDefaultPermissionUpdate default_permissions = 52805;
+}
+message GroupIDUpdate { uint32 group_id = 1; }
+message GroupStringUpdate { uint32 group_id = 1; string value = 2; }
+message GroupTextUpdate { uint32 group_id = 1; StringValue value = 2; }
+message GroupNumberUpdate { uint32 group_id = 1; int32 value = 2; }
+message GroupBoolUpdate { uint32 group_id = 1; bool value = 2; }
+message GroupOwnerUpdate { uint32 group_id = 1; uint32 user_id = 2; }
+message GroupAdminUpdate { uint32 group_id = 1; uint32 user_id = 2; bool is_admin = 3; }
+message GroupMembersUpdate { uint32 group_id = 1; repeated GroupExtendedMember members = 2; }
+message GroupMemberPermissionUpdate { uint32 group_id = 1; uint32 user_id = 2; GroupPermissions permissions = 3; }
+message GroupDefaultPermissionUpdate { PeerRef group = 1; GroupPermissions permissions = 2; }
+message PresenceUpdateUnion {
+ TypingUpdate typing = 6; TypingUpdate typing_stop = 81;
+ PresenceStateUpdate online = 7; PresenceStateUpdate offline = 8;
+ LastSeenUpdate last_seen = 9;
+ MessageReactionUpdate reactions = 222;
+ ReactionPositionUpdate new_reaction = 54323;
+ ReactionPositionUpdate reactions_read_by_me = 52832;
+}
+message TypingUpdate { Peer peer = 1; uint32 user_id = 2; int32 typing_type = 3; }
+message PresenceStateUpdate { uint32 user_id = 1; int32 device_type = 2; StringValue device_category = 3; }
+message LastSeenUpdate { uint32 user_id = 1; int64 date = 2; int32 device_type = 3; StringValue device_category = 4; }
+message MessageReactionUpdate { Peer peer = 1; int64 rid = 2; repeated ReactionSummary reactions = 3; bool reaction_by_me = 4; }
+message ReactionPositionUpdate { Peer peer = 1; MessagePosition message = 2; }

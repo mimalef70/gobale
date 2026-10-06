@@ -1,0 +1,166 @@
+// Minimal manually reviewed Bale wire definitions.
+// This schema is a protocol reference, NOT a claim of live interoperability.
+syntax = "proto3";
+package gobale.bale.reference;
+option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+
+message Empty {}
+message StringValue { string value = 1; }
+message BoolValue { bool value = 1; }
+message HandshakeRequest { int32 protocol_version = 1; int64 api_version = 2; }
+message HandshakeResponse { int32 protocol_version = 1; int64 api_version = 2; int64 server_time = 3; }
+message Ping { int64 id = 1; }
+message MetadataValue { string string_value = 1; bool bool_value = 2; int32 int_value = 3; }
+message MetadataItem { string key = 1; MetadataValue value = 2; }
+message Metadata { repeated MetadataItem items = 1; }
+message Request { string service = 1; string method = 2; bytes payload = 3; Metadata metadata = 4; int64 index = 5; }
+message Status { int32 code = 1; string message = 2; Metadata details = 3; }
+message Response { Status error = 1; bytes payload = 2; int64 index = 3; }
+message UpdateEnvelope { bytes payload = 1; }
+message ClientMessage { Request request = 1; Ping ping = 2; HandshakeRequest handshake = 3; }
+message ServerMessage { Response response = 1; UpdateEnvelope update = 2; Empty terminate_session = 3; Ping pong = 4; HandshakeResponse handshake = 5; }
+
+message StartPhoneAuthRequest { int64 phone_number = 1; int32 app_id = 2; string api_key = 3; bytes device_hash = 4; string device_title = 5; }
+// Official web 173855: field8 is resend wait, field9 is code lifetime (seconds).
+message StartPhoneAuthResponse { string transaction_hash = 1; bool is_registered = 2; int32 sent_code_type = 5; Int64Value code_expiration_date = 6; int32 next_send_code_type = 7; Int64Value next_send_code_wait_time = 8; Int32Value code_timeout = 9; repeated int32 available_send_code_types = 11; }
+message ValidateCodeRequest { string transaction_hash = 1; string code = 2; BoolValue is_jwt = 3; int32 language = 5; }
+message ValidatePasswordRequest { string transaction_hash = 1; string password = 2; BoolValue is_jwt = 3; int32 language = 4; }
+// Other User fields are deliberately omitted due to inconsistent catalog types.
+message User { uint32 id = 1; int64 access_hash = 2; string name = 3; StringValue local_name = 4; BoolValue is_bot = 7; StringValue nick = 9; BoolValue is_deleted = 16; }
+message AuthResponse { User user = 2; StringValue jwt = 4; }
+
+// Peer type 1 is private, 2 is group; 3 is encrypted private, NOT channel.
+message Peer { int32 type = 1; uint32 id = 2; int64 access_hash = 3; }
+message TextMessage { string text = 1; repeated uint32 mentions = 2; }
+message DocumentMessage { int64 file_id = 1; int64 access_hash = 2; int32 file_size = 3; string name = 4; string mime_type = 5; DocumentExt ext = 7; TextMessage caption = 8; }
+message Message { DocumentMessage document = 4; Empty empty = 5; JSONMessage json = 7; ServiceMessage service = 11; StickerMessage sticker = 12; TemplateMessage template = 13; TemplateResponse template_response = 14; TextMessage text = 15; Empty unsupported = 16; GiftMessage gift = 17; AnimatedStickerMessage animated_sticker = 24; GoldGiftMessage gold_gift = 28; PollMessage poll = 29; }
+message SendMessageRequest { Peer peer = 1; int64 rid = 2; Message message = 3; MessageReference quoted_message = 5; Peer ex_peer = 6; bool is_silent = 7; }
+// 2026-10-06 web capture: field 1 is sequence, field 2 is milliseconds.
+// Neither field is the client RID; message identity uses the persisted request RID.
+message SendMessageResponse { int64 sequence = 1; int64 date = 2; }
+message UpdateMessageRequest { Peer peer = 1; int64 rid = 2; Message message = 3; }
+message MessageReadRequest { Peer peer = 1; int64 date = 2; }
+message UpdateMessage { Peer peer = 1; uint32 sender_id = 2; int64 date = 3; int64 rid = 4; Message message = 5; QuotedMessage quoted_message = 7; MessagePosition previous = 9; Int64Value grouped_id = 10; bool is_silent = 11; bool has_comment = 12; MessagePosition thread = 13; Peer ex_peer = 14; StringValue author_sign = 17; }
+message UpdateMessageEdited { Peer peer = 1; int64 rid = 2; Message message = 3; Int64Value date = 4; Int32Value updater_user_id = 5; }
+message UpdateMessageDeleted { Peer peer = 1; repeated int64 rids = 2; }
+message UpdateMessageSent { Peer peer = 1; int64 rid = 2; int64 date = 3; }
+message UpdateContainer { UpdateMessageSent sent = 4; UpdateMessage message = 55; UpdateMessageEdited edited = 162; UpdateMessageDeleted deleted = 46; ChatPeerUpdate chat_cleared = 47; ChatPeerUpdate chat_deleted = 48; MessageReceipt read = 19; ReadByMeUpdate read_by_me = 50; MessageReceipt received = 54; UserTextUpdate username_changed = 209; UserTextUpdate about_changed = 210; GroupPinnedUpdate pinned = 721; GroupUnpinnedUpdate unpinned = 722; UserIDUpdate blocked = 2629; UserIDUpdate unblocked = 2630; MultipleMessagesUpdate messages = 52815; }
+
+// Current official web schema, inspected 2026-10-06. Generated catalog not used.
+message Int64Value { int64 value = 1; }
+message MessageReference { Peer peer = 1; int64 rid = 2; Int64Value date = 3; }
+message HistoryRequest { Peer peer = 1; int64 date = 2; int32 load_mode = 4; int32 limit = 5; repeated int32 optimizations = 6; }
+message HistoryItem { uint32 sender_id = 1; int64 rid = 2; int64 date = 3; Message message = 4; int32 state = 5; QuotedMessage quoted_message = 8; MessagePosition previous = 10; MessagePosition next = 11; Int64Value edited_at = 12; Int32Value editor_user_id = 13; Int64Value grouped_id = 14; BoolValue has_comment = 15; MessagePosition thread = 17; StringValue author_sign = 19; }
+message HistoryResponse { repeated HistoryItem history = 1; repeated User users = 2; repeated PeerRef user_peers = 3; repeated Group groups = 4; repeated PeerRef group_peers = 5; }
+message DialogsRequest { int64 min_date = 1; int32 limit = 2; repeated int32 optimizations = 3; int32 dialog_type = 4; bool exclude_pinned_dialogs = 5; int32 archive_filter = 6; }
+message Dialog { Peer peer = 1; int32 unread_count = 2; int64 sort_date = 3; uint32 sender_id = 4; int64 rid = 5; int64 date = 6; Message message = 7; int32 state = 8; }
+message DialogsResponse { repeated Group groups = 1; repeated User users = 2; repeated Dialog dialogs = 3; repeated PeerRef user_peers = 4; repeated PeerRef group_peers = 5; }
+message StreamUpdate { bytes update = 1; int32 route_id = 2; int32 sequence = 3; int64 timestamp = 4; UpdateBatch updates = 7; }
+message UpdateBatch { repeated bytes updates = 1; }
+message Int32Value { int32 value = 1; }
+
+message SendType { int32 type = 1; }
+message FileUploadRequest { int32 expected_size = 1; int64 crc = 2; int64 uid = 3; string name = 4; string mime_type = 5; Peer ex_peer = 6; SendType send_type = 7; int64 chunk_size = 8; int32 compressed_size = 9; int32 file_kind = 10; }
+message FileUploadResponse { int64 file_id = 1; string url = 2; bool duplicate = 3; int32 chunk_size = 4; int64 block_size = 5; }
+message FileLocation { int64 file_id = 1; int64 access_hash = 2; }
+message FileDownloadRequest { FileLocation file = 1; bool ciphertext = 2; }
+message FileURL { int64 file_id = 1; string url = 2; int32 timeout = 3; bytes file_key = 8; string algorithm = 9; bytes nonce = 10; }
+message FileDownloadResponse { FileURL file_url = 1; }
+message Photo { int32 width = 1; int32 height = 2; }
+message Video { int32 width = 1; int32 height = 2; int32 duration = 3; }
+message Audio { int32 duration = 1; string album = 2; string artist = 3; string genre = 4; string track = 5; }
+message Voice { int32 duration = 1; }
+message DocumentExt { Photo photo = 1; Video video = 2; Voice voice = 3; Video gif = 4; Audio audio = 5; }
+
+// Official web group protocol subset (2026-10-06).
+message PeerRef { uint32 id = 1; int64 access_hash = 2; }
+message BytesValue { bytes value = 1; }
+message GetMyGroupsRequest { int32 mode = 1; bool is_owner = 2; }
+message GetMyGroupsResponse { repeated PeerRef groups = 1; }
+message GroupMembersRequest { PeerRef group = 1; int32 limit = 2; BytesValue next = 3; }
+message GroupMember { uint32 uid = 1; uint32 inviter_uid = 2; int64 date = 3; BoolValue is_admin = 4; }
+message GroupMembersResponse { repeated GroupMember members = 1; BytesValue next = 2; }
+message Group { uint32 id = 1; int64 access_hash = 2; string title = 3; int32 group_type = 15; Int32Value members_count = 20; }
+message GroupCreateRequest { int64 rid = 1; string title = 2; repeated PeerRef users = 3; int32 group_type = 6; }
+message GroupCreateResponse { int32 sequence = 1; Group group = 3; repeated PeerRef not_added = 6; string invite_link = 7; }
+message GroupInviteRequest { PeerRef group = 1; int64 rid = 2; repeated PeerRef users = 3; }
+message GroupInviteResponse { repeated PeerRef not_added = 1; }
+message GroupTitleRequest { PeerRef group = 1; string title = 3; int64 rid = 4; }
+
+message ContactsRequest { string contacts_hash = 1; repeated int32 optimizations = 2; }
+message ContactsResponse { repeated User users = 1; bool is_not_changed = 2; repeated PeerRef peers = 3; }
+message ContactsSearchRequest { string request = 1; repeated int32 optimizations = 2; }
+message ContactsSearchResponse { repeated User users = 1; repeated PeerRef user_peers = 2; repeated Group groups = 4; repeated PeerRef group_peers = 5; }
+
+// Current Ghasedak recovery service; no use of the old GetDifference schema.
+message RouteState { PeerRef group = 1; int32 sequence = 2; }
+message RoutesRequest { repeated PeerRef groups = 1; repeated int32 optimizations = 2; }
+message RoutesResponse { repeated RouteState states = 1; }
+message DiffRequest { repeated RouteState states = 1; repeated int32 optimizations = 2; }
+message DatedUpdate { bytes update = 1; int64 date = 2; }
+message RouteDiff { RouteState state = 1; repeated bytes updates = 2; bool need_more = 3; BoolValue too_long = 4; repeated DatedUpdate dated_updates = 5; }
+message DiffResponse { repeated RouteDiff routes = 1; repeated PeerRef users = 2; repeated PeerRef groups = 3; }
+
+message ForwardMessagesRequest { Peer peer = 1; repeated int64 rids = 2; repeated MessageReference forwarded_messages = 3; Int64Value grouped_id = 4; bool hide_sender = 5; }
+message MessageDates { repeated int64 dates = 1; }
+message DeleteMessageRequest { Peer peer = 1; repeated int64 rids = 2; MessageDates dates = 3; BoolValue just_mine = 4; }
+
+message GetGroupInfoRequest { PeerRef peer = 1; }
+message FullGroup { uint32 id = 1; int64 access_hash = 2; string title = 3; uint32 owner_uid = 5; int64 create_date = 6; int32 group_type = 7; BoolValue is_member = 8; Int32Value members_count = 10; StringValue nick = 11; StringValue about = 16; }
+message GetGroupInfoResponse { FullGroup group = 1; }
+message GroupInviteURLResponse { string url = 1; }
+message GetUserInfoRequest { PeerRef peer = 1; }
+message FullUser { uint32 id = 1; int64 access_hash = 2; string name = 3; StringValue local_name = 4; StringValue nick = 5; StringValue about = 7; BoolValue is_bot = 9; BoolValue is_deleted = 14; BoolValue is_blocked = 13; BoolValue is_contact = 15; repeated string languages = 17; StringValue timezone = 18; }
+message GetUserInfoResponse { FullUser user = 1; }
+// Official public Groups request schemas, reviewed 2026-10-06.
+message GroupDescriptionRequest { PeerRef group = 1; int64 rid = 2; StringValue about = 3; }
+message GroupRemoveRequest { PeerRef group = 1; PeerRef user = 3; int64 rid = 4; }
+
+// Receive extensions cross-checked against official web 173855, 2026-10-06.
+message MessagePosition { int64 date = 1; int64 rid = 2; int64 sequence = 3; }
+message QuotedMessage { Int64Value message_id = 1; Int32Value public_group_id = 2; uint32 sender_user_id = 3; int64 date = 4; Message message = 5; Peer peer = 6; StringValue author_sign = 10; }
+message TemplateMessage { Message message = 1; int64 id = 2; repeated TemplateButton buttons = 3; StringValue response_type = 4; InlineKeyboard inline_keyboard = 5; ReplyKeyboard reply_keyboard = 6; KeyboardRemoval remove_keyboard = 7; }
+message TemplateResponse { string response = 1; int64 id = 2; Message message = 3; }
+message TemplateButton { string text = 1; string value = 2; int32 action = 3; }
+message InlineKeyboard { repeated InlineRow rows = 1; }
+message InlineRow { repeated InlineButton buttons = 1; }
+message InlineButton { string text = 1; StringValue url = 2; StringValue callback_data = 3; WebAppButton web_app = 4; LoginURLButton login_url = 5; StringValue switch_inline_query = 6; StringValue switch_inline_query_current_chat = 7; SwitchInlineButton switch_inline_query_chosen_chat = 8; CopyTextButton copy_text = 9; Empty authentication = 10; CustomActionButton custom_action = 11; BoolValue send_data = 12; }
+message WebAppButton { string url = 1; }
+message LoginURLButton { string url = 1; string forward_text = 2; string bot_username = 3; bool request_write_access = 4; }
+message SwitchInlineButton { string query = 1; bool allow_user_chats = 2; bool allow_bot_chats = 3; bool allow_group_chats = 4; bool allow_channel_chats = 5; }
+message CopyTextButton { string text = 1; }
+message CustomActionButton { string id = 1; }
+message ReplyKeyboard { repeated ReplyRow rows = 1; }
+message ReplyRow { repeated ReplyButton buttons = 1; }
+message ReplyButton { string text = 1; BoolValue request_contact = 2; BoolValue request_location = 3; WebAppButton web_app = 7; CustomActionButton custom_action = 8; BoolValue send_message = 9; }
+message KeyboardRemoval { bool remove_keyboard = 1; BoolValue selective = 2; }
+message GiftMessage { int32 count = 1; int64 total_amount = 2; int32 giving_type = 3; StringValue wallet_id = 4; StringValue regarding = 5; uint32 owner_id = 6; Int32Value cover_id = 7; BoolValue show_total_amount = 8; }
+message StickerMessage { Int32Value id = 1; BytesValue fast_preview = 2; StickerImage image512 = 3; StickerImage image256 = 4; Int32Value collection_id = 5; Int64Value collection_access_hash = 6; int32 format = 7; StickerImage animation = 8; }
+message AnimatedStickerMessage { Int32Value id = 1; BytesValue fast_preview = 2; StickerImage file_location = 3; Int32Value collection_id = 5; Int64Value collection_access_hash = 6; }
+message StickerImage { FileLocation file = 1; int32 width = 2; int32 height = 3; int32 file_size = 4; }
+message ServiceMessage { string text = 1; ServiceExtensions ext = 2; }
+message ServiceExtensions { Empty orphaned = 1; ServiceTextChange about_changed = 2; Empty avatar_changed = 3; ServiceTextChange nickname_changed = 4; ServiceTitle title_changed = 5; ServiceTextChange topic_changed = 6; Empty chat_archived = 7; Empty chat_restored = 8; UserIDUpdate contact_registered = 9; Empty group_created = 10; ServiceCall phone_call = 11; Empty missed_call = 12; UserIDUpdate user_invited = 13; Empty user_joined = 14; UserIDUpdate user_removed = 15; UserIDUpdate user_left = 16; GiftOpened gift_opened = 17; GiftOpenedCompact gift_opened_compact = 18; Empty welcome = 19; Empty mini_app_data_sent = 23; }
+message ServiceTextChange { StringValue value = 1; }
+message ServiceTitle { string title = 1; }
+message ServiceCall { int32 duration = 1; Int64Value start_date = 2; int32 discard_reason = 3; BoolValue is_video = 5; }
+message GiftOpened { uint32 user_id = 1; int64 rid = 2; int64 date = 3; }
+message GiftOpenedCompact { uint32 last_user_id = 1; int32 others_count = 2; int64 rid = 3; int64 date = 4; }
+message ChatPeerUpdate { Peer peer = 1; }
+message MessageReceipt { Peer peer = 1; int64 start_date = 2; int64 date = 3; }
+message ReadByMeUpdate { Peer peer = 1; int64 start_date = 2; Int32Value unread_count = 3; Int64Value end_date = 4; }
+message UserIDUpdate { uint32 uid = 1; }
+message UserTextUpdate { uint32 uid = 1; StringValue value = 2; }
+message GroupPinnedUpdate { uint32 group_id = 1; HistoryItem message = 2; }
+message GroupUnpinnedUpdate { uint32 group_id = 1; MessagePosition message = 2; }
+message MultipleMessagesUpdate { Peer peer = 1; repeated HistoryItem messages = 2; }
+
+message PollMessage { string question = 1; repeated PollOption options = 2; bool is_anonymous = 3; int32 type = 4; PollResult result = 5; int64 poll_id = 6; }
+message PollOption { int32 id = 1; string text = 2; }
+message PollResult { repeated PollOptionResult option_results = 1; repeated int64 recent_voters = 2; repeated int64 chosen_option_ids = 3; bool is_closed = 4; int64 poll_id = 5; int32 voters_count = 6; }
+message PollOptionResult { int32 option_id = 1; int32 votes_count = 2; }
+
+// GoldGiftPacketMessage contains more than the packet ID; preserve the reviewed layout.
+message GoldGiftMessage { int64 id = 1; int64 amount = 2; int64 count = 3; string description = 4; int32 giving_type = 5; }
+
+// Official web contact/location messages use a typed JSON envelope in union7.
+message JSONMessage { string raw_json = 1; }

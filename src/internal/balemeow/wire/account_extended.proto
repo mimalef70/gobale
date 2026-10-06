@@ -1,0 +1,84 @@
+// Reviewed against public Bale web 5.7.0+173855 on 2026-10-06.
+// Hand-written reviewed schema: do not regenerate from an unverified RPC catalog.
+syntax = "proto3";
+package gobale.bale.reference;
+option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+import "wire/bale.proto";
+
+message AccountStringRequest { string value = 1; }
+message AccountWrappedStringRequest { StringValue value = 1; }
+message AccountContactRequest { uint32 uid = 1; int64 access_hash = 2; }
+message AccountLocalNameRequest { uint32 uid = 1; int64 access_hash = 2; string name = 3; }
+message AccountPeerRequest { PeerRef peer = 1; }
+message AccountPeersRequest { repeated PeerRef peers = 1; }
+message AccountPeersResponse { repeated PeerRef peers = 1; }
+message AccountUsersResponse { repeated User users = 1; }
+message AccountContactRecord { int32 type = 1; StringValue string_value = 2; Int64Value long_value = 3; }
+message AccountFullUser { uint32 id = 1; repeated AccountContactRecord contact_info = 2; StringValue about = 3; repeated string languages = 4; StringValue timezone = 5; BoolValue is_blocked = 8; BoolValue is_deleted = 12; BoolValue is_contact = 13; }
+message AccountFullUsersResponse { repeated AccountFullUser users = 1; }
+// GetFullUser returns full identity; LoadFullUsers returns a different metadata schema.
+message AccountFullUserResponse { FullUser user = 1; }
+message AccountSearchUser { uint32 id = 1; int64 access_hash = 2; repeated AccountContactRecord contact_info = 17; }
+message AccountSearchResponse { repeated AccountSearchUser users = 1; repeated PeerRef peers = 2; }
+message AccountContactImport { int64 phone = 1; StringValue name = 2; }
+message AccountImportRequest { repeated AccountContactImport phones = 1; repeated int32 optimizations = 3; }
+message AccountImportResponse { repeated User users = 1; int32 sequence = 2; bytes state = 3; repeated PeerRef peers = 4; }
+message AccountPrivacyRequest { uint32 user_id = 1; int32 type = 2; int32 status = 3; }
+message AccountPrivacyStatus { int32 status = 1; }
+message AccountPrivacy { int32 invite = 1; int32 presence = 2; int32 money_transfer = 3; }
+message AccountPrivacyResponse { AccountPrivacy privacy = 1; }
+message AccountSetting { string key = 1; string value = 2; }
+message AccountSettingsResponse { repeated AccountSetting parameters = 1; }
+message AccountSettingRequest { string key = 1; StringValue value = 2; }
+message AccountAuthSession { int32 id = 1; int32 auth_holder = 2; int32 app_id = 3; string app_title = 4; string device_title = 5; int32 auth_time = 6; string auth_location = 7; Int64Value last_activity_at = 10; StringValue last_ip_address = 11; }
+message AccountSessionsResponse { repeated AccountAuthSession sessions = 1; }
+message AccountTerminateSessionRequest { int32 id = 1; }
+message AccountAvatarRequest { FileLocation file_location = 1; }
+
+// Typing uses field 3; StopTyping uses field 2. These are NOT interchangeable.
+message PresenceTypingRequest { Peer peer = 1; int32 typing_type = 3; }
+message PresenceStopTypingRequest { Peer peer = 1; int32 typing_type = 2; }
+message PresenceOnlineRequest { bool is_online = 1; int64 timeout = 2; int32 device_type = 3; }
+message PresenceUsersRequest { repeated uint32 user_ids = 1 [packed = false]; }
+message PresenceOnline { PeerRef peer = 1; Int64Value expires_at = 2; }
+message PresenceOffline { PeerRef peer = 1; BoolValue last_seen_unknown = 2; Int64Value date = 3; int32 unknown_last_seen_value = 4; }
+message PresenceRecord { PresenceOnline online = 1; PresenceOffline offline = 2; }
+message PresenceResponse { repeated PresenceRecord presences = 1; }
+message PresenceCountResponse { int32 count = 1; }
+message PresenceContactsRequest { Int32Value limit = 1; }
+
+message ReactionMessageID { int64 date = 1; int64 rid = 2; int64 sequence = 3; }
+message ReactionMutationRequest { Peer peer = 1; int64 rid = 2; string code = 3; int64 date = 4; }
+message ReactionSummary { repeated uint32 users = 1; string code = 2; Int64Value count = 3; }
+message ReactionMutationResponse { int32 sequence = 1; repeated ReactionSummary reactions = 2; bytes state = 3; }
+message ReactionsRequest { Peer peer = 1; repeated ReactionMessageID mids = 2; Peer origin_peer = 3; repeated ReactionMessageID origin_mids = 4; }
+message ReactionContainer { int64 rid = 1; int64 date = 2; repeated ReactionSummary reactions = 3; }
+message ReactionsResponse { repeated ReactionContainer containers = 1; }
+message ReactionUsersRequest { Peer peer = 1; int64 rid = 2; int64 date = 3; string code = 4; int32 page = 5; int32 limit = 6; }
+message ReactionUser { uint32 user_id = 1; string code = 2; int64 reaction_time = 3; }
+message ReactionUsersResponse { repeated ReactionUser users = 1; }
+message ViewsRequest { Peer peer = 1; repeated ReactionMessageID mids = 2; bool increment = 3; repeated ReactionMessageID correct_mids = 4; }
+message ViewContainer { ReactionMessageID mid = 1; Int64Value views = 2; }
+message ViewsResponse { repeated ViewContainer containers = 1; }
+
+message AccountPeerReport { int32 source = 1; Peer peer = 2; }
+message AccountMessageReport { Peer peer = 1; repeated ReactionMessageID mids = 2; }
+message AccountStoryReport { repeated StringValue story_id = 1; }
+message AccountReport { int32 kind = 1; string description = 2; AccountPeerReport peer_report = 101; AccountMessageReport message_report = 102; AccountStoryReport story_report = 103; }
+message AccountReportRequest { AccountReport report = 1; }
+message AccountReportDismissRequest { Peer peer = 2; }
+message AccountMagazineMessage { Peer peer = 1; int64 rid = 2; int64 date = 3; }
+message AccountUpvoteRequest { AccountMagazineMessage message = 1; Int64Value album_id = 2; }
+message AccountUpvotes { repeated AccountMagazineMessage messages = 1; int32 limit = 2; }
+message AccountUpvoteResponse { AccountUpvotes upvotes = 1; }
+message AccountUpvotersRequest { BytesValue next = 1; AccountMagazineMessage message = 2; }
+message AccountUpvotersResponse { BytesValue next = 1; repeated PeerRef users = 2; }
+
+// Deliberately omit payment token, PAN/account and wallet-link fields from the
+// service's read-only projection. Unknown provider fields never reach JSON.
+message AccountWalletBalance { int32 currency = 1; int64 amount = 2; }
+message AccountWallet { string id = 1; repeated AccountWalletBalance balances = 2; BoolValue is_active = 4; }
+message AccountWalletsResponse { repeated AccountWallet wallets = 1; }
+message AccountKifpoolsRequest { StringValue invocation_spot = 1; int32 pocket_type = 2; }
+message AccountKifpool { bool is_merchant = 1; string app = 2; int64 balance = 3; int32 level = 5; }
+message AccountKifpoolsResponse { repeated AccountKifpool wallets = 1; }

@@ -1,0 +1,12 @@
+// Current official web 5.7.0+173855, inspected 2026-10-06.
+// GetFullUser returns FullUser at field1; its current avatar is field6.
+// This deliberately projects only the fields required for avatar download.
+syntax = "proto3";
+package gobale.bale.reference;
+option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+import "wire/bale.proto";
+
+message UserAvatarResponse { UserAvatarProjection user = 1; }
+message UserAvatarProjection { uint32 id = 1; AvatarImageSet avatar = 6; }
+message AvatarImageSet { AvatarImage small = 1; AvatarImage large = 2; AvatarImage full = 3; }
+message AvatarImage { FileLocation file = 1; int32 width = 2; int32 height = 3; int32 file_size = 4; }

@@ -1,0 +1,61 @@
+// Field numbers reviewed against the public Bale Web 5.7.0 bundle, 2026-10-06.
+// 9216.fb97157470.js service encoders and index module 11125, not inferred values.
+syntax = "proto3";
+package gobale.bale.reference;
+option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+import "wire/bale.proto";
+
+message GroupPermissions {
+  bool see_message = 1; bool delete_message = 2; bool kick_user = 3;
+  bool pin_message = 4; bool invite_user = 5; bool add_admin = 6;
+  bool change_info = 7; bool send_message = 8; bool see_members = 9;
+  bool edit_message = 10;
+  BoolValue send_media = 11; BoolValue send_gif_stickers = 12;
+  BoolValue reply_to_story = 13; BoolValue forward_message_from = 14;
+  BoolValue send_gift_packet = 15; BoolValue start_call = 16;
+  BoolValue send_link_message = 17; BoolValue send_forwarded_message = 18;
+  BoolValue add_story = 19; BoolValue manage_call = 20;
+}
+message GroupExtendedMember {
+  uint32 uid = 1; uint32 inviter_uid = 2; int64 date = 3;
+  BoolValue is_admin = 4; Int32Value promoter_user_id = 5;
+  Int64Value promoted_at = 6; GroupPermissions permissions = 7;
+  StringValue title = 8;
+}
+message GroupFullExtended {
+  uint32 id = 1; int64 access_hash = 2; string title = 3;
+  uint32 owner_uid = 5; int64 create_date = 6; int32 group_type = 7;
+  BoolValue is_member = 8; Int32Value members_count = 10; StringValue nick = 11;
+  GroupPermissions permissions = 13; GroupPermissions default_permissions = 14;
+  StringValue about = 16; repeated GroupExtendedMember members = 17;
+  int32 restriction = 20; repeated string available_reactions = 24;
+}
+message GroupFullExtendedResponse { GroupFullExtended group = 1; int32 action = 2; }
+message GroupCreateExtendedRequest {
+  int64 rid = 1; string title = 2; repeated PeerRef users = 3;
+  int32 group_type = 6; StringValue nick = 8; int32 restriction = 9;
+}
+message GroupAdminRequest { PeerRef group = 1; PeerRef user = 2; StringValue admin_title = 3; }
+message GroupTransferRequest { PeerRef group = 1; uint32 new_owner = 2; }
+message GroupMemberPermissionsRequest { PeerRef group = 1; PeerRef user = 2; }
+message GroupMemberPermissionsResponse { GroupPermissions permissions = 1; }
+message GroupSetMemberPermissionsRequest { PeerRef group = 1; PeerRef user = 2; GroupPermissions permissions = 3; }
+message GroupSetDefaultPermissionsRequest { PeerRef group = 1; GroupPermissions permissions = 2; }
+message GroupJoinRequest { string token = 1; }
+message GroupJoinPublicRequest { Peer peer = 1; }
+message GroupJoinResponse { Group group = 1; int32 sequence = 2; int64 date = 4; repeated User users = 5; int64 rid = 6; repeated PeerRef user_peers = 7; uint32 inviter_uid = 8; }
+message GroupLeaveRequest { PeerRef group = 1; int64 rid = 2; BoolValue make_orphan = 4; }
+message GroupUsernameRequest { PeerRef group = 1; string nick = 2; int64 rid = 3; }
+message GroupRestrictionRequest { PeerRef group = 1; int32 restriction = 2; StringValue nick = 3; }
+message GroupHistoryRequest { PeerRef group = 1; bool can_see_history = 2; }
+message GroupVisibilityRequest { PeerRef group = 1; uint32 user_id = 2; bool can_see_messages = 3; }
+message GroupPinRequest { uint32 sender_uid = 1; PeerRef group = 2; int64 date = 3; int64 rid = 4; }
+message GroupUnpinRequest { PeerRef group = 1; int64 rid = 2; int64 date = 3; }
+message GroupPinsRequest { PeerRef group = 1; int32 page = 2; int32 limit = 3; }
+message GroupPinnedMessage { uint32 sender_uid = 1; int64 rid = 2; int64 date = 3; Message message = 4; int32 state = 5; }
+message GroupPinsResponse { repeated GroupPinnedMessage pins = 1; int32 count = 2; }
+message GroupBanRecord { PeerRef banned_user = 1; PeerRef banner_user = 2; }
+message GroupBannedResponse { repeated GroupBanRecord banned_users = 3; }
+message GroupAdminsResponse { repeated PeerRef users = 1; repeated GroupExtendedMember admins = 2; }
+message GroupPhotoRequest { PeerRef group = 1; FileLocation file_location = 3; int64 rid = 4; }
+message GroupRemovePhotoRequest { PeerRef group = 1; int64 rid = 4; Int64Value avatar_id = 6; }

@@ -1,0 +1,48 @@
+// Reviewed official public web 5.7.0+173855, modules 27369,15631,41918 and modulesBuilder.
+syntax = "proto3";
+package gobale.bale.reference;
+option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+import "wire/bale.proto";
+message MiniAppBotRequest { uint32 bot_user_id = 1; }
+message MiniAppMain { StringValue start_param = 1; Peer peer = 2; }
+message MiniAppMenu { StringValue url = 1; }
+message MiniAppKeyboard { string url = 1; }
+message MiniAppDirect { string short_name = 1; StringValue start_param = 2; Peer peer = 3; }
+message MiniAppTheme {
+ StringValue bg_color = 1; StringValue secondary_bg_color = 2; StringValue text_color = 3;
+ StringValue hint_color = 4; StringValue link_color = 5; StringValue button_color = 6;
+ StringValue button_text_color = 7; StringValue header_bg_color = 8; StringValue accent_text_color = 9;
+ StringValue section_bg_color = 10; StringValue section_header_text_color = 11; StringValue section_separator_color = 12;
+ StringValue subtitle_text_color = 13; StringValue destructive_text_color = 14; StringValue bottom_bar_bg_color = 15;
+}
+message MiniAppURLRequest { uint32 bot_user_id = 1; int32 screen_mode = 2; MiniAppTheme theme = 3; MiniAppMain main = 4; MiniAppMenu menu_button = 5; MiniAppKeyboard keyboard_button = 6; MiniAppDirect direct_link = 7; }
+message MiniAppURLResponse { string url = 1; int32 screen_mode = 2; StringValue query_id = 3; }
+message MiniAppHashRequest { uint32 bot_user_id = 1; string data = 2; }
+message MiniAppHashResponse { string hash = 1; string query_id = 2; int64 auth_date = 3; }
+message MiniAppDataRequest { uint32 bot_user_id = 1; StringValue query_id = 2; StringValue data = 3; StringValue button_text = 4; }
+message MiniAppMenuEntry { string text = 1; string url = 2; }
+message MiniAppMenuButton { Empty commands = 1; MiniAppMenuEntry mini_app = 2; }
+message MiniAppMenuResponse { MiniAppMenuButton menu_button = 1; }
+message MiniAppCustomRequest { uint32 bot_user_id = 1; string method = 2; string params = 3; }
+message MiniAppCustomResponse { string data = 4; }
+message MiniAppCallbackRequest { Peer peer = 1; MessagePosition message_id = 2; StringValue data = 3; }
+message LinkSummaryRequest { string url = 1; }
+message LinkSummaryResponse { string summary = 1; }
+// Story IDs are opaque strings; do not coerce them to numeric identifiers.
+message StoryIDRequest { string story_id = 1; }
+message StoryText { string text = 1; }
+message StoryMedia { FileLocation file_location = 1; reserved 2; int64 file_size = 3; StoryVideo video = 4; }
+message StoryVideo { FileLocation file_location = 1; reserved 2; int64 file_size = 3; float duration = 4; string format = 5; }
+message StoryContent { StoryMedia media = 1; StoryText text = 2; }
+message StoryReaction { int32 type = 1; StringValue text = 2; }
+message StoryRecord { string id = 1; uint32 owner_user_id = 2; StringValue reaction = 3; int64 created_at = 4; StoryContent content = 5; bool has_widget = 6; bool has_reply = 7; bool is_hidden = 8; bool is_mutual = 9; repeated int32 tag_ids = 10; int32 content_type = 11; repeated StoryReaction reactions = 12; int32 exception_type = 13; }
+message StoryListRequest { BoolValue get_unmutual = 1; }
+message StoryListResponse { repeated StoryRecord result = 1; }
+message StorySingleResponse { StoryRecord story = 1; Empty channel_story = 2; Empty bot_story = 3; }
+message StoryPagination { int32 page = 1; int32 limit = 2; }
+message StoryViewersRequest { string story_id = 1; StoryPagination pagination = 2; }
+message StoryViewer { string reaction = 1; uint32 user_id = 2; int64 reacted_at = 3; repeated StoryReaction reaction_data = 4; }
+message StoryViewersResponse { repeated StoryViewer viewers = 1; int32 view_count = 2; int32 like_count = 3; int32 link_click_count = 4; int32 emoji_count = 5; int32 restory_count = 6; }
+message StoryReactRequest { string story_id = 1; string reaction = 2; int32 type = 3; int32 reaction_type = 4; StringValue reaction_text = 5; }
+message StoryAddRequest { StoryMedia media = 1; StoryText text = 2; repeated int32 tag_ids = 10; int32 expiration_type = 11; int32 exception_type = 12; }
+message StoryAddResponse { string story_id = 1; }

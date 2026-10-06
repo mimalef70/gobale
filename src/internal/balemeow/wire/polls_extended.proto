@@ -1,0 +1,16 @@
+// Reviewed against Bale Web 5.7.0 MainRoutes.7a95f5bcef.js and index module 51794.
+syntax = "proto3";
+package gobale.bale.reference;
+option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+import "wire/bale.proto";
+
+message PollCreateRequest { PollMessage poll_message = 1; int64 create_at = 2; Peer ex_peer = 3; }
+message PollCreateResponse { int64 poll_id = 1; }
+message PollVoteRequest { int64 poll_id = 1; bool is_retract = 2; int64 vote_at = 3; repeated int32 option_ids = 4; }
+message PollVoteResponse { PollResult poll_result = 1; }
+message PollResultsRequest { repeated int64 poll_ids = 1 [packed = false]; }
+message PollResultsResponse { repeated PollResult poll_results = 1; }
+message PollIDRequest { int64 poll_id = 1; }
+message PollVoter { uint32 user_id = 1; int64 voted_at = 2; }
+message PollFullOptionResult { int32 option_id = 1; int32 votes_count = 2; repeated PollVoter voters = 3; }
+message PollFullResultsResponse { repeated PollFullOptionResult full_poll_result = 1; }
