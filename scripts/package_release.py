@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a reviewed GoBale prerelease bundle without copying runtime data."""
+"""Build a reviewed GoBale release bundle without copying runtime data."""
 import argparse
 import gzip
 import hashlib
@@ -11,6 +11,8 @@ import subprocess
 import tarfile
 import tempfile
 import yaml
+
+from release_notes import release_metadata
 
 ROOT = Path(__file__).resolve().parents[1]
 PLATFORMS = {"linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64"}
@@ -57,8 +59,10 @@ def main():
     parser.add_argument("--output", default="dist")
     parser.add_argument("--platform", action="append", choices=sorted(PLATFORMS))
     args = parser.parse_args()
-    if not re.fullmatch(r"\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?", args.version):
-        parser.error("version must be a semantic version without a v prefix")
+    try:
+        metadata = release_metadata("v" + args.version)
+    except ValueError as error:
+        parser.error(str(error) + " (pass --version without the v prefix)")
     configured = re.search(r'const AppVersion = "([^"]+)"', (ROOT / "src/config/settings.go").read_text())[1]
     spec = yaml.safe_load((ROOT / "docs/openapi.yaml").read_text())
     if configured != args.version or spec["info"]["version"] != args.version:
@@ -71,7 +75,7 @@ def main():
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     epoch = int(os.environ.get("SOURCE_DATE_EPOCH") or subprocess.check_output(
         ["git", "show", "-s", "--format=%ct", "HEAD"], cwd=ROOT, text=True).strip())
-    manifest = {"version": args.version, "release_stage": "alpha" if "-" in args.version else "release",
+    manifest = {"version": args.version, "release_stage": metadata["release_stage"],
                 "revision": revision, "build": {"cgo": False, "tags": ["purego"], "trimpath": True}, "packages": []}
     for platform in sorted(set(args.platform or PLATFORMS)):
         goos, goarch = platform.split("/")

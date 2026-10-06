@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Extract one reviewed version from CHANGELOG.md for prerelease publication."""
+"""Validate a release tag and extract its reviewed CHANGELOG.md section."""
 import argparse
 from pathlib import Path
 import re
@@ -8,6 +8,20 @@ import sys
 ROOT = Path(__file__).resolve().parents[1]
 VERSION = r"(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?"
 VERSION_HEADING = re.compile(r"^##\s+(?:\[(v?" + VERSION + r")\]|(v?" + VERSION + r"))(?=\s|$)")
+PUBLICATION_TAG = re.compile(
+    r"v(?P<version>(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)"
+    r"(?:-(?P<stage>alpha|beta|rc)\.[1-9][0-9]*)?)"
+)
+
+
+def release_metadata(tag: str) -> dict:
+    """Only explicit stable or reviewed alpha/beta/rc tags can be published."""
+    match = PUBLICATION_TAG.fullmatch(tag)
+    if match is None:
+        raise ValueError("release tag must be vMAJOR.MINOR.PATCH, optionally followed by -alpha.N, -beta.N or -rc.N")
+    stage = match["stage"]
+    return {"version": match["version"], "prerelease": stage is not None,
+            "latest": stage is None, "release_stage": stage or "release"}
 
 
 def extract_release_notes(changelog: str, version: str) -> str:

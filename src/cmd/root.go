@@ -161,7 +161,7 @@ func run(parent context.Context, cfg config.Settings) error {
 		return e
 	}
 	addr := net.JoinHostPort(cfg.Host, fmt.Sprint(cfg.Port))
-	logrus.WithFields(logrus.Fields{"address": addr, "version": config.AppVersion, "stage": "experimental"}).Info("GoBale starting")
+	logrus.WithFields(logrus.Fields{"address": addr, "version": config.AppVersion, "release_stage": config.ReleaseStage(config.AppVersion)}).Info("GoBale starting")
 	done := make(chan error, 1)
 	go func() { done <- server.App.Listen(addr) }()
 	select {

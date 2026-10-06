@@ -182,13 +182,14 @@ Review staged files and secret scans before publishing. Pin Actions to
 verified full SHAs; never execute unreviewed PR code with publishing credentials.
 
 Push the reviewed commit and wait for CI. Tag that exact revision with
-`vMAJOR.MINOR.PATCH-alpha.N`, `-beta.N` or `-rc.N`, then wait for tag CI. Never move
+`vMAJOR.MINOR.PATCH` for an explicitly requested full release, or append
+`-alpha.N`, `-beta.N` or `-rc.N` for prereleases, then wait for tag CI. Never move
 a published tag. Dispatch `gh workflow run release.yml --ref main -f tag=TAG`.
 Tag pushes alone do not publish. Local packaging uses
 `python3 scripts/package_release.py --version VERSION --output dist` and must
 exclude runtime/private data.
 
-Verify the public prerelease, tag SHA, four archives, manifest and checksums by
+Verify the public release, tag SHA, four archives, manifest and checksums by
 anonymous download. Verify anonymous GHCR pull, Linux amd64/arm64 manifest, immutable
 digest, documentation and a clean temporary-storage restart smoke. Newly created
 GHCR packages can be private despite a public repository; check visibility.

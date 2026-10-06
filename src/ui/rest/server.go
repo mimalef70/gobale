@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	"github.com/mimalef70/gobale/src/config"
 	"github.com/mimalef70/gobale/src/domains"
 	"github.com/mimalef70/gobale/src/infrastructure/storage"
 	"github.com/mimalef70/gobale/src/pkg/utils"
@@ -670,7 +671,7 @@ func operationQueryValue(field domains.FieldSchema, value string) (any, error) {
 	}
 }
 func (s *Server) info(c fiber.Ctx) error {
-	return success(c, map[string]any{"name": "GoBale", "version": s.opts.Version, "release_stage": "experimental", "provider": "bale", "capabilities": map[string]any{"multi_device": true, "per_device_webhook": true, "durable_outbox": true, "scheduled_sends": true, "short_restart_recovery_verified": true, "live_accounts_tested": 2}, "protocol_note": "Native implementation; provider capability verification is documented separately"})
+	return success(c, map[string]any{"name": "GoBale", "version": s.opts.Version, "release_stage": config.ReleaseStage(s.opts.Version), "provider": "bale", "capabilities": map[string]any{"multi_device": true, "per_device_webhook": true, "durable_outbox": true, "scheduled_sends": true, "short_restart_recovery_verified": true, "live_accounts_tested": 2}, "protocol_note": "Native implementation; provider capability verification is documented separately"})
 }
 func (s *Server) metrics(c fiber.Ctx) error {
 	stats, err := s.store.Stats(c.Context())

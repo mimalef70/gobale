@@ -1,11 +1,11 @@
-name: Prepare and publish prerelease
+name: Prepare and publish release
 
 # Publication is deliberately manual. A tag push only runs the read-only CI.
 on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing prerelease tag whose GoBale CI has passed (for example v0.2.0-alpha.1)
+        description: Existing version tag whose GoBale CI has passed (for example v1.0.0 or v1.1.0-rc.1)
         required: true
         type: string
 
@@ -31,14 +31,14 @@ jobs:
       version: ${{ steps.identity.outputs.version }}
       image: ${{ steps.identity.outputs.image }}
     steps:
-      - name: Require an explicit SemVer prerelease tag
+      - name: Require an explicit SemVer release tag
         env:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           python3 - <<'PY'
           import os, re
           tag = os.environ['RELEASE_TAG']
-          assert re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)-(alpha|beta|rc)\.[1-9][0-9]*', tag), 'Only explicit alpha.N, beta.N, or rc.N tags may be published by this workflow'
+          assert re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-(alpha|beta|rc)\.[1-9][0-9]*)?', tag), 'Use an explicit vMAJOR.MINOR.PATCH tag, optionally followed by -alpha.N, -beta.N or -rc.N'
           PY
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -54,7 +54,9 @@ jobs:
         run: |
           python3 - <<'PY'
           import json, os, pathlib, subprocess
+          from scripts.release_notes import release_metadata
           tag = os.environ['RELEASE_TAG']
+          release_metadata(tag)
           sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
           tagged = subprocess.check_output(['git', 'rev-parse', '--verify', 'refs/tags/' + tag + '^{commit}'], text=True).strip()
           assert sha == tagged, 'Checkout does not match the tag'
@@ -158,7 +160,7 @@ jobs:
           path: dist
       - name: Verify archive checksums
         run: cd dist && sha256sum --check SHA256SUMS
-      - name: Create draft, attach assets, and publish as a prerelease
+      - name: Create draft, attach assets, and publish reviewed release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
@@ -169,7 +171,12 @@ jobs:
         run: |
           python3 - <<'PY'
           import os, pathlib, re, subprocess
+          from scripts.release_notes import release_metadata
           tag = os.environ['RELEASE_TAG']
+          metadata = release_metadata(tag)
+          publication_flags = ['--prerelease=' + str(metadata['prerelease']).lower(), '--latest=' + str(metadata['latest']).lower()]
+          # A draft cannot be the latest release; promote only after assets exist.
+          draft_flags = ['--prerelease=' + str(metadata['prerelease']).lower(), '--latest=false']
           digest = os.environ['IMAGE_DIGEST']
           assert re.fullmatch(r'sha256:[a-f0-9]{64}', digest), 'Image publication did not return a valid digest'
           notes = subprocess.check_output(['python3', 'scripts/release_notes.py', '--version', tag], text=True)
@@ -181,7 +188,7 @@ jobs:
           remote_sha = subprocess.check_output(['gh', 'api', 'repos/' + os.environ['GITHUB_REPOSITORY'] + '/commits/' + tag, '--jq', '.sha'], text=True).strip()
           assert remote_sha == os.environ['EXPECTED_SHA'], 'Version tag moved after verification; publication aborted'
           # No --clobber: a published release must never be silently replaced.
-          subprocess.run(['gh', 'release', 'create', tag, '--verify-tag', '--draft', '--prerelease', '--latest=false', '--title', 'GoBale ' + tag, '--notes-file', str(notes_file)], check=True)
+          subprocess.run(['gh', 'release', 'create', tag, '--verify-tag', '--draft', *draft_flags, '--title', 'GoBale ' + tag, '--notes-file', str(notes_file)], check=True)
           subprocess.run(['gh', 'release', 'upload', tag, *archives, 'dist/SHA256SUMS', 'dist/manifest.json'], check=True)
-          subprocess.run(['gh', 'release', 'edit', tag, '--draft=false', '--prerelease', '--latest=false'], check=True)
+          subprocess.run(['gh', 'release', 'edit', tag, '--draft=false', *publication_flags], check=True)
           PY

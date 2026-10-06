@@ -188,6 +188,6 @@ Local logout is reported separately from confirmation of remote session revoke.
 Graceful shutdown preserves retryable work; unexpected termination can require
 reconciliation and repeated webhook delivery.
 
-Current alpha limitations and verified scope are summarized in the
+Current protocol and operational limitations and verified scope are summarized in the
 [README](../readme.md). Worker limits, synthetic benchmarks and two-account tests
 must not be interpreted as a proven fifty-real-account deployment capacity.

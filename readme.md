@@ -37,7 +37,7 @@ software and works with any application; it has no dependency on MuChat.
 
 ## Release status
 
-GoBale is **alpha** and uses Bale's user-account protocol. It is not an official
+GoBale **1.0** uses Bale's user-account protocol. It is not an official
 Bale API or SDK; provider protocol changes can require an update. Core messaging,
 media, native voice, contact avatars and selected group operations have been
 checked with **two authorized accounts**. Advanced capabilities have differing
@@ -48,9 +48,9 @@ no automatic transcoding, financial-transfer API or active-active deployment.
 No claim of 50 real accounts or completed 24-hour production validation is made.
 Use a test account and recipients you control before deploying an integration.
 
-The embedded administrative panel is currently an **unreleased source feature**.
-The `v0.2.0-alpha.1` downloads and image used below predate it. Build this checkout
-for the panel; pushing source does not replace an existing release or image tag.
+The **v1.0.0** release bundles the administrative panel in every binary and Docker
+image. Version 1.0 identifies the gateway release; the capability inventory and
+limits above still define the verified scope of the unofficial Bale integration.
 
 ## Requirements
 
@@ -143,9 +143,9 @@ restarts; provider revocation can require login again.
 
 ### Embedded administrative panel
 
-This checkout adds the panel at **http://127.0.0.1:3000/ui/** (or
-`<APP_BASE_PATH>/ui/`). Build this revision to use it; older published binaries do
-not acquire new UI files at runtime. Sign in with the username and password in
+The panel is available at **http://127.0.0.1:3000/ui/** (or
+`<APP_BASE_PATH>/ui/`). Use v1.0.0 or build this revision; UI files are part of the binary and are never
+downloaded at runtime. Sign in with the username and password in
 `APP_BASIC_AUTH`. Add a local connection, then enter its Bale phone, code and any
 requested two-step password. Refresh resumes a valid login challenge; requesting
 another code always requires a click and respects the provider cooldown.
@@ -191,7 +191,7 @@ Linux or macOS, clone the repository and initialize private configuration:
 ```sh
 git clone https://github.com/mimalef70/gobale.git
 cd gobale
-export GOBALE_IMAGE='ghcr.io/mimalef70/gobale:v0.2.0-alpha.1'
+export GOBALE_IMAGE='ghcr.io/mimalef70/gobale:v1.0.0'
 
 docker run --rm --user "$(id -u):$(id -g)" \
   --volume "$PWD:/config" --workdir /config \
@@ -241,7 +241,7 @@ docker run --detach --name gobale --restart unless-stopped \
   --read-only --tmpfs /tmp:size=67108864,mode=1777 \
   --security-opt no-new-privileges:true --cap-drop ALL \
   --add-host host.docker.internal:host-gateway \
-  ghcr.io/mimalef70/gobale:v0.2.0-alpha.1
+  ghcr.io/mimalef70/gobale:v1.0.0
 
 docker exec -it gobale /app/gobale login --device support
 ```

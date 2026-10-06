@@ -138,8 +138,8 @@ async function mock(page: Page, options: { count?: number; signedIn?: boolean } 
     if (path === 'api/app/info')
       return answer({
         name: 'GoBale',
-        version: '0.2.0-alpha.1',
-        release_stage: 'experimental',
+        version: '1.0.0',
+        release_stage: 'release',
         protocol_note: 'Synthetic test',
       })
     if (path === 'api/ready') return answer({ status: 'ready' })

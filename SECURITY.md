@@ -18,10 +18,11 @@ problem and prepare a fix before public details are released.
 
 ## Supported versions
 
-GoBale is currently a prerelease. Security fixes target the latest published
-prerelease; older prereleases do not receive a separate maintenance branch. See
+Security fixes target the latest published release. Older releases and
+prereleases do not receive separate maintenance branches. See
 [releases](https://github.com/mimalef70/gobale/releases) for current versions and
-release-specific limitations. No stable-support or security-audit claim is made.
+release-specific limitations. Version 1.0 does not imply a security audit or a
+long-term support commitment.
 
 ## Deployment boundaries
 

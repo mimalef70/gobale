@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 1.0.0 — 2026-10-06
+
+The first 1.0 gateway release includes the embedded administrative panel, durable
+account-isolation and recovery fixes, four native binary archives, and a non-root
+Linux amd64/arm64 container. The release is independent of MuChat.
 
 - Embedded English/Persian administrative UI at `/ui/`, with account login and
   lifecycle, recovery status, per-device webhook settings and delivery management.
@@ -37,6 +41,24 @@
 - Moved development invariants and acceptance gates into AGENTS.md, and coverage
   inventories beside protocol test data. Removed redundant implementation reports.
 - Replaced historical comparison reports with a native capability inventory.
+
+### Verified scope and remaining limits
+
+- UI acceptance passed with synthetic accounts across Chromium, Firefox and
+  WebKit, including Persian/English and the real Go REST stack. Linux arm64
+  installation/restart was tested natively, Linux amd64 under emulation, and the
+  packaged macOS arm64 binary was tested locally. macOS amd64 was cross-built.
+- Core native messaging/media and selected group operations have evidence from
+  two authorized Bale accounts. Version 1.0 does not expand that evidence to every
+  API or establish a fifty-real-account production capacity.
+- Ordinary-user keyboard-template sends remain rejected in live tests. Long-gap
+  recovery, exhaustive history export and long-duration capacity remain acceptance
+  gates. No financial mutation support or active-active deployment is claimed.
+- Retention has no automatic cleanup. Back up data and the encryption key before
+  upgrading to schema 5; rollback to older storage versions requires that backup.
+- Account-security/report/story writes and Mini App credential interoperability
+  retain their documented live-verification limits. See AGENTS.md and the native
+  capability inventory for dated evidence.
 
 ## 0.2.0-alpha.1 — 2026-10-06
 

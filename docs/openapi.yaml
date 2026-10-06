@@ -1,10 +1,10 @@
 openapi: 3.0.3
 info:
   title: GoBale REST API
-  version: 0.2.0-alpha.1
-  description: Native Go, multi-account Bale gateway. Alpha release; see the README release status and per-operation
-    verification for tested provider coverage. Administrative auth grants access to every device; tenant ownership
-    belongs in the consuming application.
+  version: 1.0.0
+  description: Native Go, multi-account Bale gateway. See the README release status and per-operation verification
+    for tested provider coverage; the release version does not imply every native operation has been verified. Administrative
+    auth grants access to every device; tenant ownership belongs in the consuming application.
   contact:
     name: GoBale maintainers
     url: https://github.com/mimalef70/gobale/issues

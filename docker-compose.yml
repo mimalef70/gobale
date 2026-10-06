@@ -1,6 +1,6 @@
 services:
   gobale:
-    image: ${GOBALE_IMAGE:-ghcr.io/mimalef70/gobale:v0.2.0-alpha.1}
+    image: ${GOBALE_IMAGE:-ghcr.io/mimalef70/gobale:v1.0.0}
     build:
       context: .
       dockerfile: docker/golang.Dockerfile
