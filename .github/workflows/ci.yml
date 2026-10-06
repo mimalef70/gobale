@@ -1,0 +1,155 @@
+name: GoBale CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  GO_VERSION: '1.26.6'
+  GOTOOLCHAIN: local
+
+jobs:
+  test:
+    name: Test (${{ matrix.mode }})
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [standard, race, purego]
+    defaults:
+      run:
+        working-directory: src
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: src/go.sum
+      - name: Standard tests
+        if: matrix.mode == 'standard'
+        run: go test ./...
+      - name: Race detector
+        if: matrix.mode == 'race'
+        run: go test -race ./...
+      - name: Pure Go SQLite tests
+        if: matrix.mode == 'purego'
+        env:
+          CGO_ENABLED: '0'
+        run: go test -tags purego ./...
+
+  contracts:
+    name: Contracts and source
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: src/go.sum
+      - name: Install pinned documentation tooling
+        run: |
+          python3 -m venv "$RUNNER_TEMP/gobale-docs-venv"
+          "$RUNNER_TEMP/gobale-docs-venv/bin/python" -m pip install --requirement scripts/requirements.txt
+          echo "$RUNNER_TEMP/gobale-docs-venv/bin" >> "$GITHUB_PATH"
+      - run: make fmt-check vet contracts
+      - name: Verify the static API reference and compatibility output
+        run: python3 scripts/build_docs.py --output "$RUNNER_TEMP/gobale-api-reference"
+      - name: Verify module checksums
+        run: |
+          cd src
+          go mod download
+          go mod verify
+      - name: Ensure native protocol package stays independent
+        run: |
+          python3 - <<'PY'
+          import json, subprocess
+          module = subprocess.check_output(['go', 'list', '-m'], cwd='src', text=True).strip()
+          raw = subprocess.check_output(['go', 'list', '-json', './internal/balemeow'], cwd='src', text=True)
+          imports = json.loads(raw)['Deps']
+          forbidden = ('github.com/gofiber/', 'database/sql', module + '/infrastructure/', module + '/ui/')
+          invalid = [name for name in imports if any(name == prefix or name.startswith(prefix) for prefix in forbidden)]
+          assert not invalid, 'balemeow acquired gateway dependencies: ' + ', '.join(invalid)
+          PY
+      - run: make build
+      - name: Store verified Linux build
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gobale-linux-amd64-ci
+          retention-days: 7
+          if-no-files-found: error
+          path: |
+            bin/gobale
+            LICENCE.txt
+            readme.md
+
+  security:
+    name: Go vulnerability analysis
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: src/go.sum
+      - name: Check both SQLite variants against the Go vulnerability database
+        run: make vuln
+
+  fuzz:
+    name: Bounded parser fuzzing
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version: ${{ env.GO_VERSION }}
+          cache-dependency-path: src/go.sum
+      - run: make fuzz
+
+  container:
+    name: Container build and restart
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+      - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/golang.Dockerfile
+          platforms: linux/amd64
+          load: true
+          push: false
+          tags: gobale:ci
+      - name: Verify authenticated readiness, non-root execution, and restart persistence
+        run: python3 scripts/docker_smoke.py gobale:ci
+      - name: Cross-build the ARM64 image without publishing
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: docker/golang.Dockerfile
+          platforms: linux/arm64
+          push: false
