@@ -1,0 +1,1612 @@
+{
+  "schema_version": 1,
+  "snapshot_date": "2026-10-06",
+  "scope": "GoBale implementation and recorded validation snapshot. Native operation IDs are not endpoint counts or a compatibility percentage. docs/openapi.yaml is the complete public API contract.",
+  "verification": "Offline Go tests, race, purego and vet passed at the recorded snapshot. An implemented status proves code exists, not live interoperability. Only the explicit, dated observations below and AGENTS.md describe live coverage; unmentioned capabilities remain live-unverified. Route observations retain their original test scope and must not be generalized to every option.",
+  "statuses": {
+    "implemented": "Reviewed implementation exists; no live coverage is implied.",
+    "implemented_with_limits": "Reviewed implementation exists with explicit limits or unresolved behavior.",
+    "unsupported": "No implementation or no supported contract at this snapshot.",
+    "intentional_boundary": "A deliberate architecture or credential boundary; not an exposed capability."
+  },
+  "operations": [
+    {
+      "operation": "account.about",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ]
+    },
+    {
+      "operation": "account.block",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ]
+    },
+    {
+      "operation": "account.blocked",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ]
+    },
+    {
+      "operation": "account.info",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go",
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/info.go"
+      ]
+    },
+    {
+      "operation": "account.name",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ]
+    },
+    {
+      "operation": "account.settings",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ]
+    },
+    {
+      "operation": "account.settings.set",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ]
+    },
+    {
+      "operation": "account.unblock",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ]
+    },
+    {
+      "operation": "account.username",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ]
+    },
+    {
+      "operation": "account.username.check",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ]
+    },
+    {
+      "operation": "auth.code",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/auth.go"
+      ]
+    },
+    {
+      "operation": "auth.password",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/auth.go"
+      ]
+    },
+    {
+      "operation": "auth.start",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/auth.go"
+      ]
+    },
+    {
+      "operation": "bot.callback",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/miniapp_extended.go"
+      ],
+      "notes": [
+        "Reviewed native operation with offline tests; live testing separately recorded."
+      ]
+    },
+    {
+      "operation": "channel.create",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/groups.go"
+      ]
+    },
+    {
+      "operation": "chat.clear",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/messaging_extended.go"
+      ]
+    },
+    {
+      "operation": "chat.delete",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/messaging_extended.go"
+      ]
+    },
+    {
+      "operation": "chat.history",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go"
+      ],
+      "notes": [
+        "Bounded REST history supports forward/backward/both with cursors; the consumer must loop through pages and deduplicate.",
+        "Reviewed modes1 forward,2 backward(default),3 both with explicit anchor and directional boundary cursors. All3 returned history live in the authorized test group. Exhaustive multi-page boundary semantics remain unverified; consumers deduplicate."
+      ]
+    },
+    {
+      "operation": "chat.list",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go"
+      ]
+    },
+    {
+      "operation": "contacts.add",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ],
+      "notes": [
+        "Use contacts.resolve/import for phone then contacts.add with verified user ID; no automatic hidden contact import."
+      ]
+    },
+    {
+      "operation": "contacts.import",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ]
+    },
+    {
+      "operation": "contacts.list",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/contacts.go",
+        "src/internal/balemeow/peer_refs.go"
+      ]
+    },
+    {
+      "operation": "contacts.remove",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ]
+    },
+    {
+      "operation": "contacts.rename",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ]
+    },
+    {
+      "operation": "contacts.reset",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go"
+      ]
+    },
+    {
+      "operation": "contacts.search",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/client.go"
+      ],
+      "notes": [
+        "contacts.search supports provider search; no separate exact-username guarantee."
+      ]
+    },
+    {
+      "operation": "device.connect",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go"
+      ]
+    },
+    {
+      "operation": "device.disconnect",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go"
+      ]
+    },
+    {
+      "operation": "device.logout",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/auth.go"
+      ]
+    },
+    {
+      "operation": "folders.create",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/messaging_extended.go"
+      ]
+    },
+    {
+      "operation": "folders.delete",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/messaging_extended.go"
+      ]
+    },
+    {
+      "operation": "folders.list",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/messaging_extended.go"
+      ]
+    },
+    {
+      "operation": "group.banned",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.create",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/groups.go"
+      ]
+    },
+    {
+      "operation": "group.default_permissions.set",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.demote",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.description",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/group_mutations.go"
+      ]
+    },
+    {
+      "operation": "group.info",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go"
+      ]
+    },
+    {
+      "operation": "group.invite",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/groups.go"
+      ]
+    },
+    {
+      "operation": "group.join",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.join_public",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.leave",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.link",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/info.go"
+      ]
+    },
+    {
+      "operation": "group.link.revoke",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.members",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/groups.go"
+      ]
+    },
+    {
+      "operation": "group.permissions",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.permissions.set",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.pin",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.pins",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.preview",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.promote",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.remove",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/group_mutations.go"
+      ]
+    },
+    {
+      "operation": "group.title",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/groups.go"
+      ]
+    },
+    {
+      "operation": "group.transfer",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.unban",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.unpin",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.unpin_all",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.username",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "group.visibility",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/group_extended.go"
+      ]
+    },
+    {
+      "operation": "link.summary",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/miniapp_extended.go"
+      ]
+    },
+    {
+      "operation": "media.download",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/media.go"
+      ],
+      "notes": [
+        "Scoped authenticated proxy download; provider signed URL/access hash are never returned.",
+        "Scoped streaming HTTP download; consumers own local file persistence."
+      ]
+    },
+    {
+      "operation": "media.upload",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/ui/rest/media.go"
+      ],
+      "notes": [
+        "Local authenticated upload then native streamed send; raw provider presigned upload URL is not exposed.",
+        "Returns local media_id; provider upload is deferred to send and no private provider FileLocation is exposed."
+      ]
+    },
+    {
+      "operation": "message.delete",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/messages.go"
+      ],
+      "notes": [
+        "One durable operation per message; no atomic multi-message wrapper. Caller can submit and track each operation independently."
+      ]
+    },
+    {
+      "operation": "message.edit",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go"
+      ]
+    },
+    {
+      "operation": "message.forward",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/messages.go"
+      ],
+      "notes": [
+        "One durable operation per message; no atomic multi-message wrapper. Caller can submit and track each operation independently."
+      ]
+    },
+    {
+      "operation": "message.pin",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/messaging_extended.go"
+      ]
+    },
+    {
+      "operation": "message.pins",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/messaging_extended.go"
+      ]
+    },
+    {
+      "operation": "message.reaction.remove",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/presence_reactions.go"
+      ]
+    },
+    {
+      "operation": "message.reaction.set",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/presence_reactions.go"
+      ]
+    },
+    {
+      "operation": "message.reaction.users",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/presence_reactions.go"
+      ]
+    },
+    {
+      "operation": "message.reactions",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/presence_reactions.go"
+      ]
+    },
+    {
+      "operation": "message.read",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/receive_events.go"
+      ]
+    },
+    {
+      "operation": "message.received",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/messaging_extended.go"
+      ]
+    },
+    {
+      "operation": "message.unpin",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/messaging_extended.go"
+      ]
+    },
+    {
+      "operation": "message.unpin_all",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/messaging_extended.go"
+      ]
+    },
+    {
+      "operation": "message.upvote",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_business.go",
+        "src/internal/balemeow/client.go"
+      ]
+    },
+    {
+      "operation": "message.upvote.remove",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_business.go",
+        "src/internal/balemeow/account_magazine.go",
+        "src/internal/balemeow/client.go"
+      ]
+    },
+    {
+      "operation": "message.upvoters",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_business.go",
+        "src/internal/balemeow/account_magazine.go",
+        "src/internal/balemeow/client.go"
+      ]
+    },
+    {
+      "operation": "message.views",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/presence_reactions.go"
+      ]
+    },
+    {
+      "operation": "miniapp.custom",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/miniapp_extended.go"
+      ]
+    },
+    {
+      "operation": "miniapp.data",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/miniapp_extended.go"
+      ]
+    },
+    {
+      "operation": "miniapp.hash",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/miniapp_extended.go"
+      ]
+    },
+    {
+      "operation": "miniapp.menu",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/miniapp_extended.go"
+      ]
+    },
+    {
+      "operation": "miniapp.url",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/miniapp_extended.go"
+      ],
+      "notes": [
+        "Provider-signed URL/hash only; no random query ID or unsigned fallback when provider rejects launch."
+      ]
+    },
+    {
+      "operation": "poll.close",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/poll_extended.go"
+      ]
+    },
+    {
+      "operation": "poll.results",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/poll_extended.go"
+      ]
+    },
+    {
+      "operation": "presence.online",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/presence_reactions.go"
+      ]
+    },
+    {
+      "operation": "presence.stop",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/presence_reactions.go"
+      ]
+    },
+    {
+      "operation": "presence.typing",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/presence_reactions.go"
+      ]
+    },
+    {
+      "operation": "report.dismiss",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_business.go",
+        "src/internal/balemeow/client.go"
+      ]
+    },
+    {
+      "operation": "report.messages",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_business.go",
+        "src/internal/balemeow/client.go"
+      ]
+    },
+    {
+      "operation": "report.peer",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_business.go",
+        "src/internal/balemeow/client.go"
+      ]
+    },
+    {
+      "operation": "report.story",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/account_business.go"
+      ],
+      "notes": [
+        "Reviewed Reports story union field103, bounded opaque story IDs; journaled mutation and independent wire tests. No live report submitted."
+      ]
+    },
+    {
+      "operation": "schedule.cancel",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/usecase/schedule.go"
+      ],
+      "notes": [
+        "Durable local SQLite scheduler; does not import/manage provider-side Scheduler task inventory created by another client."
+      ]
+    },
+    {
+      "operation": "schedule.create",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/usecase/schedule.go"
+      ],
+      "notes": [
+        "Durable local SQLite scheduler; does not import/manage provider-side Scheduler task inventory created by another client."
+      ]
+    },
+    {
+      "operation": "schedule.list",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/usecase/schedule.go"
+      ],
+      "notes": [
+        "Durable local SQLite scheduler; does not import/manage provider-side Scheduler task inventory created by another client."
+      ]
+    },
+    {
+      "operation": "sdk.miniapp.parse",
+      "status": "implemented",
+      "implementation": [
+        "src/pkg/miniapp/initdata.go"
+      ],
+      "notes": [
+        "Standalone bounded Go helper; constant-time HMAC/expiry checks. Known vector verified; Bale bot-token live compatibility is not established. No unsigned fallback."
+      ]
+    },
+    {
+      "operation": "sdk.miniapp.sign",
+      "status": "implemented",
+      "implementation": [
+        "src/pkg/miniapp/initdata.go"
+      ],
+      "notes": [
+        "Standalone bounded Go helper; constant-time HMAC/expiry checks. Known vector verified; Bale bot-token live compatibility is not established. No unsigned fallback."
+      ]
+    },
+    {
+      "operation": "sdk.miniapp.url",
+      "status": "implemented",
+      "implementation": [
+        "src/pkg/miniapp/url.go"
+      ],
+      "notes": [
+        "Standalone bounded Go helper; constant-time HMAC/expiry checks. Known vector verified; Bale bot-token live compatibility is not established. No unsigned fallback."
+      ]
+    },
+    {
+      "operation": "sdk.miniapp.verify",
+      "status": "implemented",
+      "implementation": [
+        "src/pkg/miniapp/initdata.go"
+      ],
+      "notes": [
+        "Standalone bounded Go helper; constant-time HMAC/expiry checks. Known vector verified; Bale bot-token live compatibility is not established. No unsigned fallback."
+      ]
+    },
+    {
+      "operation": "send.audio",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/media.go"
+      ],
+      "notes": [
+        "Native upload/send/reply are supported. Media keyboard variants and unrestricted reply_markup fields are not supported."
+      ]
+    },
+    {
+      "operation": "send.file",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/media.go"
+      ],
+      "notes": [
+        "Native upload/send/reply are supported. Media keyboard variants and unrestricted reply_markup fields are not supported."
+      ]
+    },
+    {
+      "operation": "send.image",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/media.go"
+      ],
+      "notes": [
+        "Native upload/send/reply are supported. Media keyboard variants and unrestricted reply_markup fields are not supported."
+      ]
+    },
+    {
+      "operation": "send.message",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/client.go"
+      ],
+      "notes": [
+        "Native text/reply live-verified. Dedicated keyboard template wire implemented but normal-user live sends rejected (PROVIDER_INVALID_ARGUMENT). Auto-splitting/text-to-file and media keyboard variants remain gaps.",
+        "Typed text/media and dedicated operations; not an arbitrary raw Message protobuf proxy."
+      ]
+    },
+    {
+      "operation": "send.poll",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/poll_extended.go"
+      ],
+      "notes": [
+        "GoBale send.poll creates and sends through one durable operation; no standalone unsent poll creation API."
+      ]
+    },
+    {
+      "operation": "send.sticker",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/sticker_extended.go"
+      ],
+      "notes": [
+        "Uses verified account-owned pack/sticker IDs; caller-supplied access hashes or raw document pointers are intentionally rejected."
+      ]
+    },
+    {
+      "operation": "send.template",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/client.go"
+      ],
+      "notes": [
+        "Native text/reply live-verified. Dedicated keyboard template wire implemented but normal-user live sends rejected (PROVIDER_INVALID_ARGUMENT). Auto-splitting/text-to-file and media keyboard variants remain gaps."
+      ]
+    },
+    {
+      "operation": "send.video",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/media.go"
+      ],
+      "notes": [
+        "Native upload/send/reply are supported. Media keyboard variants and unrestricted reply_markup fields are not supported.",
+        "Video/file transport available; animated GIF document-extension equivalence is not established."
+      ]
+    },
+    {
+      "operation": "send.voice",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/media.go",
+        "src/internal/balemeow/voice.go"
+      ],
+      "notes": [
+        "Native Ogg Opus voice uses SendType.VOICE and DocumentExt.voice; duration is derived in milliseconds from validated media. Live provider acknowledgement, receiving-account history media_type=voice and byte-identical download verified in the authorized two-account test group on 2026-10-06. Account-scoped media_id replaces caller-supplied file IDs/access hashes. Caller-supplied waveforms/options and arbitrary codec inputs are not supported; no automatic transcoding or waveform guarantee.",
+        "Native Ogg Opus voice uses SendType.VOICE and DocumentExt.voice; duration is derived in milliseconds from validated media. Live provider acknowledgement, receiving-account history media_type=voice and byte-identical download verified in the authorized two-account test group on 2026-10-06. Caption/reply and gateway scheduling supported; media keyboard variants, arbitrary input formats and caller-controlled message IDs/duration are not supported. No automatic transcoding or waveform guarantee."
+      ]
+    },
+    {
+      "operation": "story.add",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/story_extended.go"
+      ],
+      "notes": [
+        "Native text/image stories; video upload, widgets and custom privacy lists remain gaps."
+      ]
+    },
+    {
+      "operation": "story.delete",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/story_extended.go"
+      ]
+    },
+    {
+      "operation": "story.list",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/story_extended.go"
+      ],
+      "notes": [
+        "GetStories lists the available account feed and takes get_unmutual. Arbitrary user filtering and channel/bot story detail inventories are not supported."
+      ]
+    },
+    {
+      "operation": "story.react",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/story_extended.go"
+      ],
+      "notes": [
+        "Reviewed native operation with offline tests; live testing separately recorded."
+      ]
+    },
+    {
+      "operation": "story.viewers",
+      "status": "implemented",
+      "implementation": [
+        "src/internal/balemeow/client.go",
+        "src/internal/balemeow/story_extended.go"
+      ],
+      "notes": [
+        "Reviewed native operation with offline tests; live testing separately recorded."
+      ]
+    },
+    {
+      "operation": "users.get",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/account_extended.go",
+        "src/internal/balemeow/avatar.go",
+        "src/internal/balemeow/client.go"
+      ],
+      "notes": [
+        "users.get full:true returns batch supplementary about/languages/timezone/block/contact metadata. Single GetFullUser uses a distinct wire layout; own identity is covered by account.info. GET /user/avatar separately retrieves the current permitted contact image as authenticated bytes (small/large live-verified); avatar history enumeration and unrestricted provider-object projection are not supported."
+      ]
+    },
+    {
+      "operation": "wallet.kifpools",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/account_wallet.go",
+        "src/internal/balemeow/client.go"
+      ],
+      "notes": [
+        "Reviewed Kifpool balances/merchant metadata; payment tokens, bank account fields and authenticated wallet URLs are deliberately omitted."
+      ]
+    },
+    {
+      "operation": "wallet.list",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/internal/balemeow/account_wallet.go",
+        "src/internal/balemeow/client.go"
+      ],
+      "notes": [
+        "Reviewed Wallet/GetMyWallets balances; no payment-token exposure or independent legacy credit contract."
+      ]
+    }
+  ],
+  "route_observations": [
+    {
+      "method": "GET",
+      "path": "/app/devices",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/app/info",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/app/status",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/chat/{chat_jid}/history",
+      "notes": [
+        "read-only history with provider date cursor"
+      ],
+      "verification": [
+        "one-account live + offline"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/chat/{chat_jid}/messages",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/chats",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/devices",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/devices",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "DELETE",
+      "path": "/devices/{device_id}",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/devices/{device_id}",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/devices/{device_id}/login",
+      "notes": [
+        "native phone/OTP login",
+        "native phone/OTP login; no QR contract",
+        "native phone/OTP login; submit code through /login/code"
+      ],
+      "verification": [
+        "two-account live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/devices/{device_id}/login/code",
+      "verification": [
+        "two-account live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/devices/{device_id}/logout",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/devices/{device_id}/reconnect",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/devices/{device_id}/status",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/devices/{device_id}/webhook",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "PATCH",
+      "path": "/devices/{device_id}/webhook",
+      "verification": [
+        "two-account live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/group",
+      "verification": [
+        "authorized two-account test group live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/group/default-permissions",
+      "notes": [
+        "mode=patch and permissions.change_info; no locked-flag alias",
+        "mode=patch and permissions.send_message; no announce-flag alias"
+      ],
+      "verification": [
+        "offline protocol fixtures only; permission read live but mutation unverified"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/group/info",
+      "verification": [
+        "authorized two-account test group live + offline"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/group/invite-link",
+      "verification": [
+        "authorized two-account test group live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/group/join-with-link",
+      "notes": [
+        "native journaled token join; token or exact ble.ir/join URL"
+      ],
+      "verification": [
+        "offline protocol fixtures only; live unverified"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/group/leave",
+      "notes": [
+        "native journaled leave; optional explicit make_orphan"
+      ],
+      "verification": [
+        "offline protocol fixtures only; live unverified"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/group/name",
+      "verification": [
+        "authorized two-account test group live + offline"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/group/participants",
+      "verification": [
+        "authorized two-account test group live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/group/participants",
+      "notes": [
+        "native journaled invitation; inspect not_added_user_ids"
+      ],
+      "verification": [
+        "authorized two-account test group live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/group/participants/demote",
+      "notes": [
+        "native journaled single-user demotion; Bale peer/user contract"
+      ],
+      "verification": [
+        "offline protocol fixtures only; live unverified"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/group/participants/promote",
+      "notes": [
+        "native journaled single-user promotion; Bale peer/user contract"
+      ],
+      "verification": [
+        "offline protocol fixtures only; live unverified"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/group/participants/remove",
+      "notes": [
+        "native journaled single-user removal"
+      ],
+      "verification": [
+        "authorized two-account test group live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/group/photo",
+      "notes": [
+        "native journaled group image from account-scoped media_id"
+      ],
+      "verification": [
+        "offline protocol fixtures only; live unverified"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/group/preview",
+      "notes": [
+        "native invite preview; token input and Bale result"
+      ],
+      "verification": [
+        "offline protocol fixtures only; live unverified"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/group/topic",
+      "notes": [
+        "native journaled group description; empty string clears"
+      ],
+      "verification": [
+        "authorized two-account test group live + offline"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/message/{message_id}/delete",
+      "verification": [
+        "one-account live + offline"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/message/{message_id}/download",
+      "verification": [
+        "one-account live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/message/{message_id}/forward",
+      "verification": [
+        "one-account live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/message/{message_id}/reaction",
+      "notes": [
+        "native journaled message.reaction.set alias; peer/date_ms/code required"
+      ],
+      "verification": [
+        "authorized second-account reaction on test poll live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/message/{message_id}/read",
+      "notes": [
+        "native read through required provider timestamp; path ID is contextual"
+      ],
+      "verification": [
+        "offline protocol fixtures only"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/message/{message_id}/revoke",
+      "notes": [
+        "explicit FEATURE_NOT_SUPPORTED"
+      ],
+      "verification": [
+        "not supported"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/message/{message_id}/update",
+      "verification": [
+        "one-account live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/audio",
+      "notes": [
+        "native music/file audio; voice messages use POST /send/voice with account-scoped Ogg Opus media_id; not a ptt flag alias"
+      ],
+      "verification": [
+        "audio one-account live + offline; native voice two-account test-group live acknowledgement + received voice type + byte-identical download; offline framing/duration/scope/scheduler tests"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/chat-presence",
+      "notes": [
+        "native presence.typing alias; Bale typing_type contract; ephemeral"
+      ],
+      "verification": [
+        "offline protocol fixtures only; live unverified"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/contact",
+      "notes": [
+        "native journaled contact card; bounded name/phones/emails projection"
+      ],
+      "verification": [
+        "offline protocol fixtures only; live unverified"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/file",
+      "verification": [
+        "one-account live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/image",
+      "verification": [
+        "one-account live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/location",
+      "notes": [
+        "native journaled numeric latitude/longitude send"
+      ],
+      "verification": [
+        "authorized test-group live acknowledgement and second-account history + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/message",
+      "verification": [
+        "two-account live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/poll",
+      "notes": [
+        "native journaled create-and-send poll; not a standalone poll-creation API"
+      ],
+      "verification": [
+        "authorized test-group send/results/vote/close live + offline"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/presence",
+      "notes": [
+        "native presence.online alias; explicit online boolean; ephemeral"
+      ],
+      "verification": [
+        "offline protocol fixtures only; live unverified"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/send/schedules",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/send/schedules/{schedule_id}",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/schedules/{schedule_id}/cancel",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/schedules/{schedule_id}/pause",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/schedules/{schedule_id}/resume",
+      "verification": [
+        "offline integration"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/sticker",
+      "notes": [
+        "native journaled send using installed collection_id and sticker_id"
+      ],
+      "verification": [
+        "offline protocol fixtures only; sticker inventory read live but send unverified"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/send/video",
+      "verification": [
+        "one-account live + offline"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/user/avatar",
+      "notes": [
+        "native authenticated current contact avatar; peer=user:ID; small default or large; safe rendition fallback; no signed URL/hash exposure"
+      ],
+      "verification": [
+        "authorized live: two contacts both sizes returned JPEG; missing avatar both sizes AVATAR_NOT_FOUND; offline scope/bounds/redirect/cancellation/image-validation tests"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/user/avatar",
+      "notes": [
+        "native journaled avatar from account-scoped media_id"
+      ],
+      "verification": [
+        "offline protocol fixtures only; live unverified"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/user/check",
+      "notes": [
+        "native contacts.resolve; exact provider phone match; no hidden import"
+      ],
+      "verification": [
+        "offline protocol fixtures only; live unverified"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/user/info",
+      "notes": [
+        "native own-account profile only; no arbitrary-user lookup"
+      ],
+      "verification": [
+        "native own-account live + offline"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/user/my/contacts",
+      "verification": [
+        "offline protocol fixtures only"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/user/my/groups",
+      "verification": [
+        "offline protocol fixtures only"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/user/privacy",
+      "notes": [
+        "native privacy contract; no /user/my/privacy alias"
+      ],
+      "verification": [
+        "offline protocol fixtures only; live unverified"
+      ]
+    },
+    {
+      "method": "POST",
+      "path": "/user/pushname",
+      "notes": [
+        "native account.name alias; name field and Idempotency-Key required"
+      ],
+      "verification": [
+        "offline protocol fixtures only; live unverified"
+      ]
+    }
+  ],
+  "service_surfaces": [
+    {
+      "capability": "session_credentials",
+      "status": "intentional_boundary",
+      "note": "Sessions are encrypted with the deployment key and stored in SQLite. Credentials are never returned by REST. Immutable connection IDs scope data; selectors only identify a local device."
+    },
+    {
+      "capability": "service_lifecycle",
+      "status": "implemented",
+      "note": "Managed native client lifecycle, CLI login/reconnect, blocking rest service and graceful shutdown. Durable jobs survive process restart; no caller-managed language event loop is required."
+    },
+    {
+      "capability": "consumer_workflows",
+      "status": "unsupported",
+      "note": "Conversation await-response controllers, finite-state workflow storage, state filters, decorators, routers and in-process middleware are outside the gateway. Consumers handle signed event_id webhooks and own their workflow persistence."
+    },
+    {
+      "capability": "raw_rpc",
+      "status": "intentional_boundary",
+      "note": "No arbitrary unary/RPC proxy, raw Message protobuf submission or unreviewed generated catalog invocation. Only reviewed typed capabilities are exposed."
+    },
+    {
+      "capability": "cache_mutation",
+      "status": "intentional_boundary",
+      "note": "No public destructive cache-flush endpoint. Account-scoped references remain internal and are restored on reconnect."
+    },
+    {
+      "capability": "human_simulation",
+      "status": "intentional_boundary",
+      "note": "No fake-human jitter, automatic typing simulation or humanization toggles. Explicit presence, context-aware timing and bounded durable queues are available; no REST blocking-sleep endpoint."
+    },
+    {
+      "capability": "financial_transactions",
+      "status": "unsupported",
+      "note": "Card destination inquiries and card balances, transfers, gift/gold packet spending, opening/claiming, recipient/winner inventories and payment-token retrieval are not implemented. Read-looking gift calls may transfer value. These need a separately reviewed credential, transaction and reconciliation contract; no financial live test was performed."
+    },
+    {
+      "capability": "wallet_points",
+      "status": "unsupported",
+      "note": "Wallet points are not implemented. Balance read projections are a different capability."
+    },
+    {
+      "capability": "provider_ai",
+      "status": "unsupported",
+      "note": "The Turing AI SendEvent wire contract is not verified or implemented."
+    },
+    {
+      "capability": "official_bot_api",
+      "status": "unsupported",
+      "note": "The native user-account transport is not an official Bot API connector. Bot callback activation does not connect or operate a bot account."
+    },
+    {
+      "capability": "miniapp_browser_bridge",
+      "status": "unsupported",
+      "note": "No browser/UI runtime, iframe/postMessage bridge or theme UI. Provider launch RPCs do not implement a host bridge."
+    },
+    {
+      "capability": "formatting_helpers",
+      "status": "implemented_with_limits",
+      "note": "Bounded Go wire schemas and normalized receive events exist. No automatic text splitting, text-to-file fallback or unrestricted message/keyboard model projection."
+    },
+    {
+      "capability": "receive_updates",
+      "status": "implemented_with_limits",
+      "note": "Typed message/quote/service/template/gift/poll/sticker/group/presence/reaction mappings are normalized; unknown updates stay explicit. Rendering, payment and browser interaction are not implied. See docs/webhook-payload.md."
+    },
+    {
+      "capability": "durable_service",
+      "status": "implemented",
+      "note": "Persistent outbox, signed webhook deliveries, GetDiff recovery and immutable multi-account scope. Recovery limits and dated failure-test evidence are in AGENTS.md; a transport connection alone does not prove a complete inbox."
+    },
+    {
+      "capability": "contact_avatar",
+      "status": "implemented",
+      "note": "GET /user/avatar resolves a user through the selected authenticated account and returns inspected JPEG/PNG/GIF bytes; small/large requests fall back within the same current avatar. Live authorized contact checks returned four JPEG images (6500/17761 and 4016/9344 bytes); an account without an avatar returned AVATAR_NOT_FOUND for both sizes. No private signed URL/hash exposure or avatar-history enumeration. Bounded 8 MiB (also limited by deployment media setting), 16 M pixels; GIF first frame validated."
+    },
+    {
+      "capability": "unsupported_product_surfaces",
+      "status": "unsupported",
+      "note": "No passkey login, newsletter-specific API, business-profile API, specialized link-message send, played/star/unstar message state, call rejection, disappearing-message settings, exhaustive group-member export, join-request approval/rejection or built-in Chatwoot connector. Group permissions use explicit native permission fields. Chat pin/archive and channel behavior must use only capabilities declared in OpenAPI; an unrelated route name is not an alias."
+    }
+  ]
+}
