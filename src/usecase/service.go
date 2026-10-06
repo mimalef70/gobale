@@ -34,13 +34,16 @@ type Options struct {
 }
 
 type clientEntry struct {
-	mu          sync.Mutex   // serializes sends and lifecycle transitions for this account
-	clientMu    sync.RWMutex // short lock for status snapshots when lifecycle work is in progress
-	client      domains.Client
-	desired     bool
-	closed      bool
-	failures    int
-	nextConnect time.Time
+	mu                sync.Mutex   // serializes sends and lifecycle transitions for this account
+	clientMu          sync.RWMutex // short lock for status snapshots when lifecycle work is in progress
+	client            domains.Client
+	authMetaMu        sync.Mutex // public challenge snapshots must not block on provider calls
+	challenge         *domains.PublicChallenge
+	resendAvailableAt time.Time // provider cooldown survives local challenge expiry
+	desired           bool
+	closed            bool
+	failures          int
+	nextConnect       time.Time
 }
 
 type Service struct {
@@ -171,6 +174,7 @@ func (s *Service) Close(ctx context.Context) error {
 					e.mu.Lock()
 					defer e.mu.Unlock()
 					e.closed = true
+					e.clearAuthMetadata()
 					e.desired = false
 					callCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 					defer cancel()
@@ -254,6 +258,7 @@ func (s *Service) DeleteDevice(ctx context.Context, id string) error {
 	defer e.mu.Unlock()
 	e.desired = false
 	e.closed = true
+	e.clearAuthMetadata()
 	if err := s.store.DeleteDevice(ctx, device.ConnectionID); err != nil {
 		e.closed = false
 		return err
@@ -289,9 +294,42 @@ func (s *Service) StartAuth(ctx context.Context, id, phone string) (domains.Chal
 	if session != nil {
 		return domains.Challenge{}, domains.E("ALREADY_AUTHENTICATED", "log out before starting a new authentication challenge", 409)
 	}
+	e.authMetaMu.Lock()
+	now := time.Now().UTC()
+	if now.Before(e.resendAvailableAt) {
+		wait := int64((time.Until(e.resendAvailableAt) + time.Second - 1) / time.Second)
+		e.authMetaMu.Unlock()
+		return domains.Challenge{}, &domains.Error{Code: "AUTH_RESEND_TOO_SOON", Message: "wait before requesting another authentication code", HTTP: 429, RetryAfterSeconds: wait}
+	}
+	// Clear the previous public challenge before the replacement RPC. A failed
+	// replacement cannot resurrect a challenge whose provider cookies were reset.
+	e.challenge = nil
+	e.authMetaMu.Unlock()
 	e.desired = false
 	challenge, err := e.client.StartAuth(ctx, phone)
-	return challenge, safeError(err)
+	if err != nil {
+		return domains.Challenge{}, safeError(err)
+	}
+	now = time.Now().UTC()
+	if challenge.ID == "" {
+		return domains.Challenge{}, domains.E("INVALID_PROVIDER_CHALLENGE", "provider did not return an authentication challenge", 502)
+	}
+	if challenge.ExpiresAt.IsZero() || challenge.ExpiresAt.After(now.Add(10*time.Minute)) {
+		challenge.ExpiresAt = now.Add(10 * time.Minute)
+	}
+	resendAt := now
+	if challenge.ResendAfterSeconds != nil {
+		seconds := *challenge.ResendAfterSeconds
+		if seconds < 0 || seconds > 86400 {
+			return domains.Challenge{}, domains.E("INVALID_PROVIDER_CHALLENGE", "provider returned an invalid resend cooldown", 502)
+		}
+		resendAt = now.Add(time.Duration(seconds) * time.Second)
+	}
+	e.authMetaMu.Lock()
+	e.resendAvailableAt = resendAt
+	e.challenge = &domains.PublicChallenge{ID: challenge.ID, ExpiresAt: challenge.ExpiresAt, ResendAvailableAt: resendAt, SentCodeType: challenge.SentCodeType, NextSendCodeType: challenge.NextSendCodeType, AvailableSendCodeTypes: append([]int32{}, challenge.AvailableSendCodeTypes...), MaskedPhone: maskedPhone(phone)}
+	e.authMetaMu.Unlock()
+	return challenge, nil
 }
 func (s *Service) SubmitCode(ctx context.Context, id, challenge, code string) (domains.ConnectionStatus, error) {
 	return s.submitAuth(ctx, id, challenge, code, false)
@@ -316,6 +354,10 @@ func (s *Service) submitAuth(ctx context.Context, id, challenge, value string, p
 	if e.closed {
 		return domains.ConnectionStatus{}, domains.E("DEVICE_NOT_FOUND", "device no longer exists", 404)
 	}
+	public := e.publicChallenge(time.Now())
+	if public == nil || public.ID != challenge {
+		return e.adminStatus(time.Now()), domains.E("CHALLENGE_EXPIRED", "authentication challenge is absent or expired", 400)
+	}
 	var session *domains.Session
 	if password {
 		session, err = e.client.SubmitPassword(ctx, challenge, value)
@@ -323,11 +365,18 @@ func (s *Service) submitAuth(ctx context.Context, id, challenge, value string, p
 		session, err = e.client.SubmitCode(ctx, challenge, value)
 	}
 	if err != nil {
-		return cleanStatus(e.client.Status()), safeError(err)
+		var authErr *domains.Error
+		if errors.As(err, &authErr) && authErr.Code == "CHALLENGE_EXPIRED" {
+			e.authMetaMu.Lock()
+			e.challenge = nil
+			e.authMetaMu.Unlock()
+		}
+		return e.adminStatus(time.Now()), safeError(err)
 	}
 	if session == nil {
 		return cleanStatus(e.client.Status()), nil
 	}
+	e.clearAuthMetadata()
 	if session.UserID == "" || session.Token == "" {
 		return cleanStatus(e.client.Status()), domains.E("INVALID_PROVIDER_SESSION", "provider did not return a complete session", 502)
 	}
@@ -356,10 +405,7 @@ func (s *Service) Status(ctx context.Context, id string) (domains.ConnectionStat
 	if err != nil {
 		return domains.ConnectionStatus{}, err
 	}
-	e.clientMu.RLock()
-	client := e.client
-	e.clientMu.RUnlock()
-	return cleanStatus(client.Status()), nil
+	return e.adminStatus(time.Now()), nil
 }
 func (s *Service) Reconnect(ctx context.Context, id string) error {
 	d, err := s.ResolveDevice(ctx, id)
@@ -408,6 +454,7 @@ func (s *Service) Logout(ctx context.Context, id string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.desired = false
+	e.clearAuthMetadata()
 	remoteErr := e.client.Logout(ctx)
 	_ = e.client.Disconnect(ctx)
 	clearCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
@@ -634,6 +681,8 @@ func publicErrorMessage(code string) string {
 		return "authentication password is invalid"
 	case "CHALLENGE_EXPIRED":
 		return "authentication challenge expired"
+	case "AUTH_RESEND_TOO_SOON":
+		return "wait before requesting another authentication code"
 	case "CONNECTION_UNAVAILABLE":
 		return "provider connection is unavailable"
 	default:
@@ -698,6 +747,7 @@ func diagnostic(err error) string {
 }
 
 func (e *clientEntry) setClient(client domains.Client) {
+	e.clearAuthMetadata()
 	e.clientMu.Lock()
 	e.client = client
 	e.clientMu.Unlock()

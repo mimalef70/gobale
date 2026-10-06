@@ -14,6 +14,8 @@ import (
 const AppVersion = "0.2.0-alpha.1"
 
 type Settings struct {
+	UIEnabled                                                               bool
+	UIPublicOrigin                                                          string
 	Host                                                                    string
 	Port                                                                    int
 	BasicAuth, BasePath, Database, MediaRoot                                string
@@ -30,6 +32,17 @@ type Settings struct {
 
 func Load(v *viper.Viper) (Settings, error) {
 	s := Settings{Host: v.GetString("host"), Port: v.GetInt("port"), BasicAuth: v.GetString("basic-auth"), BasePath: v.GetString("base-path"), Database: v.GetString("database"), MediaRoot: v.GetString("media-root"), GRPCEndpoint: v.GetString("grpc-endpoint"), WebSocketEndpoint: v.GetString("ws-endpoint"), Origin: "https://web.bale.ai", APIKey: v.GetString("bale-api-key"), AppID: v.GetUint32("bale-app-id"), APIVersion: v.GetUint32("bale-api-version"), DeviceTitle: "GoBale", WebhookSecret: v.GetString("webhook-secret"), WebhookMergeGlobal: v.GetBool("webhook-device-merge-global"), MaxMediaBytes: v.GetInt64("max-media-bytes"), SendWait: 40 * time.Second}
+	s.UIEnabled = true
+	if v.IsSet("ui-enabled") {
+		s.UIEnabled = v.GetBool("ui-enabled")
+	}
+	s.UIPublicOrigin = strings.TrimSpace(v.GetString("ui-public-origin"))
+	if s.UIPublicOrigin != "" {
+		u, err := url.Parse(s.UIPublicOrigin)
+		if err != nil || u.Scheme != "https" || u.Hostname() == "" || u.User != nil || u.RawQuery != "" || u.Fragment != "" || u.Path != "" {
+			return s, fmt.Errorf("APP_UI_PUBLIC_ORIGIN must be an HTTPS origin without path, query or credentials")
+		}
+	}
 	for _, option := range []struct {
 		name          string
 		value         *int

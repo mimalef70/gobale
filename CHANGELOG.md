@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Embedded English/Persian administrative UI at `/ui/`, with account login and
+  lifecycle, recovery status, per-device webhook settings and delivery management.
+- Isolated cookie/CSRF browser authentication, immutable device-instance guards,
+  resumable public challenge metadata and enforced OTP resend cooldowns.
+- Local overview snapshots and filtered delivery lists avoid per-account provider
+  polling. Existing Basic API consumers retain their contracts.
+- Version/contract-checked UI assets, local fonts, third-party notices and build
+  stages for the single binary and non-root Docker image. Node is build-only.
+  UI changes need no database migration and do not expand Bale compatibility claims.
+
 - Bound REST requests to immutable connection IDs, including streamed bodies and
   device-path operations, so deleting and reusing an alias cannot switch accounts.
 - Persist unresolved stream-recovery gaps before accepting newer events; completed

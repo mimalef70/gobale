@@ -1613,6 +1613,18 @@
       "capability": "miniapp_signing_helpers",
       "status": "implemented_with_limits",
       "note": "2026-10-06 offline Sign/Verify regressions cover 63 unsigned/64 total fields, all C0/C1 controls and preserved legitimate Unicode/whitespace. Provider credential interoperability remains live-unverified; local signing does not prove provider login."
+    },
+    {
+      "capability": "embedded_administrative_ui",
+      "status": "implemented_with_limits",
+      "implementation": [
+        "src/ui/rest/browser.go",
+        "src/ui/rest/admin_session.go",
+        "src/ui/web/assets.go",
+        "src/usecase/admin.go",
+        "ui/src/App.tsx"
+      ],
+      "note": "2026-10-06: embedded bilingual account and webhook administration. Offline tests verify cookie/Basic isolation, CSRF/Origin guards, immutable instance selection, challenge refresh/cooldowns and 50-account local snapshots without provider RPC. This UI does not add chat/operator workflows or extend native protocol/live capacity evidence. Browser and packaging tests are separate from live Bale verification. Recorded acceptance: 10 frontend unit tests and 27 Chromium/Firefox/WebKit checks passed, including real Go REST with synthetic provider accounts and /gateway base path. Six isolated Docker smokes passed on native Linux arm64 and emulated Linux amd64; packaged macOS arm64 UI login/restart smoke passed. No new live Bale account/protocol validation is implied."
     }
   ]
 }

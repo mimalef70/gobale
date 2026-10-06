@@ -41,6 +41,9 @@ func TestOpenAPIRouteParity(t *testing.T) {
 		actual[route.Method+" "+path] = true
 	}
 	for path, methods := range spec.Paths {
+		if strings.HasPrefix(path, "/ui/") {
+			continue
+		}
 		for method := range methods {
 			documented[strings.ToUpper(method)+" "+path] = true
 		}

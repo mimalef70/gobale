@@ -15,3 +15,9 @@ bin
 site
 dist
 **/__pycache__
+
+**/node_modules
+**/test-results
+**/playwright-report
+ui/coverage
+src/ui/web/dist

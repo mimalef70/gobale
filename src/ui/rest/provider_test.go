@@ -121,7 +121,9 @@ func TestReviewedGroupMutationsUseDurableRESTDispatch(t *testing.T) {
 	})
 	_, err := svc.CreateDevice(context.Background(), "one")
 	require.NoError(t, err)
-	_, err = svc.SubmitCode(context.Background(), "one", "challenge", "synthetic")
+	challenge, err := svc.StartAuth(context.Background(), "one", "+10000000000")
+	require.NoError(t, err)
+	_, err = svc.SubmitCode(context.Background(), "one", challenge.ID, "synthetic")
 	require.NoError(t, err)
 	for _, test := range []struct{ path, body, operation string }{
 		{"/group/topic", `{"peer":{"type":"group","id":"77"},"description":""}`, "group.description"},

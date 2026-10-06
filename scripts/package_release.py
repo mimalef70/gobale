@@ -65,7 +65,9 @@ def main():
         raise SystemExit("Binary configuration, OpenAPI and requested versions must match")
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=True)
+    subprocess.run(['python3', str(ROOT / 'scripts/build_ui.py')], cwd=ROOT, check=True)
     files = approved_files()
+    notices = ROOT / 'src/ui/web/dist/THIRD_PARTY_NOTICES.txt'
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     epoch = int(os.environ.get("SOURCE_DATE_EPOCH") or subprocess.check_output(
         ["git", "show", "-s", "--format=%ct", "HEAD"], cwd=ROOT, text=True).strip())
@@ -81,7 +83,7 @@ def main():
                                GOWORK="off", GOFLAGS="")
             subprocess.run(["go", "build", "-tags", "purego", "-trimpath", "-ldflags=-s -w", "-o", str(binary), "."],
                            cwd=ROOT / "src", env=environment, check=True)
-            entries = [(binary, "gobale")] + [(path, path.relative_to(ROOT).as_posix()) for path in files]
+            entries = [(binary, "gobale"), (notices, "THIRD_PARTY_NOTICES.txt")] + [(path, path.relative_to(ROOT).as_posix()) for path in files]
             with archive.open("wb") as raw, gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=epoch) as compressed:
                 with tarfile.open(fileobj=compressed, mode="w", format=tarfile.PAX_FORMAT) as tar:
                     for path, relative in entries:

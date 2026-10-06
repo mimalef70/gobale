@@ -33,6 +33,72 @@ Administrator-configured webhooks may reach internal services. `/media/fetch`
 instead rejects private/reserved destinations and redirects, and does not use
 the configured HTTP proxies. These are intentionally different network policies.
 
+## Administrative panel
+
+`APP_UI_ENABLED=true` (default) serves the embedded panel at `/ui/`, including
+`APP_BASE_PATH` when configured. The same artifact contains the UI and API; assets
+are never downloaded at runtime. Missing, stale or corrupt assets fail startup
+before database ownership or account startup. Rebuild the complete artifact, or
+explicitly disable the UI for a Go-only/API-only deployment. UI metadata requires
+no database migration; other changes in this release may still migrate storage.
+
+Local browser access accepts only `localhost`/loopback Host values. For remote
+access set `APP_UI_PUBLIC_ORIGIN=https://gateway.example.com` (no trailing slash
+or path), terminate HTTPS at a trusted reverse proxy, and preserve that public
+Host header when forwarding to the private GoBale listener. With a base path such
+as `/bale`, open `https://gateway.example.com/bale/ui/`; the origin still excludes
+`/bale`. Expose only the TLS ingress, not the internal plaintext listener.
+Arbitrary `Forwarded`/`X-Forwarded-*` values do not grant browser access. Cookies
+are Secure for this configured HTTPS origin; remote plaintext use is unsupported.
+Forward the complete path, including `APP_BASE_PATH`, without stripping the prefix.
+Do not cache `/ui/auth/` or `/ui/api/` responses. When a public origin is configured,
+open the panel through that origin; a direct localhost URL is no longer accepted
+by its Host check. Existing Basic API access is separate from this browser policy.
+
+The panel exchanges existing Basic credentials for a random HttpOnly,
+SameSite=Strict, path-scoped cookie. Origin and CSRF checks protect mutations.
+Sessions are memory-only: at most 100, with 30-minute idle and eight-hour absolute
+expiry. Polling counts as activity. Logout invalidates the panel session; restart
+invalidates every panel session but preserves encrypted Bale sessions. Login has
+per-IP and global limits; proxies can share the per-IP budget. Keep credentials
+out of URLs and proxy logs. Only language/theme are saved in localStorage.
+
+`/ui/api/` exposes the finite management subset under browser-session auth; cookies
+do not authorize the public Basic API, and Basic alone does not authorize UI API.
+All account-scoped UI requests require `X-Device-Instance`. A stale tab gets
+`409 DEVICE_INSTANCE_CHANGED` if its alias now belongs to another connection.
+External Basic clients can opt into this guard while existing clients remain valid.
+
+Snapshots read local status and batch queue counts; polling does not call Bale.
+Lists refresh every ten seconds, active login every three and delivery lists every
+fifteen, while visible. Payloads are loaded on demand as escaped JSON. Retry targets
+the previous destination at its original queue position; replay explicitly uses
+current routing. Replacing only a webhook secret affects later attempts to the
+same URL. An empty device URL inherits global routing; no global URL means disabled.
+
+Keep the existing signing secret unless deliberately rotating it; the panel never
+reads it back. A device destination requires a non-empty secret. Clearing its URL
+switches to the configured global rules, including their event filters and secrets.
+Changing a destination pauses its old pending work. Review paused/failed deliveries
+before replay: replay can redeliver an event a receiver has already processed, so
+the receiver must deduplicate by `event_id`.
+
+### Panel troubleshooting
+
+| Symptom | Action |
+| --- | --- |
+| `/ui/` is unavailable with a published older artifact | Build this checkout or install a release that includes the panel. UI files are not downloaded at runtime. |
+| Startup reports missing, stale or corrupt UI assets | Run `make build` or rebuild the Docker image. For an intentional API-only deployment, set `APP_UI_ENABLED=false`; browser routes are then absent, while Basic API routes remain. |
+| `UI_ORIGIN_REJECTED` | Check the exact HTTPS public origin, browser URL and forwarded Host. Keep the configured path prefix. Do not rewrite Origin or rely on forwarded headers to bypass the check. |
+| `UI_UNAUTHORIZED` after a restart or idle period | Sign in to the panel again. This alone does not require logging the Bale account in again. |
+| A pending Bale login returns to the phone step | A challenge expires or is lost on restart; request a fresh code explicitly. A page refresh can only resume a still-valid challenge in the same server process. |
+| `DEVICE_INSTANCE_CHANGED` | Refresh the account list and reselect the intended connection; the old alias was replaced. Do not retry the stale action against the replacement. |
+| `UI_LOGIN_RATE_LIMITED` or `AUTH_RESEND_TOO_SOON` | Wait for the indicated retry time. Refreshing the page or opening a second tab does not reset the server-side limit. |
+
+Panel sign-out, Bale logout and connection deletion are different actions. The
+latter two cancel unsent account work; neither promises to erase retained history,
+media, ambiguous sends or audit records. See [Retention and disk use](#retention-and-disk-use).
+
 ## Backup, restore and upgrades
 
 Keep a protected backup of the encryption key **separate from** database backups.

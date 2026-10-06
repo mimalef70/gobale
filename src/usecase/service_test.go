@@ -273,6 +273,9 @@ func TestAccountIdentityCannotBeReboundAfterLogout(t *testing.T) {
 	f := &fakeClient{authSession: &domains.Session{UserID: "100", Token: "secret-one"}}
 	s, st := testService(t, Options{}, func(domains.Device) domains.Client { return f })
 	d := mustDevice(t, s, "alpha")
+	if _, e := s.StartAuth(ctx, d.ID, "+15550000100"); e != nil {
+		t.Fatal(e)
+	}
 	if _, e := s.SubmitCode(ctx, d.ID, "challenge", "123"); e != nil {
 		t.Fatal(e)
 	}
@@ -282,6 +285,9 @@ func TestAccountIdentityCannotBeReboundAfterLogout(t *testing.T) {
 	f.mu.Lock()
 	f.authSession = &domains.Session{UserID: "200", Token: "secret-two"}
 	f.mu.Unlock()
+	if _, e := s.StartAuth(ctx, d.ID, "+15550000200"); e != nil {
+		t.Fatal(e)
+	}
 	if _, e := s.SubmitCode(ctx, d.ID, "challenge", "456"); e == nil {
 		t.Fatal("account rebound")
 	}

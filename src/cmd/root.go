@@ -21,6 +21,7 @@ import (
 	"github.com/mimalef70/gobale/src/infrastructure/storage"
 	"github.com/mimalef70/gobale/src/internal/balemeow"
 	"github.com/mimalef70/gobale/src/ui/rest"
+	"github.com/mimalef70/gobale/src/ui/web"
 	"github.com/mimalef70/gobale/src/usecase"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -38,6 +39,8 @@ func NewCommand() *cobra.Command {
 	flags.String("host", "127.0.0.1", "HTTP listen host")
 	flags.Int("port", 3000, "HTTP listen port")
 	flags.String("basic-auth", "", "Global username:password (prefer APP_BASIC_AUTH)")
+	flags.Bool("ui-enabled", true, "Serve the embedded administrative UI")
+	flags.String("ui-public-origin", "", "Exact HTTPS public origin for browser access behind a reverse proxy")
 	flags.String("base-path", "", "Optional URL prefix")
 	flags.String("database", "storages/gobale.db", "SQLite database")
 	flags.String("media-root", "storages/media", "Private media directory")
@@ -57,7 +60,7 @@ func NewCommand() *cobra.Command {
 	flags.Int("reconnect-workers", 4, "Maximum concurrent reconnects (1-4)")
 	flags.Int("media-workers", 4, "Maximum concurrent media transfers")
 	flags.Int("queue-limit", 1000, "Maximum queued, in-flight and unknown sends across accounts")
-	bindings := map[string]string{"host": "APP_HOST", "port": "APP_PORT", "basic-auth": "APP_BASIC_AUTH", "base-path": "APP_BASE_PATH", "database": "APP_DATABASE", "media-root": "APP_MEDIA_ROOT", "master-key": "APP_MASTER_KEY", "master-key-file": "APP_MASTER_KEY_FILE", "grpc-endpoint": "BALE_GRPC_ENDPOINT", "ws-endpoint": "BALE_WS_ENDPOINT", "bale-app-id": "BALE_APP_ID", "bale-api-key": "BALE_API_KEY", "bale-api-version": "BALE_API_VERSION", "webhook": "BALE_WEBHOOK", "webhook-secret": "BALE_WEBHOOK_SECRET", "webhook-device-merge-global": "BALE_WEBHOOK_DEVICE_MERGE_GLOBAL", "max-media-bytes": "APP_MAX_MEDIA_BYTES", "send-workers": "APP_SEND_WORKERS", "webhook-workers": "APP_WEBHOOK_WORKERS", "reconnect-workers": "APP_RECONNECT_WORKERS", "media-workers": "APP_MEDIA_WORKERS", "queue-limit": "APP_QUEUE_LIMIT"}
+	bindings := map[string]string{"ui-enabled": "APP_UI_ENABLED", "ui-public-origin": "APP_UI_PUBLIC_ORIGIN", "host": "APP_HOST", "port": "APP_PORT", "basic-auth": "APP_BASIC_AUTH", "base-path": "APP_BASE_PATH", "database": "APP_DATABASE", "media-root": "APP_MEDIA_ROOT", "master-key": "APP_MASTER_KEY", "master-key-file": "APP_MASTER_KEY_FILE", "grpc-endpoint": "BALE_GRPC_ENDPOINT", "ws-endpoint": "BALE_WS_ENDPOINT", "bale-app-id": "BALE_APP_ID", "bale-api-key": "BALE_API_KEY", "bale-api-version": "BALE_API_VERSION", "webhook": "BALE_WEBHOOK", "webhook-secret": "BALE_WEBHOOK_SECRET", "webhook-device-merge-global": "BALE_WEBHOOK_DEVICE_MERGE_GLOBAL", "max-media-bytes": "APP_MAX_MEDIA_BYTES", "send-workers": "APP_SEND_WORKERS", "webhook-workers": "APP_WEBHOOK_WORKERS", "reconnect-workers": "APP_RECONNECT_WORKERS", "media-workers": "APP_MEDIA_WORKERS", "queue-limit": "APP_QUEUE_LIMIT"}
 	for flag, env := range bindings {
 		_ = v.BindPFlag(flag, flags.Lookup(flag))
 		_ = v.BindEnv(flag, env)
@@ -84,6 +87,19 @@ func NewCommand() *cobra.Command {
 	return root
 }
 func run(parent context.Context, cfg config.Settings) error {
+	// Validate bundled UI before opening storage or starting any account client.
+	var assets *web.Bundle
+	if cfg.UIEnabled {
+		var err error
+		assets, err = web.Validate(config.AppVersion, config.ContractSHA256)
+		if err != nil {
+			return err
+		}
+		if _, err = rest.NewAdminSessions(rest.AdminSessionOptions{BasicAuth: cfg.BasicAuth, BasePath: cfg.BasePath, PublicOrigin: cfg.UIPublicOrigin}); err != nil {
+			return err
+		}
+	}
+
 	ctx, stop := signal.NotifyContext(parent, os.Interrupt, syscall.SIGTERM)
 	defer stop()
 	st, e := storage.Open(cfg.Database, cfg.MasterKey)
@@ -140,7 +156,7 @@ func run(parent context.Context, cfg config.Settings) error {
 		defer cancel()
 		_ = service.Close(c)
 	}()
-	server, e := rest.New(service, st, rest.Options{BasicAuth: cfg.BasicAuth, BasePath: cfg.BasePath, Version: config.AppVersion, MediaRoot: cfg.MediaRoot, MaxMediaBytes: cfg.MaxMediaBytes, MediaSlots: mediaSlots, SendWait: cfg.SendWait})
+	server, e := rest.New(service, st, rest.Options{UIEnabled: cfg.UIEnabled, UIPublicOrigin: cfg.UIPublicOrigin, UIAssets: assets, BasicAuth: cfg.BasicAuth, BasePath: cfg.BasePath, Version: config.AppVersion, MediaRoot: cfg.MediaRoot, MaxMediaBytes: cfg.MaxMediaBytes, MediaSlots: mediaSlots, SendWait: cfg.SendWait})
 	if e != nil {
 		return e
 	}

@@ -1,0 +1,1 @@
+Generated frontend assets are ignored. Run npm ci && npm run build in ui/.

@@ -10,11 +10,12 @@ import (
 )
 
 type Error struct {
-	Code      string `json:"code"`
-	Message   string `json:"message"`
-	HTTP      int    `json:"-"`
-	Ambiguous bool   `json:"-"`
-	Retryable bool   `json:"-"`
+	Code              string `json:"code"`
+	Message           string `json:"message"`
+	HTTP              int    `json:"-"`
+	Ambiguous         bool   `json:"-"`
+	Retryable         bool   `json:"-"`
+	RetryAfterSeconds int64  `json:"retry_after_seconds,omitempty"`
 }
 
 func (e *Error) Error() string { return e.Message }
@@ -61,6 +62,7 @@ type WebhookPatch struct {
 type Device struct {
 	ID           string        `json:"id"`
 	ConnectionID string        `json:"-"`
+	InstanceID   string        `json:"instance_id"`
 	AccountID    string        `json:"account_id,omitempty"`
 	CreatedAt    time.Time     `json:"created_at"`
 	Webhook      WebhookConfig `json:"webhook"`

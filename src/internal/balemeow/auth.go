@@ -35,6 +35,12 @@ func (c *Client) StartAuth(ctx context.Context, phone string) (domains.Challenge
 	if authenticated {
 		return domains.Challenge{}, boundedError("ALREADY_AUTHENTICATED", "logout before starting another authentication", 409)
 	}
+	// Invalidate the previous challenge before cookies or transport are replaced.
+	// A failed replacement request must not leave a seemingly usable old code.
+	c.mu.Lock()
+	c.challenge = nil
+	c.status.Auth = "auth_required"
+	c.mu.Unlock()
 	// Starting a fresh login must not inherit cookies from a revoked challenge.
 	c.clearCookies()
 	hash, err := randomHex(16)

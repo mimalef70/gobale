@@ -32,7 +32,8 @@ software and works with any application; it has no dependency on MuChat.
 - Durable sends with idempotency keys and inspectable pending or unknown outcomes.
 - One-time and recurring message schedules that survive restarts.
 - Authenticated REST, a CLI, health/readiness probes and Prometheus metrics.
-- One binary or container, SQLite storage, and no dashboard, browser, Node.js or Redis runtime.
+- Embedded English/Persian administrative panel for accounts, login and webhooks.
+- One binary or container, SQLite storage, and no browser, Node.js or Redis runtime.
 
 ## Release status
 
@@ -47,11 +48,15 @@ no automatic transcoding, financial-transfer API or active-active deployment.
 No claim of 50 real accounts or completed 24-hour production validation is made.
 Use a test account and recipients you control before deploying an integration.
 
+The embedded administrative panel is currently an **unreleased source feature**.
+The `v0.2.0-alpha.1` downloads and image used below predate it. Build this checkout
+for the panel; pushing source does not replace an existing release or image tag.
+
 ## Requirements
 
 - **Binary:** a supported Linux or macOS system; release archives cover amd64 and arm64.
 - **Container:** Docker, with Compose v2 for the checked-in deployment file.
-- **Source build:** Go 1.26+ and a C compiler, or the `purego` build without a C compiler.
+- **Source build:** Go 1.26.6, Node 24.12+ / npm and Python 3.11+; a C compiler for default SQLite, or `purego` without one.
 - Persistent disk for SQLite/media, a stable encryption key, and network access to Bale.
 - Access to the account owner's phone/code and any two-step password during login.
 
@@ -71,6 +76,8 @@ command-line arguments, logs and public issues.
 | `APP_HOST` | `--host` | `127.0.0.1` | Native listener address |
 | `APP_PORT` | `--port` | `3000` | Port, 1–65535 |
 | `APP_BASE_PATH` | `--base-path` | empty | Prefix every route, including health and metrics |
+| `APP_UI_ENABLED` | `--ui-enabled` | `true` | Serve the embedded administrative panel |
+| `APP_UI_PUBLIC_ORIGIN` | `--ui-public-origin` | empty | Exact external HTTPS origin, e.g. `https://gateway.example.com` |
 | `APP_BASIC_AUTH` | `--basic-auth` | required | One administrative `username:password` |
 | `APP_DATABASE` | `--database` | `storages/gobale.db` | SQLite path |
 | `APP_MEDIA_ROOT` | `--media-root` | `storages/media` | Private media directory |
@@ -134,19 +141,47 @@ is preserved exactly; only the login code is trimmed. It requires an
 interactive terminal and a loopback listener. Encrypted sessions survive normal
 restarts; provider revocation can require login again.
 
+### Embedded administrative panel
+
+This checkout adds the panel at **http://127.0.0.1:3000/ui/** (or
+`<APP_BASE_PATH>/ui/`). Build this revision to use it; older published binaries do
+not acquire new UI files at runtime. Sign in with the username and password in
+`APP_BASIC_AUTH`. Add a local connection, then enter its Bale phone, code and any
+requested two-step password. Refresh resumes a valid login challenge; requesting
+another code always requires a click and respects the provider cooldown.
+
+The panel shows authentication, network and recovery separately. A connected socket
+with a recovery gap is not a synchronized account. Webhook settings show inherited
+and explicit destinations without exposing secrets. Delivery details display plain
+JSON; retry keeps the original destination/order, while replay selects current rules.
+
+Panel sign-out only ends the browser session. Bale logout removes that account's
+local session and cancels unsent work. Deleting a connection also removes its local
+alias; retained audit/history data is **not** erased. Destructive dialogs identify
+the selected connection and Bale account. This is an administrative tool, not a
+chat inbox or operator permissions system. The [API reference](https://mimalef70.github.io/gobale/)
+remains the separate read-only reference.
+
+Language and theme are the only persistent browser preferences. Admin sessions
+expire after 30 minutes without requests or eight hours total, and server restart
+requires panel sign-in again. For remote access, configure an explicit HTTPS
+origin and TLS ingress as described in [Operations](docs/operations.md#administrative-panel).
+
 ### Build from source
 
 ```sh
 git clone https://github.com/mimalef70/gobale.git
-cd gobale/src
-go build -trimpath -o ../bin/gobale .
-cd ..
+cd gobale
+make build
 ./bin/gobale init --bale-web-client
 ./bin/gobale rest
 ```
 
 Use `./bin/gobale` wherever these examples say `gobale`. Without a C compiler,
-replace the build command with `CGO_ENABLED=0 go build -tags purego -trimpath -o ../bin/gobale .`.
+run `make ui-build` then `(cd src && CGO_ENABLED=0 go build -tags purego -trimpath -o ../bin/gobale .)`.
+Node is only needed to build the embedded assets. A manual Go build without valid
+assets refuses UI-enabled startup before opening storage. Set `APP_UI_ENABLED=false`
+for an intentional API-only build.
 
 ### Docker Compose
 
@@ -168,8 +203,18 @@ docker compose exec gobale /app/gobale login --device support
 ```
 
 The initializer writes files as your host user. Skip it if this directory is
-already initialized. Use `up -d --build` to build the checked-out source instead.
-`GOBALE_IMAGE` selects the image and is a Compose setting, not an API option.
+already initialized. `GOBALE_IMAGE` selects the image and is a Compose setting,
+not an API option.
+
+To build this revision with its embedded panel, use a separate local image tag:
+
+```sh
+GOBALE_IMAGE=gobale:local docker compose up -d --build
+```
+
+This uses the same configured volume; follow the backup/upgrade procedure in
+[Operations](docs/operations.md#backup-restore-and-upgrades) before replacing an
+existing deployment. It does not publish the image.
 
 Compose publishes only localhost. `APP_PORT` selects the host port; inside the
 container GoBale listens on `0.0.0.0:3000`. SQLite/media live in a persistent named
@@ -360,8 +405,11 @@ encoding, while preserving legitimate field whitespace and Unicode. Always use
 The complete request/response contract is [docs/openapi.yaml](docs/openapi.yaml).
 Use the [read-only API explorer](https://mimalef70.github.io/gobale/) to browse
 schemas; do not enter deployment credentials into a public documentation site.
-The table below covers all **175 registered method/path combinations**, grouped
+The table below lists the public API and browser-session endpoints, grouped
 by their OpenAPI tags. It is an endpoint inventory, not a live-verification score.
+The panel uses a finite set of management aliases under `/ui/api/`; these require
+the browser session and are not a second general-purpose API. Existing integrations
+should continue using the Basic-authenticated paths listed below.
 Typed provider mutations require `Idempotency-Key`; provider permissions still
 apply. Unsupported operations return an explicit error rather than simulated success.
 
@@ -373,12 +421,17 @@ apply. Unsupported operations return an explicit error rather than simulated suc
 | Service | Get Prometheus metrics | `GET` | `/metrics` |
 | Service | Run a typed operation | `POST` | `/operations/{operation}` |
 | Service | Check storage readiness | `GET` | `/ready` |
+| Service | Sign in to the administrative panel | `POST` | `/ui/auth/session` |
+| Service | Restore the administrative panel session | `GET` | `/ui/auth/session` |
+| Service | Sign out of the administrative panel | `DELETE` | `/ui/auth/session` |
 | Devices and login | List devices | `GET` | `/app/devices` |
 | Devices and login | Get account connection status | `GET` | `/app/status` |
 | Devices and login | List devices | `GET` | `/devices` |
 | Devices and login | Create a device | `POST` | `/devices` |
+| Devices and login | Read local status and delivery counts for all devices | `GET` | `/devices/overview` |
 | Devices and login | Delete a device | `DELETE` | `/devices/{device_id}` |
 | Devices and login | Get a device | `GET` | `/devices/{device_id}` |
+| Devices and login | Read the current login challenge metadata | `GET` | `/devices/{device_id}/login` |
 | Devices and login | Start phone login | `POST` | `/devices/{device_id}/login` |
 | Devices and login | Submit a login code | `POST` | `/devices/{device_id}/login/code` |
 | Devices and login | Submit a two-step password | `POST` | `/devices/{device_id}/login/password` |

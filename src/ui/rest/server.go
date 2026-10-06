@@ -23,10 +23,14 @@ import (
 	"github.com/mimalef70/gobale/src/domains"
 	"github.com/mimalef70/gobale/src/infrastructure/storage"
 	"github.com/mimalef70/gobale/src/pkg/utils"
+	"github.com/mimalef70/gobale/src/ui/web"
 	"github.com/mimalef70/gobale/src/usecase"
 )
 
 type Options struct {
+	UIEnabled                               bool
+	UIPublicOrigin                          string
+	UIAssets                                *web.Bundle
 	MediaSlots                              chan struct{}
 	BasicAuth, BasePath, Version, MediaRoot string
 	MaxMediaBytes                           int64
@@ -61,6 +65,11 @@ func New(service *usecase.Service, store *storage.Store, opts Options) (*Server,
 	s := &Server{service: service, store: store, opts: opts, mediaSlots: slots}
 	s.App = fiber.New(fiber.Config{AppName: "GoBale", BodyLimit: int(opts.MaxMediaBytes + 4096), StreamRequestBody: true, DisablePreParseMultipartForm: true, ReadTimeout: 60 * time.Second, WriteTimeout: 60 * time.Second, ErrorHandler: s.handleError})
 	r := s.App.Group(opts.BasePath)
+	if opts.UIEnabled {
+		if err := s.registerBrowserUI(r); err != nil {
+			return nil, err
+		}
+	}
 	r.Get("/health", func(c fiber.Ctx) error { return success(c, map[string]any{"status": "ok"}) })
 	expected := sha256.Sum256([]byte("Basic " + base64.StdEncoding.EncodeToString([]byte(opts.BasicAuth))))
 	r.Use(func(c fiber.Ctx) error {
@@ -75,13 +84,7 @@ func New(service *usecase.Service, store *storage.Store, opts Options) (*Server,
 		}
 		return c.Next()
 	})
-	r.Get("/ready", func(c fiber.Ctx) error {
-		if err := store.Ping(c.Context()); err != nil {
-			return domains.E("NOT_READY", "storage unavailable", 503)
-		}
-		return success(c, map[string]any{"status": "ready"})
-	})
-	r.Get("/app/info", s.info)
+	s.registerAdminRoutes(r)
 	r.Get("/app/capabilities", func(c fiber.Ctx) error { return success(c, domains.OperationDefinitions()) })
 	r.Post("/operations/:operation", func(c fiber.Ctx) error {
 		if _, ok := domains.OperationDefinition(c.Params("operation")); !ok {
@@ -89,30 +92,6 @@ func New(service *usecase.Service, store *storage.Store, opts Options) (*Server,
 		}
 		return s.provider(c.Params("operation"))(c)
 	})
-	r.Get("/devices", s.devices)
-	r.Get("/app/devices", s.devices)
-	r.Post("/devices", s.createDevice)
-	r.Get("/devices/:device_id", s.withPathDevice(func(c fiber.Ctx) error {
-		d, e := service.GetDevice(c.Context(), c.Params("device_id"))
-		return result(c, d, e)
-	}))
-	r.Delete("/devices/:device_id", s.withPathDevice(func(c fiber.Ctx) error {
-		return result(c, nil, service.DeleteDevice(c.Context(), c.Params("device_id")))
-	}))
-	r.Get("/devices/:device_id/status", s.withPathDevice(func(c fiber.Ctx) error {
-		v, e := service.Status(c.Context(), c.Params("device_id"))
-		return result(c, v, e)
-	}))
-	r.Post("/devices/:device_id/reconnect", s.withPathDevice(func(c fiber.Ctx) error { return result(c, nil, service.Reconnect(c.Context(), c.Params("device_id"))) }))
-	r.Post("/devices/:device_id/logout", s.withPathDevice(func(c fiber.Ctx) error { return result(c, nil, service.Logout(c.Context(), c.Params("device_id"))) }))
-	r.Post("/devices/:device_id/login", s.withPathDevice(s.login))
-	r.Post("/devices/:device_id/login/code", s.withPathDevice(s.code))
-	r.Post("/devices/:device_id/login/password", s.withPathDevice(s.password))
-	r.Get("/devices/:device_id/webhook", s.withPathDevice(func(c fiber.Ctx) error {
-		v, e := service.GetWebhook(c.Context(), c.Params("device_id"))
-		return result(c, v, e)
-	}))
-	r.Patch("/devices/:device_id/webhook", s.withPathDevice(s.patchWebhook))
 	r.Get("/app/status", s.status)
 	r.Get("/send/operations/:send_id", s.operation)
 	r.Get("/send/schedules", s.schedules)
@@ -124,10 +103,6 @@ func New(service *usecase.Service, store *storage.Store, opts Options) (*Server,
 	for _, kind := range []string{"message", "image", "file", "audio", "video", "voice"} {
 		r.Post("/send/"+kind, s.send(kind))
 	}
-	r.Get("/deliveries", s.deliveries)
-	r.Get("/deliveries/:delivery_id", s.delivery)
-	r.Post("/deliveries/:delivery_id/retry", s.retryDelivery)
-	r.Post("/deliveries/:delivery_id/replay", s.replayDelivery)
 	r.Get("/chats", s.chats)
 	r.Get("/chat/:chat_jid/messages", s.messages)
 	r.Get("/chat/:chat_jid/history", s.provider("chat.history"))
@@ -167,6 +142,50 @@ func New(service *usecase.Service, store *storage.Store, opts Options) (*Server,
 	r.Use(func(c fiber.Ctx) error { return domains.E("NOT_FOUND", "route not found", 404) })
 	return s, nil
 }
+
+// registerAdminRoutes is the finite browser allowlist, also served unchanged to
+// Basic API clients. Browser authentication never exposes sends or generic RPCs.
+func (s *Server) registerAdminRoutes(r fiber.Router) {
+	r.Get("/ready", func(c fiber.Ctx) error {
+		if err := s.store.Ping(c.Context()); err != nil {
+			return domains.E("NOT_READY", "storage unavailable", 503)
+		}
+		return success(c, map[string]any{"status": "ready"})
+	})
+	r.Get("/app/info", s.info)
+	r.Get("/devices", s.devices)
+	r.Get("/app/devices", s.devices)
+	r.Post("/devices", s.createDevice)
+	r.Get("/devices/overview", s.overview)
+	r.Get("/devices/:device_id/login", s.withPathDevice(s.loginState))
+	r.Get("/devices/:device_id", s.withPathDevice(func(c fiber.Ctx) error {
+		d, e := s.service.GetDevice(c.Context(), c.Params("device_id"))
+		return result(c, d, e)
+	}))
+	r.Delete("/devices/:device_id", s.withPathDevice(func(c fiber.Ctx) error {
+		return result(c, nil, s.service.DeleteDevice(c.Context(), c.Params("device_id")))
+	}))
+	r.Get("/devices/:device_id/status", s.withPathDevice(func(c fiber.Ctx) error {
+		v, e := s.service.Status(c.Context(), c.Params("device_id"))
+		return result(c, v, e)
+	}))
+	r.Post("/devices/:device_id/reconnect", s.withPathDevice(func(c fiber.Ctx) error {
+		return result(c, nil, s.service.Reconnect(c.Context(), c.Params("device_id")))
+	}))
+	r.Post("/devices/:device_id/logout", s.withPathDevice(func(c fiber.Ctx) error { return result(c, nil, s.service.Logout(c.Context(), c.Params("device_id"))) }))
+	r.Post("/devices/:device_id/login", s.withPathDevice(s.login))
+	r.Post("/devices/:device_id/login/code", s.withPathDevice(s.code))
+	r.Post("/devices/:device_id/login/password", s.withPathDevice(s.password))
+	r.Get("/devices/:device_id/webhook", s.withPathDevice(func(c fiber.Ctx) error {
+		v, e := s.service.WebhookDetails(c.Context(), c.Params("device_id"))
+		return result(c, v, e)
+	}))
+	r.Patch("/devices/:device_id/webhook", s.withPathDevice(s.patchWebhook))
+	r.Get("/deliveries", s.deliveries)
+	r.Get("/deliveries/:delivery_id", s.delivery)
+	r.Post("/deliveries/:delivery_id/retry", s.retryDelivery)
+	r.Post("/deliveries/:delivery_id/replay", s.replayDelivery)
+}
 func success(c fiber.Ctx, v any) error {
 	return c.JSON(utils.ResponseData{Code: "SUCCESS", Message: "Success", Results: v})
 }
@@ -179,6 +198,9 @@ func result(c fiber.Ctx, v any, e error) error {
 func (s *Server) handleError(c fiber.Ctx, err error) error {
 	var de *domains.Error
 	if errors.As(err, &de) {
+		if de.RetryAfterSeconds > 0 {
+			c.Set("Retry-After", strconv.FormatInt(de.RetryAfterSeconds, 10))
+		}
 		status := de.HTTP
 		if status < 400 || status > 599 {
 			status = 500
@@ -227,6 +249,13 @@ func (s *Server) bindDevice(c fiber.Ctx, id string) (domains.Device, error) {
 	if err != nil {
 		return domains.Device{}, err
 	}
+	instance := c.Get("X-Device-Instance")
+	if instance == "" && c.Locals("gobale.browser") == true {
+		return domains.Device{}, domains.E("DEVICE_INSTANCE_REQUIRED", "refresh the device list before continuing", 400)
+	}
+	if instance != "" && instance != d.InstanceToken() {
+		return domains.Device{}, domains.E("DEVICE_INSTANCE_CHANGED", "the selected device has been replaced; refresh the device list", 409)
+	}
 	ctx, err := s.service.BindDevice(c.Context(), d)
 	if err != nil {
 		return domains.Device{}, err
@@ -255,6 +284,14 @@ func page(c fiber.Ctx) (int, int) {
 		offset = 0
 	}
 	return limit, offset
+}
+func (s *Server) overview(c fiber.Ctx) error {
+	v, e := s.service.DevicesOverview(c.Context())
+	return result(c, v, e)
+}
+func (s *Server) loginState(c fiber.Ctx) error {
+	v, e := s.service.LoginState(c.Context(), c.Params("device_id"))
+	return result(c, v, e)
 }
 func (s *Server) devices(c fiber.Ctx) error {
 	v, e := s.service.ListDevices(c.Context())
@@ -450,7 +487,15 @@ func (s *Server) deliveries(c fiber.Ctx) error {
 		return e
 	}
 	l, o := page(c)
-	v, e := s.service.ListDeliveries(c.Context(), d.ID, l, o)
+	includePayload := true
+	if raw := c.Query("include_payload"); raw != "" {
+		var err error
+		includePayload, err = strconv.ParseBool(raw)
+		if err != nil {
+			return domains.E("INVALID_REQUEST", "include_payload must be a boolean", 400)
+		}
+	}
+	v, e := s.service.ListDeliveriesFiltered(c.Context(), d.ID, l, o, c.Query("state"), includePayload)
 	return result(c, v, e)
 }
 func (s *Server) delivery(c fiber.Ctx) error {

@@ -25,6 +25,7 @@ func (s *Store) scanDevice(row scanner) (d domains.Device, err error) {
 	if err != nil {
 		return d, dbError(err)
 	}
+	d.InstanceID = d.InstanceToken()
 	d.CreatedAt = stamp(created)
 	if err = json.Unmarshal([]byte(events), &d.Webhook.Events); err != nil {
 		return d, err
@@ -41,6 +42,7 @@ func (s *Store) CreateDevice(ctx context.Context, id string) (domains.Device, er
 		return domains.Device{}, domains.E("INVALID_DEVICE_ID", "device id must contain 1-64 letters, digits, dots, underscores or hyphens", 400)
 	}
 	d := domains.Device{ID: id, ConnectionID: newID(), CreatedAt: stamp(now()), Webhook: domains.WebhookConfig{Revision: 1, Events: []string{}}}
+	d.InstanceID = d.InstanceToken()
 	tx, e := s.db.BeginTx(ctx, nil)
 	if e != nil {
 		return d, e

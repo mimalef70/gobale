@@ -35,3 +35,21 @@ func TestLocalWebhookWithSecret(t *testing.T) {
 	_, e = Load(v)
 	require.Error(t, e)
 }
+
+func TestAdministrativeUIConfiguration(t *testing.T) {
+	v := configFixture()
+	s, err := Load(v)
+	require.NoError(t, err)
+	require.True(t, s.UIEnabled)
+	v.Set("ui-enabled", false)
+	v.Set("ui-public-origin", "https://gateway.example.test:8443")
+	s, err = Load(v)
+	require.NoError(t, err)
+	require.False(t, s.UIEnabled)
+	require.Equal(t, "https://gateway.example.test:8443", s.UIPublicOrigin)
+	for _, origin := range []string{"http://example.test", "https://example.test/ui", "https://user:pass@example.test", "https://example.test?q=1", "https://example.test#fragment", "https://"} {
+		v.Set("ui-public-origin", origin)
+		_, err = Load(v)
+		require.Error(t, err, origin)
+	}
+}

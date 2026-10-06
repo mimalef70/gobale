@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/mimalef70/gobale/src/domains"
@@ -368,11 +369,30 @@ func (s *Store) GetDelivery(ctx context.Context, conn, id string) (domains.Deliv
 	return s.scanDelivery(s.db.QueryRowContext(ctx, `SELECT `+deliveryColumns+` FROM deliveries l JOIN devices d ON d.connection_id=l.connection_id WHERE l.connection_id=? AND l.id=? AND d.deleted_at IS NULL`, conn, id))
 }
 func (s *Store) ListDeliveries(ctx context.Context, conn string, limit, offset int) ([]domains.Delivery, error) {
+	return s.ListDeliveriesFiltered(ctx, conn, limit, offset, "", true)
+}
+
+func (s *Store) ListDeliveriesFiltered(ctx context.Context, conn string, limit, offset int, state string, includePayload bool) ([]domains.Delivery, error) {
+	if !validDeliveryState(state) {
+		return nil, domains.E("INVALID_DELIVERY_STATE", "unknown delivery state", 400)
+	}
 	if e := s.active(ctx, conn); e != nil {
 		return nil, e
 	}
 	limit, offset = page(limit, offset)
-	rows, e := s.db.QueryContext(ctx, `SELECT `+deliveryColumns+` FROM deliveries l JOIN devices d ON d.connection_id=l.connection_id WHERE l.connection_id=? ORDER BY l.created_at DESC,l.id LIMIT ? OFFSET ?`, conn, limit, offset)
+	columns := deliveryColumns
+	if !includePayload {
+		columns = strings.Replace(columns, "l.body,", "'null',", 1)
+	}
+	query := `SELECT ` + columns + ` FROM deliveries l JOIN devices d ON d.connection_id=l.connection_id WHERE l.connection_id=? AND d.deleted_at IS NULL`
+	args := []any{conn}
+	if state != "" {
+		query += ` AND l.state=?`
+		args = append(args, state)
+	}
+	query += ` ORDER BY l.created_at DESC,l.id LIMIT ? OFFSET ?`
+	args = append(args, limit, offset)
+	rows, e := s.db.QueryContext(ctx, query, args...)
 	if e != nil {
 		return nil, e
 	}

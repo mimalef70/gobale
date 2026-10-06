@@ -1,11 +1,20 @@
 .DEFAULT_GOAL := help
-.PHONY: help build test race purego vet fmt fmt-check contracts vuln fuzz check docker-smoke
+.PHONY: help build test race purego vet fmt fmt-check contracts vuln fuzz check docker-smoke ui-build ui-check ui-e2e
 
 help: ## Show development commands.
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-build: ## Build bin/gobale with the installed Go toolchain.
+build: ui-build ## Build the embedded UI and bin/gobale.
 	cd src && go build -trimpath -o ../bin/gobale .
+
+ui-build: ## Build and verify version-coupled embedded browser assets.
+	python3 scripts/build_ui.py
+
+ui-check: ## Typecheck, lint and unit-test the administrative UI.
+	cd ui && npm ci --no-fund && npm run typecheck && npm run lint && npm test
+
+ui-e2e: ui-build ## Test browser workflows using isolated fake accounts.
+	cd ui && npm run e2e
 
 test: ## Run tests with fake clients and temporary databases.
 	cd src && go test ./...

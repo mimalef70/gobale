@@ -63,3 +63,12 @@ __pycache__/
 # Public release staging and local site previews
 /dist/
 /site/
+
+# Administrative frontend dependencies and generated assets
+ui/node_modules/
+ui/test-results/
+ui/playwright-report/
+ui/coverage/
+ui/*.tsbuildinfo
+src/ui/web/dist/*
+!src/ui/web/dist/.placeholder

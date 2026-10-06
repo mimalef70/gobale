@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Generate the checked-in OpenAPI route inventory; no runtime dependency."""
-import argparse,json,re,sys
+import argparse,copy,hashlib,json,re,sys
 import yaml
 from pathlib import Path
 root=Path(__file__).resolve().parents[1]
@@ -20,6 +20,7 @@ for kind in ['message','image','file','audio','video','voice']:routes.add(('POST
 for action in ['pause','resume','cancel']:routes.add(('POST','/send/schedules/:schedule_id/'+action))
 for m,p,_ in re.findall(r'\{"(GET|POST|PUT|PATCH|DELETE)",\s*"([^"]+)",\s*"([^"]+)"\}',source):routes.add((m,p))
 routes.update(extension_routes)
+routes.update((method,'/ui/auth/session') for method in ['GET','POST','DELETE'])
 peer={'type':'object','required':['type','id'],'properties':{'type':{'type':'string','enum':['user','group','channel']},'id':{'type':'string','pattern':'^[0-9]+$'}}}
 schedule_properties={
  'scheduled_at':{'type':'string','format':'date-time'},
@@ -101,12 +102,20 @@ json_object={'type':'object','additionalProperties':True}
 schemas['Envelope']=obj({'code':text,'message':text},['code','message'],'Common response fields. Results are omitted for empty responses and ordinary errors.')
 schemas['EventPeer']=obj({'type':{'type':'string','enum':['user','group','channel','']},'id':{'type':'string','pattern':'^[0-9]*$'}},['type','id'],'Connection-level events and group-creation requests can have empty type/id; message peers are populated.')
 schemas['WebhookConfig']=obj({'webhook_url':text,'webhook_events':array(text),'revision':{'type':'integer','format':'int64','minimum':1}},['webhook_url','webhook_events','revision'],'The secret is never returned. An empty URL selects global fallback routing.')
-schemas['Device']=obj({'id':alias,'account_id':decimal_id,'created_at':date_time,'webhook':ref('WebhookConfig')},['id','created_at','webhook'])
+schemas['Device']=obj({'id':alias,'instance_id':{'type':'string','description':'Opaque immutable connection instance. Send X-Device-Instance to reject a deleted/recreated alias.'},'account_id':decimal_id,'created_at':date_time,'webhook':ref('WebhookConfig')},['id','instance_id','created_at','webhook'])
 schemas['ConnectionStatus']=obj({
  'auth':{'type':'string','enum':['unauthenticated','awaiting_code','awaiting_password','authenticated','auth_required']},
  'transport':{'type':'string','enum':['disconnected','connecting','handshaking','connected']},
  'recovery':{'type':'string','enum':['degraded','recovering','current','gap_detected']},
  'last_error':text},['auth','transport','recovery'],'Transport connected does not imply recovery is current.')
+schemas['DeliveryCounts']=obj({'pending':count,'failed':count,'paused':count},['pending','failed','paused'])
+schemas['DeviceOverview']={'allOf':[ref('Device'),obj({'status':ref('ConnectionStatus'),'deliveries':ref('DeliveryCounts')},['status','deliveries'])]}
+schemas['DevicesOverview']=obj({'server_time':date_time,'devices':array('DeviceOverview')},['server_time','devices'],'Local database/client snapshots only; no provider RPC or implicit reconnect.')
+schemas['PublicChallenge']=obj({'challenge_id':text,'expires_at':date_time,'resend_available_at':date_time,'sent_code_type':{'type':'integer'},'next_send_code_type':{'type':'integer'},'available_send_code_types':array({'type':'integer'}),'masked_phone':text},['challenge_id','expires_at','resend_available_at','masked_phone'])
+schemas['LoginState']=obj({'state':text,'challenge':{'allOf':[ref('PublicChallenge')],'nullable':True},'server_time':date_time},['state','challenge','server_time'],'Pending challenge metadata only; cleared on expiry, authentication, logout or server restart. No OTP/password/provider transaction hash is returned.')
+schemas['WebhookRoutingRule']=obj({'source':{'type':'string','enum':['device','global']},'url':text,'events':array(text),'secret_configured':{'type':'boolean'}},['source','url','events','secret_configured'])
+schemas['WebhookDetails']={'allOf':[ref('WebhookConfig'),obj({'secret_configured':{'type':'boolean'},'routing_mode':{'type':'string','enum':['none','device','global','merged']},'routing_rules':array('WebhookRoutingRule')},['secret_configured','routing_mode','routing_rules'])]}
+schemas['BrowserSession']=obj({'csrf_token':text,'expires_at':date_time,'absolute_expires_at':date_time},['csrf_token','expires_at','absolute_expires_at'],'In-memory administrative browser session; restart invalidates it without logging out Bale accounts. Send the CSRF token on browser mutations.')
 schemas['LoginChallenge']=obj({'challenge_id':text,'state':{'type':'string','enum':['awaiting_code']},'expires_at':date_time,'sent_code_type':{'type':'integer'},'next_send_code_type':{'type':'integer'},'resend_after_seconds':{'type':'integer','minimum':0},'available_send_code_types':array({'type':'integer'})},['challenge_id','state'])
 stored_properties={**send['properties'],'peer':ref('EventPeer'),'kind':{'type':'string','enum':['text','image','file','audio','video','voice','operation']},'request_id':{**decimal_id,'readOnly':True,'description':'Gateway-assigned persistent wire request ID.'},'operation':text,'payload':{**json_object,'description':'Normalized mutation arguments. Present only for kind=operation.'}}
 schemas['StoredRequest']=obj(stored_properties,['peer'],'Persisted request snapshot, including the gateway-assigned request_id. Mutation arguments are in payload.')
@@ -116,7 +125,7 @@ schemas['Operation']=obj({'send_id':{'type':'string','format':'uuid'},'device_id
 schemas['Schedule']=obj({'id':{'type':'string','format':'uuid'},'device_id':alias,'request':ref('StoredRequest'),'status':{'type':'string','enum':['active','paused','cancelled','completed','failed']},'next_run_at':date_time,'occurrence_count':count,'created_at':date_time},['id','device_id','request','status','next_run_at','occurrence_count','created_at'])
 schemas['MessagePayload']=obj({'kind':{'type':'string','enum':['text','document','contact','location','template','template_response','service','sticker','gift','gold_gift','poll','empty','forward','unsupported']},'message':text,'file_id':signed_id,'size':count,'name':text,'mime_type':text,'caption':text,'media_type':{'type':'string','enum':['image','video','voice','audio','animation']},'duration':{'type':'integer','minimum':0,'description':'Provider media duration when available. Native voice duration is in milliseconds; do not assume all media variants use the same unit.'},'download_supported':{'type':'boolean'}},['kind'],'Normalized bounded content. Optional quote, content, keyboard, service actions and poll results are described in the [webhook payload guide](https://github.com/mimalef70/gobale/blob/main/docs/webhook-payload.md). Access hashes and raw opaque protocol data are never exposed.')
 schemas['Event']=obj({'event_id':text,'event':{'type':'string','description':'Examples: message, message.edited, message.deleted, message.accepted, connection.recovery, protocol.unsupported_update.'},'device_id':{'type':'string','description':'Bale account ID; unlike Operation.device_id, this is not the local alias.'},'session_id':alias,'peer':ref('EventPeer'),'message_id':signed_id,'sender_id':decimal_id,'direction':{'type':'string','enum':['incoming','outgoing','unknown']},'timestamp':date_time,'payload':{**json_object,'description':'Event-specific normalized JSON. Message events use MessagePayload; other event types have their own small metadata objects.'}},['event_id','event','device_id','session_id','peer','timestamp','payload'])
-schemas['Delivery']=obj({'delivery_id':{'type':'string','format':'uuid'},'event_id':text,'device_id':alias,'url':{'type':'string','format':'uri'},'revision':{'type':'integer','format':'int64'},'payload':ref('Event'),'state':{'type':'string','enum':['queued','delivering','retry','delivered','failed','paused','cancelled']},'attempts':count,'next_attempt_at':date_time,'last_error':text,'created_at':date_time},['delivery_id','event_id','device_id','url','revision','payload','state','attempts','next_attempt_at','created_at'],'The signing secret is never returned. Retry creates a new delivery ledger at the original queue position; replay appends new deliveries using current routing. Event identity remains stable.')
+schemas['Delivery']=obj({'delivery_id':{'type':'string','format':'uuid'},'event_id':text,'device_id':alias,'url':{'type':'string','format':'uri'},'revision':{'type':'integer','format':'int64'},'payload':{'type':'object','nullable':True,'allOf':[ref('Event')],'description':'Null only when list include_payload=false; detail includes the full event.'},'state':{'type':'string','enum':['queued','delivering','retry','delivered','failed','paused','cancelled']},'attempts':count,'next_attempt_at':date_time,'last_error':text,'created_at':date_time},['delivery_id','event_id','device_id','url','revision','payload','state','attempts','next_attempt_at','created_at'],'The signing secret is never returned. Retry creates a new delivery ledger at the original queue position; replay appends new deliveries using current routing. Event identity remains stable.')
 schemas['LocalChat']=obj({'peer':ref('Peer'),'last_event':ref('Event'),'count':count},['peer','last_event','count'],'Local persisted event aggregate; count is the number of stored events for the peer.')
 schemas['RemoteChat']=obj({'peer':ref('Peer'),'unread_count':count,'date':date_time,'message_id':signed_id,'payload':ref('MessagePayload')},['peer','unread_count','date','payload'])
 schemas['RemoteChats']=obj({'chats':array('RemoteChat'),'next_date':timestamp},['chats'],'Use next_date as the next remote date cursor; absent when the returned page is shorter than limit.')
@@ -137,7 +146,7 @@ schemas['Health']=obj({'status':{'type':'string','enum':['ok']}},['status'])
 schemas['Ready']=obj({'status':{'type':'string','enum':['ready']}},['status'])
 for name,item in {'DeviceList':'Device','ScheduleList':'Schedule','EventList':'Event','DeliveryList':'Delivery','LocalChatList':'LocalChat'}.items():
  schemas[name]=array(item)
-for name in ['Device','DeviceList','ConnectionStatus','LoginChallenge','WebhookConfig','Operation','Schedule','ScheduleList','EventList','Delivery','DeliveryList','LocalChatList','RemoteChats','HistoryPage','Media','Contacts','GroupList','GroupMembers','GroupInfo','InviteLink','AccountInfo','AppInfo','Health','Ready']:
+for name in ['DevicesOverview','LoginState','WebhookDetails','BrowserSession','Device','DeviceList','ConnectionStatus','LoginChallenge','WebhookConfig','Operation','Schedule','ScheduleList','EventList','Delivery','DeliveryList','LocalChatList','RemoteChats','HistoryPage','Media','Contacts','GroupList','GroupMembers','GroupInfo','InviteLink','AccountInfo','AppInfo','Health','Ready']:
  schemas[name+'Response']=obj({'code':text,'message':text,'results':ref(name)},['code','message','results'])
 schemas['EmptyResponse']={**obj({'code':text,'message':text},['code','message']),'additionalProperties':False}
 schemas['ErrorResponse']={**obj({'code':text,'message':text},['code','message']),'additionalProperties':False}
@@ -147,10 +156,12 @@ def response(name, description='Success'):
  return {'description':description,'content':{'application/json':{'schema':ref(name)}}}
 
 success_models={
+ ('GET','/devices/overview'):'DevicesOverviewResponse',('GET','/devices/{device_id}/login'):'LoginStateResponse',
+ ('GET','/ui/auth/session'):'BrowserSessionResponse',('POST','/ui/auth/session'):'BrowserSessionResponse',('DELETE','/ui/auth/session'):'EmptyResponse',
  ('GET','/health'):'HealthResponse',('GET','/ready'):'ReadyResponse',('GET','/app/info'):'AppInfoResponse',
  ('GET','/devices'):'DeviceListResponse',('GET','/app/devices'):'DeviceListResponse',('POST','/devices'):'DeviceResponse',('GET','/devices/{device_id}'):'DeviceResponse',('DELETE','/devices/{device_id}'):'EmptyResponse',
  ('GET','/devices/{device_id}/status'):'ConnectionStatusResponse',('GET','/app/status'):'ConnectionStatusResponse',('POST','/devices/{device_id}/login'):'LoginChallengeResponse',('POST','/devices/{device_id}/login/code'):'ConnectionStatusResponse',('POST','/devices/{device_id}/login/password'):'ConnectionStatusResponse',('POST','/devices/{device_id}/reconnect'):'EmptyResponse',('POST','/devices/{device_id}/logout'):'EmptyResponse',
- ('GET','/devices/{device_id}/webhook'):'WebhookConfigResponse',('PATCH','/devices/{device_id}/webhook'):'WebhookConfigResponse',
+ ('GET','/devices/{device_id}/webhook'):'WebhookDetailsResponse',('PATCH','/devices/{device_id}/webhook'):'WebhookConfigResponse',
  ('GET','/send/operations/{send_id}'):'OperationResponse',('GET','/send/schedules'):'ScheduleListResponse',('POST','/send/schedules'):'ScheduleResponse',('GET','/send/schedules/{schedule_id}'):'ScheduleResponse',
  ('GET','/deliveries'):'DeliveryListResponse',('GET','/deliveries/{delivery_id}'):'DeliveryResponse',('POST','/deliveries/{delivery_id}/retry'):'EmptyResponse',('POST','/deliveries/{delivery_id}/replay'):'DeliveryListResponse',
  ('GET','/chats'):'ChatsResponse',('GET','/chat/{chat_jid}/messages'):'EventListResponse',('GET','/chat/{chat_jid}/history'):'HistoryPageResponse',('POST','/media'):'MediaResponse',('POST','/media/fetch'):'MediaResponse',
@@ -178,11 +189,20 @@ for method,p in sorted(routes):
  for parameter in op['parameters']:
   if parameter['name']=='message_id':parameter['schema']={'type':'string','pattern':'^-?[0-9]+$','description':'Nonzero signed int64 message ID. Preserve its sign and decimal string representation.'}
   if parameter['name']=='chat_jid':parameter['schema']={'type':'string','pattern':'^(user|group|channel):[0-9]+$','description':'Scoped type:id peer key. Provider access references are resolved inside the selected account.'}
- if not path.startswith('/devices') and path not in ['/health','/ready','/app/info','/app/devices','/metrics']:
+ if not path.startswith(('/devices','/ui/')) and path not in ['/health','/ready','/app/info','/app/devices','/metrics']:
   op['parameters'] += [{'name':'X-Device-Id','in':'header','schema':{'type':'string'},'description':'Device alias. Header takes precedence over device_id query; explicit invalid aliases never fall back. The request stays bound to the selected immutable connection; deletion never redirects it to a reused alias.'},{'name':'device_id','in':'query','schema':{'type':'string'}}]
- if method=='GET' and (path in ['/chats','/deliveries','/send/schedules'] or path.endswith('/messages')):
+ if ('{device_id}' in path or any(p['name']=='X-Device-Id' for p in op['parameters'])) and not path.startswith('/ui/'):
+  op['parameters'].append({'name':'X-Device-Instance','in':'header','schema':{'type':'string'},'description':'Optional for Basic API clients, required by the embedded browser API. Must match the selected device instance_id; mismatch is 409 DEVICE_INSTANCE_CHANGED before any provider call.'})
+ if path=='/ui/auth/session':
+  op['security']=[] if method=='POST' else [{'browserSession':[]}]
+  op['parameters']=[{'name':'Origin','in':'header','required':method in ['POST','DELETE'],'schema':{'type':'string'},'description':'Exact permitted browser origin; cross-origin requests are rejected.'}]
+  if method=='DELETE':op['parameters'].append({'name':'X-CSRF-Token','in':'header','required':True,'schema':{'type':'string'}})
+ if method=='GET' and (path in ['/chats' ,'/deliveries','/send/schedules'] or path.endswith('/messages')):
   op['parameters'] += [{'name':'limit','in':'query','schema':{'type':'integer','minimum':1,'maximum':100,'default':50}},{'name':'offset','in':'query','schema':{'type':'integer','minimum':0,'default':0}}]
+ if method=='GET' and path=='/deliveries':
+  op['parameters'] += [{'name':'state','in':'query','schema':{'type':'string','enum':['queued','delivering','retry','delivered','failed','paused','cancelled']}},{'name':'include_payload','in':'query','schema':{'type':'boolean','default':True},'description':'False excludes payload content from list rows. The detail endpoint still returns the full event.'}]
  schema=None
+ if method=='POST' and path=='/ui/auth/session':schema={'type':'object','additionalProperties':False,'required':['username','password'],'properties':{'username':text,'password':{'type':'string','writeOnly':True}}}
  if method=='POST' and path in ['/send/'+x for x in ['message','image','file','audio','video','voice']]:
   schema={'allOf':[{'$ref':'#/components/schemas/SendRequest'},{'required':['message'],'properties':{'message':{'minLength':1}}}]}
   if path!='/send/message':schema={'allOf':[{'$ref':'#/components/schemas/SendRequest'},{'required':['media_id']}],'description':'Use media_id from POST /media. Provider format support is capability-gated.'}
@@ -304,6 +324,11 @@ for method,p in sorted(routes):
    body['headers']={'Cache-Control':{'schema':{'type':'string','enum':['no-store']},'description':'Authenticated responses must not be cached; some native results contain short-lived Mini App launch credentials.'},'X-Content-Type-Options':{'schema':{'type':'string','enum':['nosniff']}}}
  paths.setdefault(path,{})[method.lower()]=op
 core_summaries={
+ ('GET','/devices/overview'):'Get local device and delivery status snapshots',
+ ('GET','/devices/{device_id}/login'):'Resume pending login metadata',
+ ('GET','/ui/auth/session'):'Read the administrative browser session',
+ ('POST','/ui/auth/session'):'Create an administrative browser session',
+ ('DELETE','/ui/auth/session'):'Log out the administrative browser session',
  ('GET','/health'):'Check service liveness',
  ('GET','/ready'):'Check storage readiness',
  ('GET','/metrics'):'Get Prometheus metrics',
@@ -542,7 +567,7 @@ tag_notes={
  'Reports': '''Reports are explicit journaled mutations, not local filtering. Kinds: 1 scam, 2 inappropriate content, 3 other, 4 violence, 5 spam, 6 false information. Message targets require original IDs and timestamps. Story reports accept 1–100 distinct opaque IDs (up to 512 UTF-8 bytes each, without control characters) and a description of up to 1024 Unicode characters. Reports remain subject to provider rules; an unknown acknowledgment is not blindly retried.''',
  'Wallet information': '''Read-only sanitized balances: no payment, transfer, charge, claim or withdrawal. Payment tokens, card/account numbers, authenticated wallet links and personal first/last names are omitted. Amounts are signed int64 decimal strings. Modern currency 0 means rial and 1 score; unknown nonnegative currency values are preserved. No unit is inferred for legacy kifpool balances. Output is bounded to 100 wallets and 16 balances per wallet.''',
  'Webhooks': '''Events persist before recovery checkpoints, and each selected destination has its own durable delivery. Delivery is at-least-once: deduplicate event_id and return success only after accepting the event. session_id is the local device alias; device_id is the Bale account ID. Configure an override per device or inherit global destinations. A URL change cancels unstarted deliveries to the previous configuration; explicit replay selects the new destination. A secret-only change for the same URL applies on the next attempt. Secrets are write-only. See the [webhook payload guide](https://github.com/mimalef70/gobale/blob/main/docs/webhook-payload.md) for HMAC verification, event examples and receipt semantics.''',
- 'Service': '''Administrative Basic authentication grants access to every configured account; tenant authorization belongs in the consuming application. Only /health is unauthenticated. /ready measures service readiness, not successful recovery for every account. /app/capabilities lists extension contracts only; core login, device, text/media, history and webhook routes are documented separately. Named /operations calls are a whitelist with typed input, never an arbitrary provider RPC proxy. Check per-operation verification and the README release status before relying on a feature.''',
+ 'Service': '''Administrative Basic authentication grants access to every configured account; tenant authorization belongs in the consuming application. Only /health in the Basic API is unauthenticated. The optional embedded UI has a public static shell and separate browser session login. /ready measures service readiness, not successful recovery for every account. /app/capabilities lists extension contracts only; core login, device, text/media, history and webhook routes are documented separately. Named /operations calls are a whitelist with typed input, never an arbitrary provider RPC proxy. Check per-operation verification and the README release status before relying on a feature.''',
 }
 operation_notes={
  'group.permissions.set': 'A patch requires at least one explicit boolean. Empty, null and unknown permissions are rejected; replace requires all 20 fields, including false values. Concurrent external client changes cannot be protected by a provider compare-and-swap.',
@@ -577,7 +602,49 @@ for path,operations in paths.items():
   if operation.get('x-gobale-operation')=='group.default_permissions.set':
    operation['requestBody']['content']['application/json']['example']={'peer':{'type':'group','id':'77'},'mode':'patch','permissions':{'invite_user':True}}
 
-spec={'openapi':'3.0.3','info':{'title':'GoBale REST API','version':'0.2.0-alpha.1','description':'Native Go, multi-account Bale gateway. Alpha release; see the README release status and per-operation verification for tested provider coverage. Administrative auth grants access to every device; tenant ownership belongs in the consuming application.','contact':{'name':'GoBale maintainers','url':'https://github.com/mimalef70/gobale/issues'},'license':{'name':'MIT','url':'https://github.com/mimalef70/gobale/blob/main/LICENCE.txt'}},'externalDocs':{'description':'Guides and verified capabilities','url':'https://github.com/mimalef70/gobale/blob/main/readme.md#connect-your-application'},'tags':[{'name':name,**({'description':tag_notes[name]} if name in tag_notes else {})} for name in sorted({tag for operations in paths.values() for operation in operations.values() for tag in operation['tags']})],'servers':[{'url':'http://127.0.0.1:3000','description':'Local development; configure APP_BASE_PATH when used.'}],'paths':paths,'components':{'securitySchemes':{'basicAuth':{'type':'http','scheme':'basic'}},'schemas':schemas}}
+
+# Mirror only the finite administrative router into its browser namespace. Copy
+# the completed Basic operation so request/response contracts cannot drift, but
+# never inherit Basic authentication or expose sends/native operations to cookies.
+admin_function=re.search(r'func \(s \*Server\) registerAdminRoutes\(r fiber.Router\) \{(.*?)\n\}',source,re.S)
+if not admin_function:raise RuntimeError('Administrative route registry not found')
+admin_routes=set((method.upper(),re.sub(r':([a-z_]+)',r'{\1}',path)) for method,path in re.findall(r'r\.(Get|Post|Put|Patch|Delete)\("([^"\n]+)"',admin_function.group(1)))
+if not admin_routes:raise RuntimeError('Administrative route registry is empty')
+tag_notes['Browser administration']='The embedded panel uses this finite administrative API with the gobale_admin HttpOnly cookie. Basic credentials are not accepted here, and this cookie cannot authenticate ordinary Basic API routes. Every mutation requires an exact permitted Origin and X-CSRF-Token from the browser session response. Account-scoped reads and writes also require X-Device-Instance matching the selected immutable connection. Missing instance is 400 DEVICE_INSTANCE_REQUIRED; replacement is 409 DEVICE_INSTANCE_CHANGED before any provider call. UI_UNAUTHORIZED means the browser session is missing or expired. An account-level AUTH_REQUIRED may also use HTTP 401 without invalidating the administrative session; reauthenticate that Bale account only. No sends, generic operations, media or conversation endpoints are exposed in this namespace. All routes use APP_BASE_PATH when configured.'
+for method,path in sorted(admin_routes):
+ source_operation=paths.get(path,{}).get(method.lower())
+ if source_operation is None:raise RuntimeError('Missing Basic contract for administrative route: '+method+' '+path)
+ operation=copy.deepcopy(source_operation)
+ operation['operationId']='ui_'+source_operation['operationId']
+ operation['tags']=['Browser administration']
+ operation['security']=[{'browserSession':[]}]
+ operation['description']=('Browser-session version of '+method+' '+path+'. Basic authentication is not accepted. '+operation.get('description','')).strip()
+ mutation=method not in ['GET','HEAD','OPTIONS']
+ operation['parameters'].append({'name':'Origin','in':'header','required':mutation,'schema':{'type':'string'},'description':'Exact permitted browser origin. Required for mutations; cross-origin values are rejected for every request.'})
+ if mutation:operation['parameters'].append({'name':'X-CSRF-Token','in':'header','required':True,'schema':{'type':'string'},'description':'Use csrf_token from the current /ui/auth/session response. Never put it in a URL.'})
+ scoped=False
+ for parameter in operation['parameters']:
+  if parameter['name']=='X-Device-Instance' and parameter['in']=='header':
+   parameter['required']=True
+   parameter['description']='Required immutable instance_id from the selected device. Missing is 400 DEVICE_INSTANCE_REQUIRED; a deleted/recreated alias is 409 DEVICE_INSTANCE_CHANGED before any provider call.'
+   scoped=True
+ if ('{device_id}' in path or path.startswith('/deliveries')) and not scoped:raise RuntimeError('Administrative account route lacks instance guard contract: '+method+' '+path)
+ operation['responses']['401']['description']='UI_UNAUTHORIZED: administrative browser cookie is absent or expired. AUTH_REQUIRED: only the selected Bale account needs authentication; this provider error does not invalidate the browser session.'
+ operation['responses']['403']=copy.deepcopy(operation['responses']['400'])
+ operation['responses']['403']['description']='UI_ORIGIN_REJECTED or UI_CSRF_REJECTED: exact permitted origin and, for mutations, current CSRF token are required. A provider may also reject an account operation.'
+ if scoped:
+  operation['responses']['400']['description']+='; DEVICE_INSTANCE_REQUIRED when the browser omits the selected instance.'
+  operation['responses']['409']['description']+='; DEVICE_INSTANCE_CHANGED when the selected alias now refers to a different immutable connection.'
+ if method=='POST' and path.endswith('/login'):
+  operation['responses']['429']['description']='AUTH_RESEND_TOO_SOON: wait for Retry-After before explicitly requesting another code. Provider authentication limits may also return 429.'
+  operation['responses']['429'].setdefault('headers',{})['Retry-After']={'schema':{'type':'integer','minimum':1},'description':'Remaining local resend cooldown in seconds, when supplied.'}
+ paths.setdefault('/ui/api'+path,{})[method.lower()]=operation
+for method,operation in paths['/ui/auth/session'].items():
+ operation['responses']['401']['description']='UI_UNAUTHORIZED: invalid administrative credentials on POST, or missing/expired browser session on GET and DELETE. This is distinct from a Bale account AUTH_REQUIRED response.'
+operation_ids=[operation['operationId'] for operations in paths.values() for operation in operations.values()]
+if len(operation_ids)!=len(set(operation_ids)):raise RuntimeError('Duplicate OpenAPI operationId')
+
+spec={'openapi':'3.0.3','info':{'title':'GoBale REST API','version':'0.2.0-alpha.1','description':'Native Go, multi-account Bale gateway. Alpha release; see the README release status and per-operation verification for tested provider coverage. Administrative auth grants access to every device; tenant ownership belongs in the consuming application.','contact':{'name':'GoBale maintainers','url':'https://github.com/mimalef70/gobale/issues'},'license':{'name':'MIT','url':'https://github.com/mimalef70/gobale/blob/main/LICENCE.txt'}},'externalDocs':{'description':'Guides and verified capabilities','url':'https://github.com/mimalef70/gobale/blob/main/readme.md#connect-your-application'},'tags':[{'name':name,**({'description':tag_notes[name]} if name in tag_notes else {})} for name in sorted({tag for operations in paths.values() for operation in operations.values() for tag in operation['tags']})],'servers':[{'url':'http://127.0.0.1:3000','description':'Local development; configure APP_BASE_PATH when used.'}],'paths':paths,'components':{'securitySchemes':{'basicAuth':{'type':'http','scheme':'basic'},'browserSession':{'type':'apiKey','in':'cookie','name':'gobale_admin','description':'HttpOnly browser session restricted to the UI path. Browser mutations also require CSRF and exact origin checks; this cookie does not authenticate the Basic API.'}},'schemas':schemas}}
 def check_refs(value):
  if isinstance(value,dict):
   if '$ref' in value:
@@ -608,8 +675,13 @@ if args.check and args.stdout:parser.error('--check and --stdout are mutually ex
 if args.format=='json' and not args.stdout:parser.error('--format json requires --stdout; only YAML is tracked')
 data=(json.dumps(spec,ensure_ascii=False,indent=2)+'\n' if args.format=='json' else yaml.dump(spec,Dumper=SpecDumper,sort_keys=False,allow_unicode=True,width=110))
 target=root/'docs/openapi.yaml'
+contract_target=root/'src/config/contract.go'
+contract='// Code generated by scripts/generate_openapi.py; DO NOT EDIT.\npackage config\n\nconst ContractSHA256 = "'+hashlib.sha256(data.encode()).hexdigest()+'"\n'
 if args.stdout:sys.stdout.write(data)
 elif args.check:
+ if not contract_target.exists() or contract_target.read_text()!=contract:raise SystemExit('OpenAPI digest stale: run python3 scripts/generate_openapi.py')
  if not target.exists() or target.read_text()!=data:raise SystemExit('OpenAPI stale: run python3 scripts/generate_openapi.py')
-else:target.write_text(data)
-if not args.stdout:print(f'{len(paths)} paths / {len(routes)} operations')
+else:
+ target.write_text(data)
+ contract_target.write_text(contract)
+if not args.stdout:print(f'{len(paths)} paths / {sum(len(operations) for operations in paths.values())} operations')

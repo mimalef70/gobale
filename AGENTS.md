@@ -4,7 +4,9 @@
 
 GoBale is an independent Go gateway for Bale accounts, with REST, CLI and signed
 webhooks. Keep one module in `src` and the `cmd / ui/rest / usecase / domains /
-infrastructure` layers. There is no dashboard or browser runtime. Consumers own
+infrastructure` layers. The embedded administrative UI lives in `ui/` and is served
+from `src/ui/web`; there is no browser or Node runtime. Keep its scope to account
+lifecycle, status and webhook administration; no chat or sending console. Consumers own
 their users and permissions; do not depend on MuChat's models.
 
 `internal/balemeow` owns transport, authentication, RPC and updates. It must not
@@ -152,6 +154,13 @@ as shown in [CONTRIBUTING.md](CONTRIBUTING.md).
 From the root run `make check`, `make race`, `make fuzz`, `make vuln`.
 `make check` covers formatting, normal/purego tests, vet and contracts.
 Run focused failure tests for lifecycle, parser, retry and account-scope changes.
+
+Official builds need Node 24.12+ and `make ui-build` before Go compilation. Ordinary
+Go checks must remain independent of Node and generated UI assets. Run `make
+ui-check` and `make ui-e2e` for UI changes. Browser API routes are a finite allowlist;
+use HttpOnly sessions, Origin/CSRF checks and immutable instance guards. Never put
+credentials, OTPs or webhook secrets in browser storage. Build assets and their
+manifest must match the binary version and OpenAPI digest; do not ship placeholders.
 
 `docs/openapi.yaml` is the public API contract. Regenerate through
 `python3 scripts/generate_openapi.py`; validate coverage with
