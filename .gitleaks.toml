@@ -1,0 +1,23 @@
+# Keep default detectors enabled. Exceptions match one reviewed public or synthetic
+# value AND its exact repository path, only for the generic-api-key detector.
+# No private credentials, account identifiers, session values, or runtime paths are exempt.
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+[[rules.allowlists]]
+description = "Public Bale web-client identity, verified in the official public web bundle; not an account credential."
+condition = "AND"
+regexTarget = "secret"
+paths = ['''(?:^|/)src/config/public_client\.go$''']
+regexes = ['''^C28D46DC4C3A7A26564BFCC48B929086A95C93C98E789A19847BEE8627DE4E7D$''']
+
+[[rules.allowlists]]
+description = "Synthetic token-shaped diagnostic used to test that provider errors are redacted."
+condition = "AND"
+regexTarget = "secret"
+paths = ['''(?:^|/)src/usecase/service_test\.go$''']
+regexes = ['''^WS_CLOSE_12345$''']

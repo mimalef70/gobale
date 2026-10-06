@@ -1,0 +1,65 @@
+# Binaries
+bin/
+main
+main.exe
+.claude
+
+# Build artifacts
+src/pkged.go
+
+# Database
+*.db
+storages/
+
+# Environment
+.env
+
+# Runtime media & QR codes
+statics/
+
+# History files
+history-*.json
+
+# Media conversions
+*.jpe
+
+# IDE & editor
+.idea/
+.vscode/settings.json
+.factory/
+.cursor/mcp.json
+.playwright-mcp/
+
+# OS files
+.DS_Store
+tmp/
+
+# Worktrees
+.worktrees/
+
+# Local Superpowers planning artifacts
+docs/superpowers/
+
+.mcp.json
+
+# GoBale local credentials and artifacts
+master.key
+*.key
+*.db-*
+*.db.lock
+src/gobale
+coverage.out
+artifacts/
+*.har
+captures/
+.env.*
+!.env.example
+
+# Python development helpers
+.venv/
+__pycache__/
+*.pyc
+
+# Public release staging and local site previews
+/dist/
+/site/

@@ -1,0 +1,31 @@
+name: Feature request
+description: Propose a focused capability or improvement.
+title: '[Feature]: '
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: User problem
+      description: What should an integration or operator be able to do?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Include the API or workflow and any failure cases that matter.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: References and alternatives
+      description: Public documentation, reference clients, or synthetic protocol examples. No raw private captures.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked the capability inventory and existing issues.
+          required: true
