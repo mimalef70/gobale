@@ -1,0 +1,17 @@
+.git
+.env*
+**/.env*
+**/master.key
+**/*.key
+**/storages
+**/statics
+**/*.db*
+**/gobale
+artifacts
+captures
+*.har
+bin
+.venv
+site
+dist
+**/__pycache__

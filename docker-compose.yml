@@ -1,0 +1,49 @@
+services:
+  gobale:
+    image: ${GOBALE_IMAGE:-ghcr.io/mimalef70/gobale:v0.2.0-alpha.1}
+    build:
+      context: .
+      dockerfile: docker/golang.Dockerfile
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: 3000
+      APP_BASE_PATH: ${APP_BASE_PATH:-}
+      APP_BASIC_AUTH: ${APP_BASIC_AUTH:?Run gobale init first}
+      APP_MASTER_KEY: ${APP_MASTER_KEY:?Export APP_MASTER_KEY from master.key}
+      APP_MASTER_KEY_FILE: ""
+      APP_DATABASE: /app/storages/gobale.db
+      APP_MEDIA_ROOT: /app/storages/media
+      APP_MAX_MEDIA_BYTES: ${APP_MAX_MEDIA_BYTES:-67108864}
+      APP_SEND_WORKERS: ${APP_SEND_WORKERS:-4}
+      APP_WEBHOOK_WORKERS: ${APP_WEBHOOK_WORKERS:-8}
+      APP_RECONNECT_WORKERS: ${APP_RECONNECT_WORKERS:-4}
+      APP_MEDIA_WORKERS: ${APP_MEDIA_WORKERS:-4}
+      APP_QUEUE_LIMIT: ${APP_QUEUE_LIMIT:-1000}
+      BALE_GRPC_ENDPOINT: ${BALE_GRPC_ENDPOINT:-https://next-ws.bale.ai}
+      BALE_WS_ENDPOINT: ${BALE_WS_ENDPOINT:-wss://next-ws.bale.ai/ws/}
+      BALE_APP_ID: ${BALE_APP_ID:-0}
+      BALE_API_KEY: ${BALE_API_KEY:-}
+      BALE_API_VERSION: ${BALE_API_VERSION:-173855}
+      BALE_WEBHOOK: ${BALE_WEBHOOK:-}
+      BALE_WEBHOOK_SECRET: ${BALE_WEBHOOK_SECRET:-}
+      BALE_WEBHOOK_DEVICE_MERGE_GLOBAL: ${BALE_WEBHOOK_DEVICE_MERGE_GLOBAL:-false}
+      HTTP_PROXY: ${HTTP_PROXY:-}
+      HTTPS_PROXY: ${HTTPS_PROXY:-}
+      NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,host.docker.internal}
+    volumes:
+      - gobale-data:/app/storages
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    read_only: true
+    tmpfs:
+      - /tmp:size=67108864,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    stop_grace_period: 30s
+volumes:
+  gobale-data:
