@@ -206,6 +206,11 @@ The initializer writes files as your host user. Skip it if this directory is
 already initialized. `GOBALE_IMAGE` selects the image and is a Compose setting,
 not an API option.
 
+The same versioned, multi-platform image is also published on
+[Docker Hub](https://hub.docker.com/r/mimalef70/gobale). To use that registry,
+set `GOBALE_IMAGE='mimalef70/gobale:v1.0.0'` before running the commands above.
+The embedded UI and runtime are identical to the GHCR image.
+
 To build this revision with its embedded panel, use a separate local image tag:
 
 ```sh
