@@ -1016,7 +1016,8 @@
       "method": "GET",
       "path": "/chat/{chat_jid}/history",
       "notes": [
-        "read-only history with provider date cursor"
+        "read-only history with provider date cursor",
+        "2026-10-06 offline fake-WebSocket regressions: full equal-timestamp or wrong-direction pages omit next_date and expose incomplete/non_advancing_cursor; exhaustive pagination remains unproven."
       ],
       "verification": [
         "one-account live + offline"
@@ -1596,7 +1597,7 @@
     {
       "capability": "durable_service",
       "status": "implemented",
-      "note": "Persistent outbox, signed webhook deliveries, GetDiff recovery and immutable multi-account scope. Recovery limits and dated failure-test evidence are in AGENTS.md; a transport connection alone does not prove a complete inbox."
+      "note": "Persistent outbox, signed webhook deliveries, GetDiff recovery and immutable multi-account scope. Recovery limits and dated failure-test evidence are in AGENTS.md; a transport connection alone does not prove a complete inbox. Offline regression checks on 2026-10-06 cover alias reuse during a real streamed HTTP request, durable unresolved stream gaps after restart, catch-up status completion, schema-5 retry ordering, exact voice proof reconciliation including stored evidence on restart, and none/once plus whitespace schedule execution. These use synthetic accounts/databases and do not extend live recovery or capacity claims."
     },
     {
       "capability": "contact_avatar",
@@ -1607,6 +1608,11 @@
       "capability": "unsupported_product_surfaces",
       "status": "unsupported",
       "note": "No passkey login, newsletter-specific API, business-profile API, specialized link-message send, played/star/unstar message state, call rejection, disappearing-message settings, exhaustive group-member export, join-request approval/rejection or built-in Chatwoot connector. Group permissions use explicit native permission fields. Chat pin/archive and channel behavior must use only capabilities declared in OpenAPI; an unrelated route name is not an alias."
+    },
+    {
+      "capability": "miniapp_signing_helpers",
+      "status": "implemented_with_limits",
+      "note": "2026-10-06 offline Sign/Verify regressions cover 63 unsigned/64 total fields, all C0/C1 controls and preserved legitimate Unicode/whitespace. Provider credential interoperability remains live-unverified; local signing does not prove provider login."
     }
   ]
 }

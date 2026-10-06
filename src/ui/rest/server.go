@@ -92,27 +92,27 @@ func New(service *usecase.Service, store *storage.Store, opts Options) (*Server,
 	r.Get("/devices", s.devices)
 	r.Get("/app/devices", s.devices)
 	r.Post("/devices", s.createDevice)
-	r.Get("/devices/:device_id", func(c fiber.Ctx) error {
+	r.Get("/devices/:device_id", s.withPathDevice(func(c fiber.Ctx) error {
 		d, e := service.GetDevice(c.Context(), c.Params("device_id"))
 		return result(c, d, e)
-	})
-	r.Delete("/devices/:device_id", func(c fiber.Ctx) error {
+	}))
+	r.Delete("/devices/:device_id", s.withPathDevice(func(c fiber.Ctx) error {
 		return result(c, nil, service.DeleteDevice(c.Context(), c.Params("device_id")))
-	})
-	r.Get("/devices/:device_id/status", func(c fiber.Ctx) error {
+	}))
+	r.Get("/devices/:device_id/status", s.withPathDevice(func(c fiber.Ctx) error {
 		v, e := service.Status(c.Context(), c.Params("device_id"))
 		return result(c, v, e)
-	})
-	r.Post("/devices/:device_id/reconnect", func(c fiber.Ctx) error { return result(c, nil, service.Reconnect(c.Context(), c.Params("device_id"))) })
-	r.Post("/devices/:device_id/logout", func(c fiber.Ctx) error { return result(c, nil, service.Logout(c.Context(), c.Params("device_id"))) })
-	r.Post("/devices/:device_id/login", s.login)
-	r.Post("/devices/:device_id/login/code", s.code)
-	r.Post("/devices/:device_id/login/password", s.password)
-	r.Get("/devices/:device_id/webhook", func(c fiber.Ctx) error {
+	}))
+	r.Post("/devices/:device_id/reconnect", s.withPathDevice(func(c fiber.Ctx) error { return result(c, nil, service.Reconnect(c.Context(), c.Params("device_id"))) }))
+	r.Post("/devices/:device_id/logout", s.withPathDevice(func(c fiber.Ctx) error { return result(c, nil, service.Logout(c.Context(), c.Params("device_id"))) }))
+	r.Post("/devices/:device_id/login", s.withPathDevice(s.login))
+	r.Post("/devices/:device_id/login/code", s.withPathDevice(s.code))
+	r.Post("/devices/:device_id/login/password", s.withPathDevice(s.password))
+	r.Get("/devices/:device_id/webhook", s.withPathDevice(func(c fiber.Ctx) error {
 		v, e := service.GetWebhook(c.Context(), c.Params("device_id"))
 		return result(c, v, e)
-	})
-	r.Patch("/devices/:device_id/webhook", s.patchWebhook)
+	}))
+	r.Patch("/devices/:device_id/webhook", s.withPathDevice(s.patchWebhook))
 	r.Get("/app/status", s.status)
 	r.Get("/send/operations/:send_id", s.operation)
 	r.Get("/send/schedules", s.schedules)
@@ -220,7 +220,27 @@ func (s *Server) device(c fiber.Ctx) (domains.Device, error) {
 	if id == "" {
 		id = c.Query("device_id")
 	}
-	return s.service.ResolveDevice(c.Context(), id)
+	return s.bindDevice(c, id)
+}
+func (s *Server) bindDevice(c fiber.Ctx, id string) (domains.Device, error) {
+	d, err := s.service.ResolveDevice(c.Context(), id)
+	if err != nil {
+		return domains.Device{}, err
+	}
+	ctx, err := s.service.BindDevice(c.Context(), d)
+	if err != nil {
+		return domains.Device{}, err
+	}
+	c.SetContext(ctx)
+	return d, nil
+}
+func (s *Server) withPathDevice(handler fiber.Handler) fiber.Handler {
+	return func(c fiber.Ctx) error {
+		if _, err := s.bindDevice(c, c.Params("device_id")); err != nil {
+			return err
+		}
+		return handler(c)
+	}
 }
 func page(c fiber.Ctx) (int, int) {
 	limit, _ := strconv.Atoi(c.Query("limit", "50"))
@@ -254,6 +274,13 @@ func (s *Server) createDevice(c fiber.Ctx) error {
 	if e != nil {
 		return e
 	}
+	// Configuration and rollback belong to the connection just created, even if
+	// another request deletes/recreates its alias before this handler completes.
+	ctx, e := s.service.BindDevice(c.Context(), v)
+	if e != nil {
+		return e
+	}
+	c.SetContext(ctx)
 	if req.URL != nil || req.Secret != nil || req.Events != nil {
 		v.Webhook, e = s.service.PatchWebhook(c.Context(), v.ID, domains.WebhookPatch{URL: req.URL, Secret: req.Secret, Events: req.Events})
 		if e != nil {

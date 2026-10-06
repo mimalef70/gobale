@@ -166,7 +166,9 @@ curl --user "$APP_BASIC_AUTH" -H 'X-Device-Id: support' -X POST \
 ```
 
 Retry replaces a `failed` or `retry` delivery for its unchanged destination with a
-new ledger entry. A changed destination requires explicit replay, which selects
+new ledger entry at the original durable queue position. A waiting later event
+cannot overtake that retry; events already delivered cannot be reordered.
+A changed destination requires explicit replay, which appends deliveries for
 current targets and can redeliver to a previously successful target. Neither
 changes the event ID. Inspect the outcome before replaying again.
 

@@ -87,10 +87,12 @@ func (c *Client) history(ctx context.Context, raw json.RawMessage) (json.RawMess
 	}
 	c.mu.Unlock()
 	out := struct {
-		Messages   []historyMessage `json:"messages"`
-		NextDate   string           `json:"next_date,omitempty"`
-		BeforeDate string           `json:"before_date,omitempty"`
-		AfterDate  string           `json:"after_date,omitempty"`
+		Messages             []historyMessage `json:"messages"`
+		NextDate             string           `json:"next_date,omitempty"`
+		BeforeDate           string           `json:"before_date,omitempty"`
+		AfterDate            string           `json:"after_date,omitempty"`
+		Incomplete           bool             `json:"incomplete,omitempty"`
+		PaginationStopReason string           `json:"pagination_stop_reason,omitempty"`
 	}{Messages: []historyMessage{}}
 	var oldest, newest int64
 	for _, m := range reply.History {
@@ -126,6 +128,14 @@ func (c *Client) history(ctx context.Context, raw json.RawMessage) (json.RawMess
 				out.NextDate = strconv.FormatInt(newest, 10)
 			} else {
 				out.NextDate = strconv.FormatInt(oldest, 10)
+			}
+			if (mode == 1 && newest <= date) || (mode == 2 && oldest >= date) {
+				// Timestamp-only cursors cannot disambiguate a full boundary page.
+				// Do not send callers into a loop or skip unseen messages by moving
+				// the date by a millisecond; preserve the page and expose the limit.
+				out.NextDate = ""
+				out.Incomplete = true
+				out.PaginationStopReason = "non_advancing_cursor"
 			}
 		}
 	}

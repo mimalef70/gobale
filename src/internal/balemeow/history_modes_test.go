@@ -92,3 +92,63 @@ func TestHistoryForwardDefaultStartsAtEpoch(t *testing.T) {
 		t.Fatalf("%s %v", raw, err)
 	}
 }
+
+func TestHistoryStopsNonadvancingDirectionalPages(t *testing.T) {
+	for _, mode := range []int32{1, 2} {
+		for _, equal := range []bool{true, false} {
+			name := map[int32]string{1: "forward", 2: "backward"}[mode] + "/wrong_direction"
+			if equal {
+				name = map[int32]string{1: "forward", 2: "backward"}[mode] + "/equal_timestamp"
+			}
+			t.Run(name, func(t *testing.T) {
+				const anchor = int64(1720000000000)
+				date := anchor
+				if !equal {
+					date--
+					if mode == 2 {
+						date = anchor + 1
+					}
+				}
+				var fake *fakeWS
+				fake = newFakeWS(t, func(ws *websocket.Conn, m *wire.ClientMessage) {
+					if m.Request == nil {
+						return
+					}
+					q := &wire.HistoryRequest{}
+					if m.Request.Method != "LoadHistory" || decode(m.Request.Payload, q) != nil || q.Date != anchor || q.LoadMode != mode || q.Limit != 2 {
+						t.Error("unexpected history query")
+						return
+					}
+					rows := []*wire.HistoryItem{}
+					for _, rid := range []int64{11, 12} {
+						rows = append(rows, &wire.HistoryItem{SenderId: 42, Rid: rid, Date: date, Message: &wire.Message{Text: &wire.TextMessage{Text: "synthetic"}}})
+					}
+					fake.send(ws, &wire.ServerMessage{Response: &wire.Response{Index: m.Request.Index, Payload: marshal(t, &wire.HistoryResponse{History: rows})}})
+				})
+				c := fake.client()
+				connectTest(t, c, acceptingSink)
+				body, _ := json.Marshal(map[string]any{"peer": map[string]string{"type": "user", "id": "42"}, "date": "1720000000000", "limit": 2, "load_mode": mode})
+				raw, err := c.Call(context.Background(), "chat.history", body)
+				if err != nil {
+					t.Fatal(err)
+				}
+				var page struct {
+					Messages             []historyMessage `json:"messages"`
+					Incomplete           bool             `json:"incomplete"`
+					PaginationStopReason string           `json:"pagination_stop_reason"`
+				}
+				if json.Unmarshal(raw, &page) != nil || len(page.Messages) != 2 || !page.Incomplete || page.PaginationStopReason != "non_advancing_cursor" {
+					t.Fatalf("missing nonadvancing-page limit: %s", raw)
+				}
+				var fields map[string]json.RawMessage
+				_ = json.Unmarshal(raw, &fields)
+				if _, exists := fields["next_date"]; exists {
+					t.Fatalf("unsafe/repeating cursor: %s", raw)
+				}
+				if page.Messages[0].ID != "11" || page.Messages[1].ID != "12" {
+					t.Fatal("boundary messages were discarded")
+				}
+			})
+		}
+	}
+}

@@ -208,6 +208,12 @@ func (s *Service) entry(device domains.Device) (*clientEntry, error) {
 	return entry, nil
 }
 func (s *Service) ResolveDevice(ctx context.Context, id string) (domains.Device, error) {
+	if selected, ok := ctx.Value(deviceScopeKey{}).(deviceScope); ok {
+		if id != "" && id != selected.alias {
+			return domains.Device{}, domains.E("DEVICE_SCOPE_MISMATCH", "request is bound to another device", 409)
+		}
+		return s.store.DeviceByConnection(ctx, selected.connection)
+	}
 	if id != "" {
 		return s.store.GetDevice(ctx, id)
 	}

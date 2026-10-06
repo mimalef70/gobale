@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -24,7 +25,10 @@ var (
 	ErrOptions   = errors.New("miniapp: invalid validation options")
 )
 
-const maxQueryBytes = 32 << 10
+const (
+	maxQueryBytes  = 32 << 10
+	maxQueryFields = 64
+)
 
 // Options always enforces expiry. Zero MaxAge uses five minutes; negative or
 // values over seven days are rejected. Zero FutureSkew permits no future date.
@@ -64,7 +68,8 @@ func ParseUnverified(raw string) (Unverified, error) {
 
 // Sign signs caller-supplied fields with a caller-owned bot token. auth_date must
 // be supplied explicitly. It never invents identity, dates, query IDs or tokens,
-// never falls back to unsigned data, and rejects a preexisting hash.
+// never falls back to unsigned data, and rejects a preexisting hash. At most 63
+// caller fields leave room for hash within the final 64-field query limit.
 func Sign(fields map[string]string, botToken string) (string, error) {
 	if !validToken(botToken) {
 		return "", ErrOptions
@@ -80,6 +85,11 @@ func Sign(fields map[string]string, botToken string) (string, error) {
 	clean, err := parse(raw, false)
 	if err != nil {
 		return "", err
+	}
+	// The public field budget includes the hash added below. Otherwise Sign
+	// could return a query that ParseUnverified and Verify reject themselves.
+	if len(clean) >= maxQueryFields {
+		return "", ErrMalformed
 	}
 	if _, err = timestamp(clean["auth_date"]); err != nil {
 		return "", err
@@ -134,12 +144,12 @@ func parse(raw string, requireHash bool) (map[string]string, error) {
 		return nil, ErrMalformed
 	}
 	parsed, err := url.ParseQuery(raw)
-	if err != nil || len(parsed) > 64 {
+	if err != nil || len(parsed) > maxQueryFields {
 		return nil, ErrMalformed
 	}
 	fields := make(map[string]string, len(parsed))
 	for key, values := range parsed {
-		if len(values) != 1 || !validKey(key) || !utf8.ValidString(values[0]) || strings.ContainsAny(values[0], "\r\n\x00") {
+		if len(values) != 1 || !validKey(key) || !utf8.ValidString(values[0]) || containsControl(values[0]) {
 			return nil, ErrMalformed
 		}
 		fields[key] = values[0]
@@ -173,7 +183,10 @@ func validKey(v string) bool {
 	return true
 }
 func validToken(v string) bool {
-	return v != "" && len(v) <= 4096 && utf8.ValidString(v) && !strings.ContainsAny(v, "\r\n\x00")
+	return v != "" && len(v) <= 4096 && utf8.ValidString(v) && !containsControl(v)
+}
+func containsControl(v string) bool {
+	return strings.ContainsFunc(v, unicode.IsControl)
 }
 func timestamp(v string) (time.Time, error) {
 	if v == "" || len(v) > 12 {

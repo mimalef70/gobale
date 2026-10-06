@@ -18,6 +18,10 @@ import (
 )
 
 func loginCommand(v *viper.Viper) *cobra.Command {
+	return loginCommandWithSecretReader(v, readSecret)
+}
+
+func loginCommandWithSecretReader(v *viper.Viper, secretReader func(string) (string, error)) *cobra.Command {
 	c := &cobra.Command{Use: "login", Short: "Connect a device via the running local REST API; prompts keep codes out of shell history", RunE: func(cmd *cobra.Command, args []string) error {
 		cfg, e := config.Load(v)
 		if e != nil {
@@ -90,10 +94,11 @@ func loginCommand(v *viper.Viper) *cobra.Command {
 		if challenge == "" {
 			return fmt.Errorf("login response lacked challenge_id")
 		}
-		code, e := readSecret("Code: ")
+		code, e := secretReader("Code: ")
 		if e != nil {
 			return e
 		}
+		code = strings.TrimSpace(code)
 		out, e = call("/devices/"+id+"/login/code", map[string]any{"challenge_id": challenge, "code": code})
 		code = ""
 		needPassword := false
@@ -106,7 +111,7 @@ func loginCommand(v *viper.Viper) *cobra.Command {
 			}
 		}
 		if needPassword {
-			password, pe := readSecret("Two-step password: ")
+			password, pe := secretReader("Two-step password: ")
 			if pe != nil {
 				return pe
 			}
@@ -124,11 +129,17 @@ func loginCommand(v *viper.Viper) *cobra.Command {
 	return c
 }
 func readSecret(prompt string) (string, error) {
+	return readTerminalSecret(prompt, int(os.Stdin.Fd()), term.IsTerminal, term.ReadPassword)
+}
+
+func readTerminalSecret(prompt string, fd int, isTerminal func(int) bool, readPassword func(int) ([]byte, error)) (string, error) {
 	fmt.Print(prompt)
-	if !term.IsTerminal(int(os.Stdin.Fd())) {
+	if !isTerminal(fd) {
 		return "", fmt.Errorf("interactive terminal required; use REST for automated login")
 	}
-	b, e := term.ReadPassword(int(os.Stdin.Fd()))
+	b, e := readPassword(fd)
 	fmt.Println()
-	return strings.TrimSpace(string(b)), e
+	// ReadPassword already removes the terminal line ending. Whitespace may be
+	// part of a password; only the code-specific caller may normalize its input.
+	return string(b), e
 }

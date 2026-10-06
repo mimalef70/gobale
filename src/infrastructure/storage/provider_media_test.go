@@ -139,6 +139,7 @@ func TestProviderMediaMigrationAndBackupRestore(t *testing.T) {
 	require.NoError(t, e)
 	_, e = s.db.Exec(`DROP TABLE schedule_idempotency`)
 	require.NoError(t, e)
+	restoreLegacyDeliveryOrder(t, s)
 	_, e = s.db.Exec(`DROP INDEX deliveries_pending_order`)
 	require.NoError(t, e)
 	_, e = s.db.Exec(`DROP INDEX deliveries_inflight_target`)
@@ -151,7 +152,7 @@ func TestProviderMediaMigrationAndBackupRestore(t *testing.T) {
 	defer upgraded.Close()
 	var version int
 	require.NoError(t, upgraded.db.QueryRow(`SELECT version FROM gobale_meta`).Scan(&version))
-	require.Equal(t, 4, version)
+	require.Equal(t, schemaVersion, version)
 	m := privateMedia()
 	require.NoError(t, upgraded.SaveProviderMedia(ctx, d.ConnectionID, domains.Peer{Type: "user", ID: "42"}, "123", m))
 	backup := filepath.Join(t.TempDir(), "backup.db")

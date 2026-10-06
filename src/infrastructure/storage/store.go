@@ -29,6 +29,8 @@ type Store struct {
 }
 type scanner interface{ Scan(...any) error }
 
+const schemaVersion = 5
+
 func now() int64               { return time.Now().UTC().UnixMilli() }
 func stamp(ms int64) time.Time { return time.UnixMilli(ms).UTC() }
 func notFound() error          { return domains.E("NOT_FOUND", "resource not found", 404) }
@@ -148,6 +150,9 @@ func Open(path string, key []byte) (s *Store, err error) {
 	if _, err = db.ExecContext(ctx, `UPDATE operations SET state='unknown',error_code='PROCESS_INTERRUPTED',error_message='process stopped while the outcome was unknown',updated_at=? WHERE state='sending'`, now()); err != nil {
 		return nil, err
 	}
+	if err = s.reconcileStoredVoiceProofs(ctx); err != nil {
+		return nil, err
+	}
 	if _, err = db.ExecContext(ctx, `UPDATE deliveries SET state='retry',next_at=? WHERE state='delivering'`, now()); err != nil {
 		return nil, err
 	}
@@ -199,7 +204,7 @@ func (s *Store) migrate(ctx context.Context) error {
 		if e != nil || identity != "gobale" {
 			return fmt.Errorf("refusing unrelated database; GoBale requires its own database")
 		}
-		if version < 1 || version > 4 {
+		if version < 1 || version > schemaVersion {
 			return fmt.Errorf("unsupported GoBale schema version %d", version)
 		}
 		p, e := s.decrypt(check, "gobale-key-check-v1")
@@ -216,13 +221,26 @@ func (s *Store) migrate(ctx context.Context) error {
 				return fmt.Errorf("migrate schedule idempotency: %w", e)
 			}
 		}
-		if version <= 3 {
+		if version <= 4 {
+			// Preserve the previous created_at/rowid ordering during upgrade.
+			// Thereafter retries inherit this stable position, not their new rowid.
+			for _, ddl := range []string{
+				`ALTER TABLE deliveries ADD COLUMN queue_order INTEGER NOT NULL DEFAULT 0`,
+				`WITH positions AS MATERIALIZED (SELECT rowid AS source_rowid,ROW_NUMBER() OVER(ORDER BY created_at,rowid) AS position FROM deliveries) UPDATE deliveries SET queue_order=(SELECT position FROM positions WHERE source_rowid=deliveries.rowid)`,
+				deliveryQueueOrderIndex,
+				storedMessageProofIndex,
+				`DROP INDEX IF EXISTS deliveries_pending_order`,
+			} {
+				if _, e = tx.ExecContext(ctx, ddl); e != nil {
+					return fmt.Errorf("migrate stable delivery order: %w", e)
+				}
+			}
 			for _, ddl := range deliveryActiveIndexes {
 				if _, e = tx.ExecContext(ctx, ddl); e != nil {
 					return fmt.Errorf("migrate active delivery indexes: %w", e)
 				}
 			}
-			if _, e = tx.ExecContext(ctx, `UPDATE gobale_meta SET version=4 WHERE id=1`); e != nil {
+			if _, e = tx.ExecContext(ctx, `UPDATE gobale_meta SET version=? WHERE id=1`, schemaVersion); e != nil {
 				return e
 			}
 		}
@@ -237,7 +255,7 @@ func (s *Store) migrate(ctx context.Context) error {
 	if e != nil {
 		return e
 	}
-	if _, e = tx.ExecContext(ctx, `INSERT INTO gobale_meta(id,identity,version,key_check) VALUES(1,'gobale',4,?)`, check); e != nil {
+	if _, e = tx.ExecContext(ctx, `INSERT INTO gobale_meta(id,identity,version,key_check) VALUES(1,'gobale',?,?)`, schemaVersion, check); e != nil {
 		return e
 	}
 	return tx.Commit()
@@ -253,7 +271,7 @@ var schema = []string{
 	`CREATE INDEX operations_connection ON operations(connection_id,created_at)`,
 	`CREATE TABLE events(id TEXT NOT NULL,connection_id TEXT NOT NULL REFERENCES devices(connection_id),peer_key TEXT NOT NULL,type TEXT NOT NULL,message_id TEXT NOT NULL,event_time INTEGER NOT NULL,body TEXT NOT NULL,created_at INTEGER NOT NULL,PRIMARY KEY(connection_id,id))`,
 	`CREATE INDEX events_chat ON events(connection_id,peer_key,event_time DESC)`,
-	`CREATE TABLE deliveries(id TEXT PRIMARY KEY,connection_id TEXT NOT NULL REFERENCES devices(connection_id),event_id TEXT NOT NULL,url TEXT NOT NULL,secret BLOB NOT NULL,device_config INTEGER NOT NULL,revision INTEGER NOT NULL,body TEXT NOT NULL,state TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,next_at INTEGER NOT NULL,last_error TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,FOREIGN KEY(connection_id,event_id) REFERENCES events(connection_id,id))`,
+	`CREATE TABLE deliveries(id TEXT PRIMARY KEY,connection_id TEXT NOT NULL REFERENCES devices(connection_id),event_id TEXT NOT NULL,url TEXT NOT NULL,secret BLOB NOT NULL,device_config INTEGER NOT NULL,revision INTEGER NOT NULL,body TEXT NOT NULL,state TEXT NOT NULL,attempts INTEGER NOT NULL DEFAULT 0,next_at INTEGER NOT NULL,last_error TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,queue_order INTEGER NOT NULL DEFAULT 0,FOREIGN KEY(connection_id,event_id) REFERENCES events(connection_id,id))`,
 	`CREATE INDEX deliveries_queue ON deliveries(state,next_at)`,
 	`CREATE INDEX deliveries_connection ON deliveries(connection_id,created_at)`,
 	`CREATE TABLE schedules(id TEXT PRIMARY KEY,connection_id TEXT NOT NULL REFERENCES devices(connection_id),request TEXT NOT NULL,state TEXT NOT NULL,next_at INTEGER NOT NULL,occurrence_count INTEGER NOT NULL DEFAULT 0,created_at INTEGER NOT NULL)`,
@@ -263,6 +281,8 @@ var schema = []string{
 	scheduleIdempotencySchema,
 	deliveryActiveIndexes[0],
 	deliveryActiveIndexes[1],
+	deliveryQueueOrderIndex,
+	storedMessageProofIndex,
 }
 
 func (s *Store) active(ctx context.Context, conn string) error {

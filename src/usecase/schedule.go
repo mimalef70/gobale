@@ -137,7 +137,10 @@ func (s *Service) scheduleLoop() {
 	}
 }
 func (s *Service) materializeSchedule(job domains.Schedule) {
-	start, err := time.Parse(time.RFC3339, job.Request.ScheduledAt)
+	// Match creation-time parsing, including schedules already persisted with
+	// surrounding whitespace. Keep the stored request unchanged: its original
+	// representation is part of the existing idempotency contract.
+	start, err := time.Parse(time.RFC3339, strings.TrimSpace(job.Request.ScheduledAt))
 	if err != nil {
 		_ = s.store.SetScheduleState(s.ctx, job.ConnectionID, job.ID, "failed")
 		return

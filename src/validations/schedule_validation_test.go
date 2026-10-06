@@ -48,6 +48,30 @@ func TestParseScheduleOptionsValidatesRecurrence(t *testing.T) {
 	}
 }
 
+func TestParseScheduleOptionsOneTimeAliases(t *testing.T) {
+	now := time.Date(2026, 10, 6, 12, 0, 0, 0, time.UTC)
+	for _, recurrence := range []string{"", "none", "once", " NONE ", " ONCE "} {
+		t.Run(recurrence, func(t *testing.T) {
+			options := domainSend.ScheduleOptions{
+				ScheduledAt: " \t" + now.Add(time.Hour).Format(time.RFC3339) + " \n",
+				Timezone:    " UTC ", Recurrence: recurrence,
+			}
+			spec, err := ParseScheduleOptions(options, now)
+			require.NoError(t, err)
+			require.Equal(t, "once", spec.Recurrence)
+			require.Equal(t, now.Add(time.Hour), spec.ScheduledAt)
+			_, repeats := NextScheduleOccurrence(spec, spec.ScheduledAt)
+			require.False(t, repeats)
+			options.OccurrenceLimit = 2
+			_, err = ParseScheduleOptions(options, now)
+			require.ErrorContains(t, err, "occurrence_limit")
+			options.OccurrenceLimit, options.DayOfMonth = 0, 1
+			_, err = ParseScheduleOptions(options, now)
+			require.ErrorContains(t, err, "recurring schedule")
+		})
+	}
+}
+
 func TestNextScheduleOccurrenceClampsShortMonths(t *testing.T) {
 	location, err := time.LoadLocation("Asia/Jakarta")
 	require.NoError(t, err)

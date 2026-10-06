@@ -43,11 +43,13 @@ func ParseScheduleOptions(options domainSend.ScheduleOptions, now time.Time) (Sc
 		return ScheduleSpec{}, pkgError.ValidationError("scheduled_at must be in the future")
 	}
 	recurrence := strings.ToLower(strings.TrimSpace(options.Recurrence))
-	if recurrence == "" {
+	// "none" is the public spelling for a one-time send. Keep "once" for
+	// existing callers and persisted schedules; the calendar engine uses once.
+	if recurrence == "" || recurrence == "none" {
 		recurrence = "once"
 	}
 	if recurrence != "once" && recurrence != "daily" && recurrence != "weekly" && recurrence != "monthly" {
-		return ScheduleSpec{}, pkgError.ValidationError("recurrence must be once, daily, weekly, or monthly")
+		return ScheduleSpec{}, pkgError.ValidationError("recurrence must be none (or once), daily, weekly, or monthly")
 	}
 	if recurrence == "once" && (len(options.Weekdays) > 0 || options.DayOfMonth != 0) {
 		return ScheduleSpec{}, pkgError.ValidationError("weekly and monthly recurrence fields require a recurring schedule")

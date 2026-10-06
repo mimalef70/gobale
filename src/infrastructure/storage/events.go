@@ -38,7 +38,10 @@ func scopedEventID(conn string, e domains.Event) string {
 	sum := sha256.Sum256([]byte(conn + "\x00" + source))
 	return hex.EncodeToString(sum[:])
 }
-func (s *Store) insertDelivery(ctx context.Context, tx *sql.Tx, conn, eventID, body string, t WebhookTarget, config domains.WebhookConfig) (domains.Delivery, error) {
+
+// queueOrder is zero for new work/replay; retries inherit their original queue
+// position while keeping a separate attempt record and creation timestamp.
+func (s *Store) insertDelivery(ctx context.Context, tx *sql.Tx, conn, eventID, body string, t WebhookTarget, config domains.WebhookConfig, queueOrder int64) (domains.Delivery, error) {
 	if e := ValidateWebhookURL(t.URL); e != nil {
 		return domains.Delivery{}, e
 	}
@@ -60,7 +63,7 @@ func (s *Store) insertDelivery(ctx context.Context, tx *sql.Tx, conn, eventID, b
 		lastError = "webhook configuration changed before event persistence"
 	}
 	created := now()
-	_, e = tx.ExecContext(ctx, `INSERT INTO deliveries(id,connection_id,event_id,url,secret,device_config,revision,body,state,next_at,last_error,created_at) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)`, id, conn, eventID, t.URL, cipher, t.Device, t.Revision, body, state, created, lastError, created)
+	_, e = tx.ExecContext(ctx, `INSERT INTO deliveries(id,connection_id,event_id,url,secret,device_config,revision,body,state,next_at,last_error,created_at,queue_order) VALUES(?,?,?,?,?,?,?,?,?,?,?,?,CASE WHEN ?=0 THEN (SELECT COALESCE(MAX(queue_order),0)+1 FROM deliveries) ELSE ? END)`, id, conn, eventID, t.URL, cipher, t.Device, t.Revision, body, state, created, lastError, created, queueOrder, queueOrder)
 	return domains.Delivery{Device: t.Device, ID: id, ConnectionID: conn, EventID: eventID, URL: t.URL, Secret: t.Secret, Revision: t.Revision, Body: json.RawMessage(body), State: state, NextAt: stamp(created), LastError: lastError, CreatedAt: stamp(created)}, e
 }
 
@@ -96,6 +99,20 @@ func (s *Store) AppendEvent(ctx context.Context, conn string, event domains.Even
 		return false, e
 	}
 	if n == 0 {
+		// A replay can restore an older unresolved operation, but only the
+		// previously persisted body is evidence. A changed duplicate must not
+		// introduce new proof, deliveries, media references or checkpoints.
+		var storedBody string
+		if e = tx.QueryRowContext(ctx, `SELECT body FROM events WHERE connection_id=? AND id=?`, conn, event.ID).Scan(&storedBody); e != nil {
+			return false, e
+		}
+		storedEvent, err := storedMessageProof(storedBody)
+		if err != nil {
+			return false, err
+		}
+		if _, e = s.reconcileOwnMessageTx(ctx, tx, conn, d.AccountID, storedEvent); e != nil {
+			return false, e
+		}
 		return false, tx.Commit()
 	}
 	switch event.Type {
@@ -110,7 +127,7 @@ func (s *Store) AppendEvent(ctx context.Context, conn string, event domains.Even
 			return false, e
 		}
 	}
-	if e = s.reconcileOwnMessageTx(ctx, tx, conn, d.AccountID, event); e != nil {
+	if _, e = s.reconcileOwnMessageTx(ctx, tx, conn, d.AccountID, event); e != nil {
 		return false, e
 	}
 	seen := map[string]bool{}
@@ -119,7 +136,7 @@ func (s *Store) AppendEvent(ctx context.Context, conn string, event domains.Even
 			continue
 		}
 		seen[target.URL] = true
-		if _, e = s.insertDelivery(ctx, tx, conn, event.ID, body, target, d.Webhook); e != nil {
+		if _, e = s.insertDelivery(ctx, tx, conn, event.ID, body, target, d.Webhook, 0); e != nil {
 			return false, e
 		}
 	}
@@ -136,23 +153,27 @@ func (s *Store) AppendEvent(ctx context.Context, conn string, event domains.Even
 // identity; matching text, dates or an unbound/foreign sender is not evidence.
 // Only ordinary sends and the reviewed message-producing operations below can
 // be proved by this echo. Other mutations and terminal decisions never change.
-func (s *Store) reconcileOwnMessageTx(ctx context.Context, tx *sql.Tx, conn, account string, event domains.Event) error {
-	if event.Type != "message" || event.Direction != "outgoing" || account == "" || event.SenderID != account || event.MessageID == "" || event.Peer.Validate() != nil {
-		return nil
+func (s *Store) reconcileOwnMessageTx(ctx context.Context, tx *sql.Tx, conn, account string, event domains.Event) (bool, error) {
+	if event.Type != "message" || event.Direction != "outgoing" || account == "" || event.AccountID != account || event.SenderID != account || event.MessageID == "" || event.Peer.Validate() != nil || event.Time.UnixMilli() <= 0 {
+		return false, nil
 	}
 	result, err := marshal(domains.SendResult{MessageID: event.MessageID, Date: event.Time})
 	if err != nil {
-		return err
+		return false, err
 	}
-	_, err = tx.ExecContext(ctx, `UPDATE operations SET state='succeeded',result=?,error_code='',error_message='',updated_at=?
+	r, err := tx.ExecContext(ctx, `UPDATE operations SET state='succeeded',result=?,error_code='',error_message='',updated_at=?
  WHERE connection_id=? AND state IN ('sending','unknown')
  AND json_extract(request,'$.request_id')=?
  AND json_extract(request,'$.peer.type')=? AND json_extract(request,'$.peer.id')=?
  AND ((COALESCE(json_extract(request,'$.operation'),'')=''
-       AND COALESCE(json_extract(request,'$.kind'),'') IN ('','text','image','file','audio','video'))
+       AND COALESCE(json_extract(request,'$.kind'),'') IN ('','text','image','file','audio','video','voice'))
       OR (json_extract(request,'$.kind')='operation'
        AND json_extract(request,'$.operation') IN ('send.poll','send.sticker','send.contact','send.location','send.template')))`, result, now(), conn, event.MessageID, event.Peer.Type, event.Peer.ID)
-	return err
+	if err != nil {
+		return false, err
+	}
+	n, err := r.RowsAffected()
+	return n > 0, err
 }
 
 func (s *Store) ListEvents(ctx context.Context, conn, peerKey string, limit, offset int) ([]domains.Event, error) {
@@ -218,14 +239,16 @@ const deliveryColumns = `l.id,l.event_id,l.connection_id,d.alias,l.url,l.secret,
 // These partial indexes exclude retained delivery history. The predicates match
 // the ordering subqueries exactly so SQLite can use them without ANALYZE.
 var deliveryActiveIndexes = []string{
-	`CREATE INDEX deliveries_pending_order ON deliveries(connection_id,url,created_at) WHERE state IN ('queued','retry')`,
-	`CREATE INDEX deliveries_inflight_target ON deliveries(connection_id,url) WHERE state='delivering'`,
+	`CREATE INDEX IF NOT EXISTS deliveries_pending_order ON deliveries(connection_id,url,queue_order) WHERE state IN ('queued','retry')`,
+	`CREATE INDEX IF NOT EXISTS deliveries_inflight_target ON deliveries(connection_id,url) WHERE state='delivering'`,
 }
+
+const deliveryQueueOrderIndex = `CREATE INDEX deliveries_queue_order ON deliveries(queue_order)`
 
 const deliveryClaimQuery = `SELECT ` + deliveryColumns + ` FROM deliveries l JOIN devices d ON d.connection_id=l.connection_id WHERE d.deleted_at IS NULL AND l.state IN ('queued','retry') AND l.next_at<=?
  AND NOT EXISTS(SELECT 1 FROM deliveries p WHERE p.connection_id=l.connection_id AND p.url=l.url AND p.state='delivering')
- AND NOT EXISTS(SELECT 1 FROM deliveries p WHERE p.connection_id=l.connection_id AND p.url=l.url AND p.state IN ('queued','retry') AND (p.created_at<l.created_at OR (p.created_at=l.created_at AND p.rowid<l.rowid)))
- ORDER BY l.next_at,l.created_at,l.rowid LIMIT ?`
+ AND NOT EXISTS(SELECT 1 FROM deliveries p WHERE p.connection_id=l.connection_id AND p.url=l.url AND p.state IN ('queued','retry') AND p.queue_order<l.queue_order)
+ ORDER BY l.next_at,l.queue_order LIMIT ?`
 
 func (s *Store) scanDelivery(row scanner) (v domains.Delivery, err error) {
 	var ciphertext, currentSecret []byte
@@ -388,7 +411,7 @@ func (s *Store) ReplayDelivery(ctx context.Context, conn, id string, targets []W
 			continue
 		}
 		seen[target.URL] = true
-		v, e := s.insertDelivery(ctx, tx, conn, eventID, body, target, device.Webhook)
+		v, e := s.insertDelivery(ctx, tx, conn, eventID, body, target, device.Webhook, 0)
 		if e != nil {
 			return nil, e
 		}
@@ -411,9 +434,10 @@ func (t WebhookTarget) String() string {
 	return fmt.Sprintf("WebhookTarget{device:%t,revision:%d}", t.Device, t.Revision)
 }
 
-// RetryDelivery retries only this destination, preserving the former attempt
-// ledger and cancelling its eligibility atomically. Explicit ReplayDelivery is
-// required to move payloads to a changed destination or replay successful work.
+// RetryDelivery retries only this destination, retaining the original queue
+// position and attempt ledger while cancelling the old attempt atomically.
+// Explicit ReplayDelivery moves payloads to changed destinations or replays
+// successful work with a new queue position.
 func (s *Store) RetryDelivery(ctx context.Context, conn, id string) (domains.Delivery, error) {
 	tx, e := s.db.BeginTx(ctx, nil)
 	if e != nil {
@@ -434,7 +458,11 @@ func (s *Store) RetryDelivery(ctx context.Context, conn, id string) (domains.Del
 	if old.Revision != d.Webhook.Revision || (old.Device && old.URL != d.Webhook.URL) {
 		return domains.Delivery{}, domains.E("DELIVERY_CONFLICT", "webhook target changed; explicit replay is required", 409)
 	}
-	replacement, e := s.insertDelivery(ctx, tx, conn, old.EventID, string(old.Body), WebhookTarget{URL: old.URL, Secret: old.Secret, Revision: old.Revision, Device: old.Device}, d.Webhook)
+	var queueOrder int64
+	if e = tx.QueryRowContext(ctx, `SELECT queue_order FROM deliveries WHERE connection_id=? AND id=?`, conn, id).Scan(&queueOrder); e != nil {
+		return domains.Delivery{}, e
+	}
+	replacement, e := s.insertDelivery(ctx, tx, conn, old.EventID, string(old.Body), WebhookTarget{URL: old.URL, Secret: old.Secret, Revision: old.Revision, Device: old.Device}, d.Webhook, queueOrder)
 	if e != nil {
 		return domains.Delivery{}, e
 	}

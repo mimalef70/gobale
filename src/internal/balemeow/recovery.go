@@ -29,6 +29,20 @@ func (c *Client) setRecovery(conn *connection, state, code string) {
 		}
 	}
 }
+
+// Only call after the recovery work/checkpoint has been accepted by the sink.
+// A catch-up response can cover the arriving stream update itself, so that
+// early-return path must finish the status transition as well.
+func (c *Client) finishRecovery(conn *connection) {
+	if conn.checkpoint.Gap || conn.recoveryFailed {
+		c.setRecovery(conn, "gap_detected", "RECOVERY_GAP")
+	} else if c.opts.RecoveryVerified {
+		c.setRecovery(conn, "current", "")
+	} else {
+		c.setRecovery(conn, "degraded", "")
+	}
+}
+
 func (c *Client) initializeRecovery(ctx context.Context, conn *connection) error {
 	if c.opts.LoadCheckpoint == nil {
 		return nil
@@ -103,13 +117,7 @@ func (c *Client) initializeRecovery(ctx context.Context, conn *connection) error
 	} else if err := c.recoverRoutes(ctx, conn); err != nil {
 		return err
 	}
-	if conn.checkpoint.Gap {
-		c.setRecovery(conn, "gap_detected", "RECOVERY_GAP")
-	} else if c.opts.RecoveryVerified {
-		c.setRecovery(conn, "current", "")
-	} else {
-		c.setRecovery(conn, "degraded", "")
-	}
+	c.finishRecovery(conn)
 	return nil
 }
 func (c *Client) recoverRoutes(ctx context.Context, conn *connection) error {
@@ -294,11 +302,18 @@ func (c *Client) consumeRecoveredStream(ctx context.Context, conn *connection, d
 		}
 		previous = conn.checkpoint.Routes[key]
 		if stream.Sequence <= previous {
+			c.finishRecovery(conn)
 			return nil
 		}
 		if stream.Sequence > previous+1 {
 			conn.checkpoint.Gap = true
 			conn.recoveryFailed = true
+			// Record the unresolved hole before accepting any newer live message.
+			// Otherwise a restart reloads the old gap-free cursor and can advertise
+			// current even when GetDiff still has not accounted for the jump.
+			if err := c.persistRecovery(ctx, conn, nil, "gap_detected"); err != nil {
+				return err
+			}
 		}
 	}
 	events, err := decodeStreamEvents(conn.account, data)
@@ -321,11 +336,7 @@ func (c *Client) consumeRecoveredStream(ctx context.Context, conn *connection, d
 		conn.checkpoint.Routes[key] = previous
 		return err
 	}
-	if c.opts.RecoveryVerified {
-		c.setRecovery(conn, "current", "")
-	} else {
-		c.setRecovery(conn, "degraded", "")
-	}
+	c.finishRecovery(conn)
 	return nil
 }
 

@@ -116,6 +116,7 @@ func TestScheduleIdempotencyMigrationFromV2PreservesExistingSchedule(t *testing.
 	require.NoError(t, err)
 	_, err = s.db.Exec(`DROP TABLE schedule_idempotency`)
 	require.NoError(t, err)
+	restoreLegacyDeliveryOrder(t, s)
 	_, err = s.db.Exec(`DROP INDEX deliveries_pending_order`)
 	require.NoError(t, err)
 	_, err = s.db.Exec(`DROP INDEX deliveries_inflight_target`)

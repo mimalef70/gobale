@@ -190,3 +190,94 @@ func TestOwnEchoReconcilesOnlyReviewedMessageProducingOperations(t *testing.T) {
 		})
 	}
 }
+
+func TestVoiceEchoRequiresExactProofAndReleasesMediaAndCapacity(t *testing.T) {
+	ctx := context.Background()
+	s, _ := testStore(t)
+	d := device(t, s, "voice-echo")
+	other := device(t, s, "other")
+	for _, conn := range []string{d.ConnectionID, other.ConnectionID} {
+		require.NoError(t, s.BindAccount(ctx, conn, "456"))
+	}
+	require.NoError(t, s.SaveMedia(ctx, domains.Media{ID: "voice", ConnectionID: d.ConnectionID, Path: "synthetic.ogg", Size: 100}))
+	req := domains.SendRequest{Kind: "voice", Peer: domains.Peer{Type: "user", ID: "9007199254740993"}, MediaID: "voice"}
+	op, _, err := s.Enqueue(ctx, d.ConnectionID, req, "voice-once", 1)
+	require.NoError(t, err)
+	jobs, err := s.ClaimOperations(ctx, 1)
+	require.NoError(t, err)
+	require.Len(t, jobs, 1)
+	require.NoError(t, s.FinishOperation(ctx, d.ConnectionID, op.ID, "unknown", nil, "SEND_UNKNOWN", "response lost"))
+	proof := ownEcho(op)
+	proof.Payload = json.RawMessage(`{"kind":"document","media_type":"voice","mime_type":"audio/ogg","duration":1000}`)
+	for i, mutate := range []func(*domains.Event){
+		func(e *domains.Event) { e.SenderID = "999" },
+		func(e *domains.Event) { e.SenderID = "" },
+		func(e *domains.Event) { e.Peer.ID = "77" },
+		func(e *domains.Event) { e.Peer.Type = "group" },
+		func(e *domains.Event) { e.MessageID = "123" },
+		func(e *domains.Event) { e.Direction = "incoming" },
+		func(e *domains.Event) { e.Type = "message.accepted" },
+		func(e *domains.Event) { e.Type = "message.edited" },
+	} {
+		bad := proof
+		bad.ID += string(rune('a' + i))
+		mutate(&bad)
+		_, err = s.AppendEvent(ctx, d.ConnectionID, bad, nil)
+		require.NoError(t, err)
+		got, err := s.GetOperation(ctx, d.ConnectionID, op.ID)
+		require.NoError(t, err)
+		require.Equal(t, "unknown", got.State)
+	}
+	// Even the same bound account and exact RID on another connection cannot prove it.
+	_, err = s.AppendEvent(ctx, other.ConnectionID, proof, nil)
+	require.NoError(t, err)
+	got, err := s.GetOperation(ctx, d.ConnectionID, op.ID)
+	require.NoError(t, err)
+	require.Equal(t, "unknown", got.State)
+	errorCode(t, s.DeleteMedia(ctx, d.ConnectionID, "voice"), "MEDIA_IN_USE")
+	_, _, err = s.Enqueue(ctx, d.ConnectionID, textRequest("next"), "next", 1)
+	errorCode(t, err, "QUEUE_FULL")
+	_, err = s.AppendEvent(ctx, d.ConnectionID, proof, nil)
+	require.NoError(t, err)
+	got, err = s.GetOperation(ctx, d.ConnectionID, op.ID)
+	require.NoError(t, err)
+	require.Equal(t, "succeeded", got.State)
+	require.Equal(t, req.MediaID, got.Request.MediaID)
+	require.Equal(t, op.Request.RequestID, got.Result.MessageID)
+	require.Empty(t, got.ErrorCode)
+	require.NoError(t, s.DeleteMedia(ctx, d.ConnectionID, "voice"))
+	_, _, err = s.Enqueue(ctx, d.ConnectionID, textRequest("next"), "next", 1)
+	require.NoError(t, err)
+	// A late timeout cannot undo the proven result or make another send eligible.
+	errorCode(t, s.FinishOperation(ctx, d.ConnectionID, op.ID, "unknown", nil, "SEND_UNKNOWN", "late response"), "OPERATION_CONFLICT")
+}
+
+func TestOwnEchoReconcilesAllOrdinaryMediaKinds(t *testing.T) {
+	for _, kind := range []string{"image", "file", "audio", "video", "voice"} {
+		for _, state := range []string{"sending", "unknown"} {
+			t.Run(kind+"/"+state, func(t *testing.T) {
+				ctx := context.Background()
+				s, _ := testStore(t)
+				d := device(t, s, "media-echo")
+				require.NoError(t, s.BindAccount(ctx, d.ConnectionID, "456"))
+				require.NoError(t, s.SaveMedia(ctx, domains.Media{ID: "media", ConnectionID: d.ConnectionID, Path: "synthetic", Size: 100}))
+				req := domains.SendRequest{Kind: kind, Peer: domains.Peer{Type: "user", ID: "123"}, MediaID: "media"}
+				op, _, err := s.Enqueue(ctx, d.ConnectionID, req, "once", 1)
+				require.NoError(t, err)
+				_, err = s.ClaimOperations(ctx, 1)
+				require.NoError(t, err)
+				if state == "unknown" {
+					require.NoError(t, s.FinishOperation(ctx, d.ConnectionID, op.ID, "unknown", nil, "SEND_UNKNOWN", "response lost"))
+				}
+				echo := ownEcho(op)
+				echo.Payload, err = json.Marshal(map[string]any{"kind": "document", "media_type": kind})
+				require.NoError(t, err)
+				_, err = s.AppendEvent(ctx, d.ConnectionID, echo, nil)
+				require.NoError(t, err)
+				got, err := s.GetOperation(ctx, d.ConnectionID, op.ID)
+				require.NoError(t, err)
+				require.Equal(t, "succeeded", got.State)
+			})
+		}
+	}
+}

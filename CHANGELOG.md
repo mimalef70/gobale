@@ -2,6 +2,24 @@
 
 ## Unreleased
 
+- Bound REST requests to immutable connection IDs, including streamed bodies and
+  device-path operations, so deleting and reusing an alias cannot switch accounts.
+- Persist unresolved stream-recovery gaps before accepting newer events; completed
+  catch-up now exits recovering without hiding gaps on another route.
+- Added schema 5 durable webhook queue ordering. Manual retries retain their
+  position; replay appends deliberately. Back up before upgrading; older binaries
+  require restoration of the previous database snapshot for rollback.
+- Included native voice in exact account/peer/request-ID own-message reconciliation.
+  Existing unknown voice operations can use already-persisted proof on startup;
+  duplicate events use their original stored body, never changed replay content.
+- Accepted documented one-time recurrence `none` and retained the `once` alias;
+  execution now handles surrounding timestamp whitespace in existing schedules.
+- Stop non-advancing directional history pagination with explicit incomplete/stop
+  fields instead of returning a repeated cursor. Exhaustive export remains unproven.
+- Preserve CLI two-step password bytes; only OTP input is trimmed.
+- Reserve the Mini App signature field within the 64-field limit and reject all
+  Unicode control characters in parsed/signed data and signing tokens.
+
 - Added the project MIT license with copyright attributed to mimalef70.
 - Consolidated installation, configuration and the endpoint directory in the README.
 - Published the generated API contract as YAML; the hosted JSON URL remains available.

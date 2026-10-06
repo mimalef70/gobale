@@ -129,7 +129,8 @@ gobale login --device support
 ```
 
 The helper creates the device if needed, then prompts for the phone, login code
-and optional two-step password. Codes/passwords are not echoed. It requires an
+and optional two-step password. Codes/passwords are not echoed. Password whitespace
+is preserved exactly; only the login code is trimmed. It requires an
 interactive terminal and a loopback listener. Encrypted sessions survive normal
 restarts; provider revocation can require login again.
 
@@ -233,7 +234,9 @@ automatically import the entire old inbox.
 Select devices with `X-Device-Id`, or `device_id` query when the header is absent.
 Implicit selection works only with one registered device. An explicit invalid
 selector never falls back. Data belongs to an immutable connection: reusing a
-deleted alias does not inherit its old jobs, history or media.
+deleted alias does not inherit its old jobs, history or media. Every request stays
+bound to its originally selected connection, including while its body is read;
+deleting that connection never redirects the request to a replacement account.
 
 For application-managed login, use `POST /devices`, then `/devices/{device_id}/login`
 with `phone`, `/devices/{device_id}/login/code` with `challenge_id` and `code`, and
@@ -268,6 +271,12 @@ device. Never create another send/key merely because its state is `unknown`.
 Remote history uses millisecond date cursors, not offsets. Preserve original
 message dates with their IDs for reads and forwards. Local `/messages` returns
 stored events, including edits/deletions, rather than a projected transcript.
+For forward/backward history, continue with `results.next_date` and deduplicate
+message IDs at timestamp boundaries. If a full page cannot advance the cursor,
+it omits `next_date` and reports `incomplete: true` with
+`pagination_stop_reason: "non_advancing_cursor"`. Keep that page and stop automatic
+pagination; adjusting its date yourself could skip messages. Exhaustive history
+export remains unproven. Around mode returns bounds, not a continuation cursor.
 Phone lookup can fail due to discoverability; it never silently imports contacts.
 
 ### Media, voice and avatars
@@ -311,7 +320,10 @@ gobale_api -H 'Content-Type: application/json' \
 ```
 
 Use a future RFC3339 timestamp and IANA timezone. Recurrence supports `none`,
-`daily`, `weekly` and `monthly`; pause/resume/cancel by the returned schedule `id`.
+`daily`, `weekly` and `monthly`; `once` is also accepted as an alias for `none`.
+Omitted or empty recurrence means one occurrence. Surrounding timestamp whitespace
+is ignored for execution, including already-stored schedules; original request
+values remain unchanged for idempotency. Pause/resume/cancel by the schedule `id`.
 Media schedules use the appropriate `kind` and local `media_id`. A schedule
 occurrence and its outbox entry commit together. Cancelling a schedule stops
 future occurrences, not work already accepted by Bale.
@@ -334,6 +346,14 @@ A device webhook overrides global `BALE_WEBHOOK`; an empty URL restores fallback
 all events; secrets are write-only. URL changes pause pending old deliveries;
 explicit replay chooses current destinations. See [Webhook payloads](docs/webhook-payload.md)
 for event examples, signatures and retry handling.
+
+## Mini App signing helpers
+
+The standalone Go package `src/pkg/miniapp` accepts at most 63 fields for `Sign`;
+the generated `hash` brings the verified query limit to 64 fields. Both paths
+reject Unicode control characters, duplicate or ambiguous names and malformed
+encoding, while preserving legitimate field whitespace and Unicode. Always use
+`Verify` with expiry checks; locally signing data does not prove provider login.
 
 ## Current API
 

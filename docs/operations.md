@@ -61,6 +61,20 @@ wrong master keys are rejected. Roll back with a compatible database snapshot,
 not an arbitrary older binary against a newer schema. Check release notes for
 protocol and storage changes before replacing the running version.
 
+Schema 5 adds durable webhook queue positions. Existing rows retain their
+creation order (including row-order ties); new manual retries keep their original
+position. A retry already reordered by an older version cannot be retrospectively
+resequenced because that version recorded no retry-versus-replay lineage. Older
+binaries cannot open this schema: rollback requires restoring the pre-upgrade
+backup. Recovery gaps recorded by this version survive restart;
+a gap lost by an older version cannot be reconstructed without provider evidence.
+
+On startup, unresolved voice operations with an already-stored exact own-message
+proof are reconciled without contacting Bale. Account, immutable connection, peer,
+request ID, direction and proof date must match the reviewed rules; otherwise the
+operation remains `unknown`. This does not resend messages, generate new webhook
+deliveries or move recovery checkpoints. Failed repair transactions roll back.
+
 ## Retention and disk use
 
 This release retains data without an automatic TTL or background cleaner. It
