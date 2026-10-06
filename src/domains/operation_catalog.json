@@ -1,0 +1,5002 @@
+[
+  {
+    "operation": "users.get",
+    "mode": "read",
+    "method": "GET",
+    "path": "/user/profiles",
+    "description": "users.get",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "maxLength": 4,
+                "enum": [
+                  "user"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "maxLength": 10,
+                "pattern": "^[0-9]+$",
+                "format": "uint32-string"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 100,
+          "minItems": 1
+        },
+        "full": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "users"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.username.check",
+    "mode": "read",
+    "method": "GET",
+    "path": "/user/username/check",
+    "description": "account.username.check",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "maxLength": 32,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "username"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.blocked",
+    "mode": "read",
+    "method": "GET",
+    "path": "/user/blocked",
+    "description": "account.blocked",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.sessions",
+    "mode": "read",
+    "method": "GET",
+    "path": "/user/sessions",
+    "description": "account.sessions",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.settings",
+    "mode": "read",
+    "method": "GET",
+    "path": "/user/settings",
+    "description": "account.settings",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.privacy",
+    "mode": "read",
+    "method": "GET",
+    "path": "/user/privacy",
+    "description": "account.privacy",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.privacy.status",
+    "mode": "read",
+    "method": "GET",
+    "path": "/user/privacy/status",
+    "description": "account.privacy.status",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "type": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        }
+      },
+      "required": [
+        "type"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.name",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/name",
+    "description": "account.name",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.about",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/about",
+    "description": "account.about",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "about": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 0
+        }
+      },
+      "required": [
+        "about"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.username",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/username",
+    "description": "account.username",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "username": {
+          "type": "string",
+          "maxLength": 32,
+          "minLength": 0
+        }
+      },
+      "required": [
+        "username"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "contacts.add",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/contacts/add",
+    "description": "contacts.add",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "user"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "contacts.remove",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/contacts/remove",
+    "description": "contacts.remove",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "user"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.block",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/block",
+    "description": "account.block",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "user"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.unblock",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/unblock",
+    "description": "account.unblock",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "user"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "contacts.rename",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/contacts/rename",
+    "description": "contacts.rename",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "user",
+        "name"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "contacts.import",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/contacts/import",
+    "description": "contacts.import",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "contacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "phone": {
+                "type": "string",
+                "maxLength": 32,
+                "format": "phone"
+              },
+              "name": {
+                "type": "string",
+                "maxLength": 255
+              }
+            },
+            "required": [
+              "phone"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 100,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "contacts"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "contacts.reset",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/contacts/reset",
+    "description": "contacts.reset",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "confirm": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        }
+      },
+      "required": [
+        "confirm"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.privacy.set",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/privacy",
+    "description": "account.privacy.set",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "status": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        }
+      },
+      "required": [
+        "type",
+        "status"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.settings.set",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/settings",
+    "description": "account.settings.set",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "key": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1
+        },
+        "value": {
+          "type": "string",
+          "maxLength": 4096,
+          "nullable": true
+        }
+      },
+      "required": [
+        "key",
+        "value"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.session.terminate",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/sessions/terminate",
+    "description": "account.session.terminate",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "session_id": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        }
+      },
+      "required": [
+        "session_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.sessions.terminate",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/sessions/terminate-others",
+    "description": "account.sessions.terminate",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "confirm": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        }
+      },
+      "required": [
+        "confirm"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.permissions",
+    "mode": "read",
+    "method": "GET",
+    "path": "/group/permissions",
+    "description": "group.permissions",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer",
+        "user"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.default_permissions",
+    "mode": "read",
+    "method": "GET",
+    "path": "/group/default-permissions",
+    "description": "group.default_permissions",
+    "verification": "offline tests; live authorized two-account test 2026-10-06: read",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.admins",
+    "mode": "read",
+    "method": "GET",
+    "path": "/group/admins",
+    "description": "group.admins",
+    "verification": "offline tests; live authorized two-account test 2026-10-06: read",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.banned",
+    "mode": "read",
+    "method": "GET",
+    "path": "/group/banned",
+    "description": "group.banned",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.pins",
+    "mode": "read",
+    "method": "GET",
+    "path": "/group/pins",
+    "description": "group.pins",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.preview",
+    "mode": "read",
+    "method": "GET",
+    "path": "/group/preview",
+    "description": "group.preview",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "maxLength": 1024,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "token"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.promote",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/participants/promote",
+    "description": "group.promote",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "admin_title": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "peer",
+        "user"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.demote",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/participants/demote",
+    "description": "group.demote",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer",
+        "user"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.transfer",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/owner",
+    "description": "group.transfer",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer",
+        "user"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.unban",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/participants/unban",
+    "description": "group.unban",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer",
+        "user"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.permissions.set",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/permissions",
+    "description": "Patch preserves omitted permissions; replace requires all 20 explicit booleans.",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "permissions": {
+          "type": "object",
+          "properties": {
+            "see_message": {
+              "type": "boolean"
+            },
+            "delete_message": {
+              "type": "boolean"
+            },
+            "kick_user": {
+              "type": "boolean"
+            },
+            "pin_message": {
+              "type": "boolean"
+            },
+            "invite_user": {
+              "type": "boolean"
+            },
+            "add_admin": {
+              "type": "boolean"
+            },
+            "change_info": {
+              "type": "boolean"
+            },
+            "send_message": {
+              "type": "boolean"
+            },
+            "see_members": {
+              "type": "boolean"
+            },
+            "edit_message": {
+              "type": "boolean"
+            },
+            "send_media": {
+              "type": "boolean"
+            },
+            "send_gif_stickers": {
+              "type": "boolean"
+            },
+            "reply_to_story": {
+              "type": "boolean"
+            },
+            "forward_message_from": {
+              "type": "boolean"
+            },
+            "send_gift_packet": {
+              "type": "boolean"
+            },
+            "start_call": {
+              "type": "boolean"
+            },
+            "send_link_message": {
+              "type": "boolean"
+            },
+            "send_forwarded_message": {
+              "type": "boolean"
+            },
+            "add_story": {
+              "type": "boolean"
+            },
+            "manage_call": {
+              "type": "boolean"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "mode": {
+          "type": "string",
+          "maxLength": 7,
+          "enum": [
+            "patch",
+            "replace"
+          ]
+        },
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer",
+        "permissions",
+        "user"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.default_permissions.set",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/default-permissions",
+    "description": "Patch preserves omitted permissions; replace requires all 20 explicit booleans.",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "permissions": {
+          "type": "object",
+          "properties": {
+            "see_message": {
+              "type": "boolean"
+            },
+            "delete_message": {
+              "type": "boolean"
+            },
+            "kick_user": {
+              "type": "boolean"
+            },
+            "pin_message": {
+              "type": "boolean"
+            },
+            "invite_user": {
+              "type": "boolean"
+            },
+            "add_admin": {
+              "type": "boolean"
+            },
+            "change_info": {
+              "type": "boolean"
+            },
+            "send_message": {
+              "type": "boolean"
+            },
+            "see_members": {
+              "type": "boolean"
+            },
+            "edit_message": {
+              "type": "boolean"
+            },
+            "send_media": {
+              "type": "boolean"
+            },
+            "send_gif_stickers": {
+              "type": "boolean"
+            },
+            "reply_to_story": {
+              "type": "boolean"
+            },
+            "forward_message_from": {
+              "type": "boolean"
+            },
+            "send_gift_packet": {
+              "type": "boolean"
+            },
+            "start_call": {
+              "type": "boolean"
+            },
+            "send_link_message": {
+              "type": "boolean"
+            },
+            "send_forwarded_message": {
+              "type": "boolean"
+            },
+            "add_story": {
+              "type": "boolean"
+            },
+            "manage_call": {
+              "type": "boolean"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        },
+        "mode": {
+          "type": "string",
+          "maxLength": 7,
+          "enum": [
+            "patch",
+            "replace"
+          ]
+        }
+      },
+      "required": [
+        "peer",
+        "permissions"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.join",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/join-with-link",
+    "description": "group.join",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "token": {
+          "type": "string",
+          "maxLength": 1024,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "token"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.join_public",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/join-public",
+    "description": "group.join_public",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.leave",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/leave",
+    "description": "group.leave",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "make_orphan": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.link.revoke",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/invite-link/revoke",
+    "description": "group.link.revoke",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.unpin_all",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/unpin-all",
+    "description": "group.unpin_all",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.username",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/username",
+    "description": "group.username",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "username": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "peer",
+        "username"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.restriction",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/restriction",
+    "description": "group.restriction",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "restriction": {
+          "type": "string",
+          "maxLength": 7,
+          "enum": [
+            "private",
+            "public"
+          ]
+        },
+        "username": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "peer",
+        "restriction"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.history",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/history-visibility",
+    "description": "group.history",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "show": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "peer",
+        "show"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.visibility",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/member-visibility",
+    "description": "group.visibility",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "user": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 4,
+              "enum": [
+                "user"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "can_see_messages": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "peer",
+        "user",
+        "can_see_messages"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.pin",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/pin",
+    "description": "group.pin",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 19,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int64-string"
+        },
+        "sender_id": {
+          "type": "string",
+          "maxLength": 10,
+          "pattern": "^[0-9]+$",
+          "format": "uint32-string"
+        }
+      },
+      "required": [
+        "peer",
+        "message_id",
+        "date",
+        "sender_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.unpin",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/unpin",
+    "description": "group.unpin",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 19,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int64-string"
+        }
+      },
+      "required": [
+        "peer",
+        "message_id",
+        "date"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "channel.create",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/channel",
+    "description": "channel.create",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "maxLength": 4,
+                "enum": [
+                  "user"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "maxLength": 10,
+                "pattern": "^[0-9]+$",
+                "format": "uint32-string"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 100,
+          "minItems": 0
+        },
+        "username": {
+          "type": "string",
+          "maxLength": 64
+        }
+      },
+      "required": [
+        "title"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "chat.clear",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/chat/clear",
+    "description": "chat.clear",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "confirm": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        }
+      },
+      "required": [
+        "peer",
+        "confirm"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "chat.delete",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/chat/delete",
+    "description": "chat.delete",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "confirm": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        }
+      },
+      "required": [
+        "peer",
+        "confirm"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.received",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/message/received",
+    "description": "message.received",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 19,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int64-string"
+        }
+      },
+      "required": [
+        "peer",
+        "date"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.pin",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/message/pin",
+    "description": "message.pin",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 19,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int64-string"
+        },
+        "just_mine": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "peer",
+        "message_id",
+        "date",
+        "just_mine"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.unpin",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/message/unpin",
+    "description": "message.unpin",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "date": {
+          "type": "string",
+          "maxLength": 19,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int64-string"
+        }
+      },
+      "required": [
+        "peer",
+        "message_id",
+        "date"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.unpin_all",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/message/unpin-all",
+    "description": "message.unpin_all",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.pins",
+    "mode": "read",
+    "method": "GET",
+    "path": "/message/pins",
+    "description": "message.pins",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "folders.list",
+    "mode": "read",
+    "method": "GET",
+    "path": "/folders",
+    "description": "folders.list",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "include_muted_unread_peers": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "folders.create",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/folders",
+    "description": "folders.create",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "peers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "maxLength": 7,
+                "enum": [
+                  "user",
+                  "group",
+                  "channel"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "maxLength": 10,
+                "pattern": "^[0-9]+$",
+                "format": "uint32-string"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 100,
+          "minItems": 0
+        }
+      },
+      "required": [
+        "name"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "folders.edit",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/folders/edit",
+    "description": "folders.edit",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "folder_id": {
+          "type": "string",
+          "maxLength": 10,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int64-string"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 255,
+          "minLength": 1
+        },
+        "added_peers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "maxLength": 7,
+                "enum": [
+                  "user",
+                  "group",
+                  "channel"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "maxLength": 10,
+                "pattern": "^[0-9]+$",
+                "format": "uint32-string"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 100,
+          "minItems": 0
+        },
+        "deleted_peers": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "maxLength": 7,
+                "enum": [
+                  "user",
+                  "group",
+                  "channel"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "maxLength": 10,
+                "pattern": "^[0-9]+$",
+                "format": "uint32-string"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 100,
+          "minItems": 0
+        }
+      },
+      "required": [
+        "folder_id",
+        "name"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "folders.delete",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/folders/delete",
+    "description": "folders.delete",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "folder_id": {
+          "type": "string",
+          "maxLength": 10,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int64-string"
+        }
+      },
+      "required": [
+        "folder_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "presence.online",
+    "mode": "ephemeral",
+    "method": "POST",
+    "path": "/presence/online",
+    "description": "Immediate presence signal; never replayed after restart.",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "online": {
+          "type": "boolean"
+        },
+        "timeout_ms": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 90000
+        }
+      },
+      "required": [
+        "online"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "presence.typing",
+    "mode": "ephemeral",
+    "method": "POST",
+    "path": "/presence/typing",
+    "description": "presence.typing",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "typing_type": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "presence.stop",
+    "mode": "ephemeral",
+    "method": "POST",
+    "path": "/presence/stop",
+    "description": "presence.stop",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "typing_type": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 12
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "presence.users",
+    "mode": "read",
+    "method": "GET",
+    "path": "/presence/users",
+    "description": "presence.users",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "users": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "maxLength": 4,
+                "enum": [
+                  "user"
+                ]
+              },
+              "id": {
+                "type": "string",
+                "maxLength": 10,
+                "pattern": "^[0-9]+$",
+                "format": "uint32-string"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 100,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "users"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "presence.contacts",
+    "mode": "read",
+    "method": "GET",
+    "path": "/presence/contacts",
+    "description": "presence.contacts",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "presence.group",
+    "mode": "read",
+    "method": "GET",
+    "path": "/presence/group",
+    "description": "presence.group",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "presence.group.count",
+    "mode": "read",
+    "method": "GET",
+    "path": "/presence/group/count",
+    "description": "presence.group.count",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.reactions",
+    "mode": "read",
+    "method": "GET",
+    "path": "/message/reactions",
+    "description": "message.reactions",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "message_id": {
+                "type": "string",
+                "maxLength": 20,
+                "pattern": "^-?[0-9]+$",
+                "format": "int64-string"
+              },
+              "date_ms": {
+                "type": "string",
+                "maxLength": 19,
+                "pattern": "^[0-9]+$"
+              },
+              "sequence": {
+                "type": "string",
+                "maxLength": 20,
+                "pattern": "^-?[0-9]+$"
+              }
+            },
+            "required": [
+              "message_id",
+              "date_ms"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 100,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "peer",
+        "messages"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.views",
+    "mode": "read",
+    "method": "GET",
+    "path": "/message/views",
+    "description": "message.views",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "message_id": {
+                "type": "string",
+                "maxLength": 20,
+                "pattern": "^-?[0-9]+$",
+                "format": "int64-string"
+              },
+              "date_ms": {
+                "type": "string",
+                "maxLength": 19,
+                "pattern": "^[0-9]+$"
+              },
+              "sequence": {
+                "type": "string",
+                "maxLength": 20,
+                "pattern": "^-?[0-9]+$"
+              }
+            },
+            "required": [
+              "message_id",
+              "date_ms"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 100,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "peer",
+        "messages"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.views.increment",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/message/views/increment",
+    "description": "message.views.increment",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "message_id": {
+                "type": "string",
+                "maxLength": 20,
+                "pattern": "^-?[0-9]+$",
+                "format": "int64-string"
+              },
+              "date_ms": {
+                "type": "string",
+                "maxLength": 19,
+                "pattern": "^[0-9]+$"
+              },
+              "sequence": {
+                "type": "string",
+                "maxLength": 20,
+                "pattern": "^-?[0-9]+$"
+              }
+            },
+            "required": [
+              "message_id",
+              "date_ms"
+            ],
+            "additionalProperties": false
+          },
+          "maxItems": 100,
+          "minItems": 1
+        }
+      },
+      "required": [
+        "peer",
+        "messages"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.reaction.set",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/message/reaction/set",
+    "description": "message.reaction.set",
+    "verification": "offline tests; live authorized two-account test 2026-10-06: second-account reaction",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "date_ms": {
+          "type": "string",
+          "maxLength": 19,
+          "pattern": "^[0-9]+$"
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 32,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "peer",
+        "message_id",
+        "date_ms",
+        "code"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.reaction.remove",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/message/reaction/remove",
+    "description": "message.reaction.remove",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "date_ms": {
+          "type": "string",
+          "maxLength": 19,
+          "pattern": "^[0-9]+$"
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 32,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "peer",
+        "message_id",
+        "date_ms",
+        "code"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.reaction.users",
+    "mode": "read",
+    "method": "GET",
+    "path": "/message/reaction/users",
+    "description": "message.reaction.users",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "date_ms": {
+          "type": "string",
+          "maxLength": 19,
+          "pattern": "^[0-9]+$"
+        },
+        "code": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100000
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "peer",
+        "message_id",
+        "date_ms"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "channel.list",
+    "mode": "read",
+    "method": "GET",
+    "path": "/channels",
+    "description": "channel.list",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "is_owner": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.photo",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/photo",
+    "description": "group.photo",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "media_id": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "peer",
+        "media_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "group.photo.remove",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/group/photo/remove",
+    "description": "group.photo.remove",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "avatar_id": {
+          "type": "string",
+          "maxLength": 20,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "account.avatar",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/user/avatar",
+    "description": "account.avatar",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "media_id": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "media_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "send.poll",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/send/poll",
+    "description": "Create and send poll using durable request ID. Any uncertain result after creation becomes unknown; creation is never blindly repeated.",
+    "verification": "offline tests; live authorized two-account test 2026-10-06: send, second-account history, vote and close",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "question": {
+          "type": "string",
+          "maxLength": 300,
+          "minLength": 1
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 100,
+            "minLength": 1
+          },
+          "minItems": 2,
+          "maxItems": 10
+        },
+        "anonymous": {
+          "type": "boolean"
+        },
+        "multiple": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "peer",
+        "question",
+        "options"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "poll.vote",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/poll/vote",
+    "description": "poll.vote",
+    "verification": "offline tests; live authorized two-account test 2026-10-06: second-account vote",
+    "request": {
+      "type": "object",
+      "properties": {
+        "poll_id": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "option_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 2147483647
+          },
+          "minItems": 0,
+          "maxItems": 10
+        },
+        "retract": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "poll_id",
+        "option_ids"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "poll.close",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/poll/close",
+    "description": "poll.close",
+    "verification": "offline tests; live authorized two-account test 2026-10-06: close",
+    "request": {
+      "type": "object",
+      "properties": {
+        "poll_id": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        }
+      },
+      "required": [
+        "poll_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "poll.results",
+    "mode": "read",
+    "method": "GET",
+    "path": "/poll/results",
+    "description": "poll.results",
+    "verification": "offline tests; live authorized two-account test 2026-10-06: read after send",
+    "request": {
+      "type": "object",
+      "properties": {
+        "poll_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 20,
+            "minLength": 1,
+            "pattern": "^-?[0-9]+$",
+            "format": "int64-string"
+          },
+          "minItems": 1,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "poll_ids"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "poll.full_results",
+    "mode": "read",
+    "method": "GET",
+    "path": "/poll/full-results",
+    "description": "poll.full_results",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "poll_id": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        }
+      },
+      "required": [
+        "poll_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "sticker.list",
+    "mode": "read",
+    "method": "GET",
+    "path": "/sticker/collections",
+    "description": "sticker.list",
+    "verification": "offline tests; live authorized two-account test 2026-10-06: read",
+    "request": {
+      "type": "object",
+      "properties": {
+        "offset": {
+          "type": "string",
+          "maxLength": 512
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "sticker.get",
+    "mode": "read",
+    "method": "GET",
+    "path": "/sticker/collection",
+    "description": "sticker.get",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "collection_id": {
+          "type": "string",
+          "maxLength": 10,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int32-string"
+        }
+      },
+      "required": [
+        "collection_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "sticker.pack.add",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/sticker/collection/add",
+    "description": "sticker.pack.add",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "collection_id": {
+          "type": "string",
+          "maxLength": 10,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int32-string"
+        }
+      },
+      "required": [
+        "collection_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "sticker.pack.remove",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/sticker/collection/remove",
+    "description": "sticker.pack.remove",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "collection_id": {
+          "type": "string",
+          "maxLength": 10,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int32-string"
+        }
+      },
+      "required": [
+        "collection_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "send.sticker",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/send/sticker",
+    "description": "send.sticker",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "collection_id": {
+          "type": "string",
+          "maxLength": 10,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int32-string"
+        },
+        "sticker_id": {
+          "type": "string",
+          "maxLength": 10,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int32-string"
+        },
+        "animated": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "peer",
+        "collection_id",
+        "sticker_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "report.peer",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/report/peer",
+    "description": "report.peer",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "source": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 4
+        }
+      },
+      "required": [
+        "peer",
+        "kind"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "report.messages",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/report/messages",
+    "description": "report.messages",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "kind": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "messages": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "message_id": {
+                "type": "string",
+                "maxLength": 20,
+                "pattern": "^-?[0-9]+$",
+                "format": "int64-string"
+              },
+              "date_ms": {
+                "type": "string",
+                "maxLength": 19,
+                "pattern": "^[0-9]+$"
+              },
+              "sequence": {
+                "type": "string",
+                "maxLength": 20,
+                "pattern": "^-?[0-9]+$"
+              }
+            },
+            "required": [
+              "message_id",
+              "date_ms"
+            ],
+            "additionalProperties": false
+          },
+          "minItems": 1,
+          "maxItems": 100
+        }
+      },
+      "required": [
+        "peer",
+        "kind",
+        "messages"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "report.dismiss",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/report/dismiss",
+    "description": "report.dismiss",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "peer"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.upvoters",
+    "mode": "read",
+    "method": "GET",
+    "path": "/message/upvoters",
+    "description": "message.upvoters",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "date_ms": {
+          "type": "string",
+          "maxLength": 19,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int64-string"
+        },
+        "next": {
+          "type": "string",
+          "maxLength": 5500
+        }
+      },
+      "required": [
+        "peer",
+        "message_id",
+        "date_ms"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.upvote",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/message/upvote",
+    "description": "message.upvote",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "date_ms": {
+          "type": "string",
+          "maxLength": 19,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int64-string"
+        },
+        "album_id": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        }
+      },
+      "required": [
+        "peer",
+        "message_id",
+        "date_ms"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "message.upvote.remove",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/message/upvote/remove",
+    "description": "message.upvote.remove",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "date_ms": {
+          "type": "string",
+          "maxLength": 19,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int64-string"
+        },
+        "album_id": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        }
+      },
+      "required": [
+        "peer",
+        "message_id",
+        "date_ms"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "contacts.resolve",
+    "mode": "read",
+    "method": "GET",
+    "path": "/user/check",
+    "description": "Resolve an exact phone match using supported provider lookup. Missing/ambiguous accounts are explicit errors; contacts are not silently imported.",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "phone": {
+          "type": "string",
+          "maxLength": 16,
+          "minLength": 5,
+          "pattern": "^\\+?[0-9]{5,15}$"
+        }
+      },
+      "required": [
+        "phone"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "miniapp.url",
+    "mode": "read",
+    "method": "GET",
+    "path": "/miniapp/url",
+    "description": "Return provider-signed launch URL. Authentication data stays in the response, not in the operation journal. No unsigned fallback.",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "bot_id": {
+          "type": "string",
+          "maxLength": 10,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "uint32-string"
+        },
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "screen_mode": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 2
+        },
+        "source": {
+          "type": "string",
+          "maxLength": 12,
+          "enum": [
+            "main",
+            "direct",
+            "menu",
+            "keyboard"
+          ]
+        },
+        "start_param": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "short_name": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "url": {
+          "type": "string",
+          "maxLength": 4096
+        },
+        "theme": {
+          "type": "object",
+          "properties": {
+            "bg_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "secondary_bg_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "text_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "hint_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "link_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "button_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "button_text_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "header_bg_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "accent_text_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "section_bg_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "section_header_text_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "section_separator_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "subtitle_text_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "destructive_text_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            },
+            "bottom_bar_bg_color": {
+              "type": "string",
+              "maxLength": 9,
+              "minLength": 7,
+              "pattern": "^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$"
+            }
+          },
+          "required": [],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "bot_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "miniapp.hash",
+    "mode": "read",
+    "method": "GET",
+    "path": "/miniapp/hash",
+    "description": "Return provider authentication data. Treat the response as a short-lived credential; never log it.",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "bot_id": {
+          "type": "string",
+          "maxLength": 10,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "uint32-string"
+        },
+        "data": {
+          "type": "string",
+          "maxLength": 4096
+        }
+      },
+      "required": [
+        "bot_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "miniapp.menu",
+    "mode": "read",
+    "method": "GET",
+    "path": "/miniapp/menu",
+    "description": "miniapp.menu",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "bot_id": {
+          "type": "string",
+          "maxLength": 10,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "uint32-string"
+        }
+      },
+      "required": [
+        "bot_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "miniapp.data",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/miniapp/data",
+    "description": "miniapp.data",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "bot_id": {
+          "type": "string",
+          "maxLength": 10,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "uint32-string"
+        },
+        "data": {
+          "type": "string",
+          "maxLength": 16384
+        },
+        "query_id": {
+          "type": "string",
+          "maxLength": 1024
+        },
+        "button_text": {
+          "type": "string",
+          "maxLength": 256
+        }
+      },
+      "required": [
+        "bot_id",
+        "data"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "miniapp.custom",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/miniapp/custom",
+    "description": "Invoke an app-specific method with a durable outcome. Parameters are application data, not account login/payment credentials.",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "bot_id": {
+          "type": "string",
+          "maxLength": 10,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "uint32-string"
+        },
+        "method": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1
+        },
+        "params": {
+          "type": "string",
+          "maxLength": 16384
+        }
+      },
+      "required": [
+        "bot_id",
+        "method"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "bot.callback",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/bot/callback",
+    "description": "Send a button callback using its original message position. Returns provider acknowledgment; no automatic replay after an uncertain result.",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "date_ms": {
+          "type": "string",
+          "maxLength": 19,
+          "minLength": 1,
+          "pattern": "^[0-9]+$",
+          "format": "positive-int64-string"
+        },
+        "data": {
+          "type": "string",
+          "maxLength": 4096
+        }
+      },
+      "required": [
+        "peer",
+        "message_id",
+        "date_ms",
+        "data"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "link.summary",
+    "mode": "read",
+    "method": "GET",
+    "path": "/link/summary",
+    "description": "link.summary",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "url"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "story.list",
+    "mode": "read",
+    "method": "GET",
+    "path": "/story/list",
+    "description": "story.list",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "get_unmutual": {
+          "type": "boolean"
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "story.get",
+    "mode": "read",
+    "method": "GET",
+    "path": "/story",
+    "description": "story.get",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "story_id": {
+          "type": "string",
+          "maxLength": 256,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "story_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "story.viewers",
+    "mode": "read",
+    "method": "GET",
+    "path": "/story/viewers",
+    "description": "story.viewers",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "story_id": {
+          "type": "string",
+          "maxLength": 256,
+          "minLength": 1
+        },
+        "page": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "story_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "story.add",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/story/add",
+    "description": "Publish a text OR an uploaded PNG/JPEG/GIF image story. Provide exactly one of text/media_id. Existing provider privacy is retained unless explicitly selected; video-story upload is not verified.",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "text": {
+          "type": "string",
+          "maxLength": 4096,
+          "minLength": 1
+        },
+        "expiration_days": {
+          "type": "integer",
+          "enum": [
+            1,
+            2
+          ]
+        },
+        "privacy": {
+          "type": "string",
+          "maxLength": 8,
+          "enum": [
+            "unknown",
+            "exclude",
+            "include",
+            "contacts",
+            "all"
+          ]
+        },
+        "tag_ids": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2147483647
+          },
+          "minItems": 0,
+          "maxItems": 32
+        },
+        "media_id": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "story.delete",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/story/delete",
+    "description": "story.delete",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "story_id": {
+          "type": "string",
+          "maxLength": 256,
+          "minLength": 1
+        }
+      },
+      "required": [
+        "story_id"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "story.react",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/story/react",
+    "description": "story.react",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "story_id": {
+          "type": "string",
+          "maxLength": 256,
+          "minLength": 1
+        },
+        "story_type": {
+          "type": "string",
+          "maxLength": 7,
+          "enum": [
+            "user",
+            "channel",
+            "bot"
+          ]
+        },
+        "reaction_type": {
+          "type": "string",
+          "maxLength": 12,
+          "enum": [
+            "view",
+            "emoji",
+            "remove_emoji",
+            "link"
+          ]
+        },
+        "reaction_text": {
+          "type": "string",
+          "maxLength": 128
+        }
+      },
+      "required": [
+        "story_id",
+        "reaction_type"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "wallet.list",
+    "mode": "read",
+    "method": "GET",
+    "path": "/wallet/list",
+    "description": "Read sanitized wallet balances. Financial transfers and payment credentials are not accepted by this API.",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {},
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "wallet.kifpools",
+    "mode": "read",
+    "method": "GET",
+    "path": "/wallet/kifpools",
+    "description": "Read sanitized legacy wallet balance. No token/PAN/account number/launch credentials are returned.",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "pocket_type": {
+          "type": "integer",
+          "enum": [
+            0,
+            2200,
+            3300,
+            6680,
+            9999
+          ]
+        }
+      },
+      "required": [],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "send.contact",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/send/contact",
+    "description": "send.contact",
+    "verification": "official-schema-and-offline-tests; live verification tracked separately",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "reply_message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "silent": {
+          "type": "boolean"
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 128,
+          "minLength": 1
+        },
+        "phones": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 32,
+            "minLength": 1
+          },
+          "minItems": 1,
+          "maxItems": 10
+        },
+        "emails": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 254,
+            "minLength": 1
+          },
+          "minItems": 0,
+          "maxItems": 10
+        }
+      },
+      "required": [
+        "peer",
+        "name",
+        "phones"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "send.location",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/send/location",
+    "description": "send.location",
+    "verification": "offline tests; live authorized two-account test 2026-10-06: send and second-account history",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "reply_message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "silent": {
+          "type": "boolean"
+        },
+        "latitude": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "longitude": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      },
+      "required": [
+        "peer",
+        "latitude",
+        "longitude"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "send.template",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/send/template",
+    "description": "Send text with inline/reply/remove keyboard; normal-user live sends currently rejected by provider. Gateway persists outer message RID; inner new-template ID is unset.",
+    "verification": "official-schema and offline tests; live user-account copy/URL variants rejected with PROVIDER_INVALID_ARGUMENT on 2026-10-06; interoperability unresolved",
+    "request": {
+      "type": "object",
+      "properties": {
+        "peer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "maxLength": 7,
+              "enum": [
+                "user",
+                "group",
+                "channel"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "maxLength": 10,
+              "pattern": "^[0-9]+$",
+              "format": "uint32-string"
+            }
+          },
+          "required": [
+            "type",
+            "id"
+          ],
+          "additionalProperties": false
+        },
+        "reply_message_id": {
+          "type": "string",
+          "maxLength": 20,
+          "minLength": 1,
+          "pattern": "^-?[0-9]+$",
+          "format": "int64-string"
+        },
+        "silent": {
+          "type": "boolean"
+        },
+        "text": {
+          "type": "string",
+          "maxLength": 16384,
+          "minLength": 1
+        },
+        "inline_keyboard": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "minLength": 1
+                },
+                "url": {
+                  "type": "string",
+                  "maxLength": 2048,
+                  "minLength": 1
+                },
+                "callback_data": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "minLength": 1
+                },
+                "copy_text": {
+                  "type": "string",
+                  "maxLength": 256,
+                  "minLength": 1
+                },
+                "web_app_url": {
+                  "type": "string",
+                  "maxLength": 2048,
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 8
+          },
+          "minItems": 1,
+          "maxItems": 20
+        },
+        "reply_keyboard": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "text": {
+                  "type": "string",
+                  "maxLength": 64,
+                  "minLength": 1
+                },
+                "request_contact": {
+                  "type": "boolean"
+                },
+                "request_location": {
+                  "type": "boolean"
+                },
+                "web_app_url": {
+                  "type": "string",
+                  "maxLength": 2048,
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "text"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 1,
+            "maxItems": 8
+          },
+          "minItems": 1,
+          "maxItems": 20
+        },
+        "remove_keyboard": {
+          "type": "boolean",
+          "enum": [
+            true
+          ]
+        },
+        "selective": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "peer",
+        "text"
+      ],
+      "additionalProperties": false
+    }
+  },
+  {
+    "operation": "report.story",
+    "mode": "mutation",
+    "method": "POST",
+    "path": "/report/story",
+    "description": "Report one or more stories as inappropriate content",
+    "verification": "official-web-schema-and-offline-tests; no live report submitted",
+    "request": {
+      "type": "object",
+      "properties": {
+        "story_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512
+          },
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "kind": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 6
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 1024
+        }
+      },
+      "required": [
+        "story_ids",
+        "kind"
+      ],
+      "additionalProperties": false
+    }
+  }
+]
