@@ -558,35 +558,12 @@ func validateWebhookURL(value string) error {
 	}
 	return nil
 }
-func eventAllowed(event string, filters []string) bool {
-	if len(filters) == 0 {
-		return true
-	}
-	for _, filter := range filters {
-		if filter == "*" || filter == event {
-			return true
-		}
-	}
-	return false
-}
-func (s *Service) targets(d domains.Device, event string) []storage.WebhookTarget {
-	result := []storage.WebhookTarget{}
-	if d.Webhook.URL != "" && eventAllowed(event, d.Webhook.Events) {
-		result = append(result, storage.WebhookTarget{URL: d.Webhook.URL, Secret: d.Webhook.Secret, Revision: d.Webhook.Revision, Device: true})
-	}
-	if (d.Webhook.URL == "" || s.options.MergeGlobal) && eventAllowed(event, s.options.GlobalWebhookEvents) {
-		for _, target := range s.options.GlobalWebhooks {
-			duplicate := false
-			for _, old := range result {
-				if old.URL == target.URL {
-					duplicate = true
-					break
-				}
-			}
-			if !duplicate {
-				result = append(result, target)
-			}
-		}
+
+// Routing plans are resolved against current device configuration inside storage.
+func (s *Service) targets(_ domains.Device, event string) []storage.WebhookTarget {
+	result := []storage.WebhookTarget{{Device: true, CurrentDevice: true, MergeGlobal: s.options.MergeGlobal}}
+	if domains.EventAllowed(event, s.options.GlobalWebhookEvents) {
+		result = append(result, s.options.GlobalWebhooks...)
 	}
 	return result
 }

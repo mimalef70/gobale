@@ -67,6 +67,7 @@ func (s *Service) sendLoop() {
 	}
 }
 func (s *Service) processOperation(op domains.Operation) {
+	defer s.busyWorker("send")()
 	// Every exit is persisted with a detached short context: shutdown must not
 	// leave an accepted provider send eligible for blind automatic retry.
 	finish := func(state string, result *domains.SendResult, code, message string) {
@@ -221,6 +222,7 @@ func (s *Service) reconnectLoop() {
 	}
 }
 func (s *Service) connectEntry(conn string, e *clientEntry) {
+	defer s.busyWorker("reconnect")()
 	defer s.wg.Done()
 	defer func() { <-s.reconnectSlots }()
 	defer e.mu.Unlock()
@@ -232,7 +234,9 @@ func (s *Service) connectEntry(conn string, e *clientEntry) {
 		return
 	}
 	if err == nil {
+		started := time.Now()
 		err = e.client.Connect(ctx, session, s.sink(conn))
+		s.observeReconnect(started, err != nil && s.ctx.Err() == nil)
 	}
 	if err != nil {
 		e.failures++
@@ -298,6 +302,7 @@ func (s *Service) webhookLoop() {
 	}
 }
 func (s *Service) deliver(d domains.Delivery) {
+	defer s.busyWorker("webhook")()
 	update := func(state string, next time.Time, message string) {
 		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()

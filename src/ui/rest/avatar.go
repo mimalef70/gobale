@@ -28,30 +28,32 @@ func (s *Server) avatar(c fiber.Ctx) error {
 	default:
 		return domains.E("MEDIA_BUSY", "media transfer capacity reached", 503)
 	}
+	stream := &slotReader{release: func() { <-s.mediaSlots }}
+	handedOff := false
+	defer func() {
+		if !handedOff {
+			_ = stream.Close()
+		}
+	}()
 	reader, info, err := s.service.DownloadAvatar(c.Context(), d.ID, domains.Peer{Type: parts[0], ID: parts[1]}, c.Query("size", "small"))
 	if err != nil {
-		<-s.mediaSlots
 		return err
 	}
+	stream.ReadCloser = reader
 	limit := min(s.opts.MaxMediaBytes, int64(8<<20))
 	if info.Size <= 0 || info.Size > limit {
-		_ = reader.Close()
-		<-s.mediaSlots
 		return domains.E("AVATAR_TOO_LARGE", "avatar is empty or exceeds configured size limit", 413)
 	}
 	switch info.ContentType {
 	case "image/jpeg", "image/png", "image/gif":
 	default:
-		_ = reader.Close()
-		<-s.mediaSlots
 		return domains.E("AVATAR_INVALID", "provider returned an unsupported image format", 502)
 	}
 	c.Set("Content-Type", info.ContentType)
 	c.Set("Content-Disposition", mime.FormatMediaType("inline", map[string]string{"filename": filepath.Base(info.Name)}))
-	stream := &slotReader{ReadCloser: reader, release: func() { <-s.mediaSlots }}
 	if err := c.SendStream(stream, int(info.Size)); err != nil {
-		_ = stream.Close()
 		return err
 	}
+	handedOff = true
 	return nil
 }

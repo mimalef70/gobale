@@ -46,17 +46,22 @@ func (s *Service) DownloadAvatar(ctx context.Context, id string, user domains.Pe
 		stopService = context.AfterFunc(serviceContext, cancel)
 	}
 	release := func() { stopService(); cancel() }
+	handedOff := false
+	defer func() {
+		if !handedOff {
+			release()
+		}
+	}()
 	reader, info, err := downloader.DownloadAvatar(lifetime, user, size)
 	if err != nil {
-		release()
 		if reader != nil {
 			_ = reader.Close()
 		}
 		return nil, domains.AvatarInfo{}, safeError(err)
 	}
 	if reader == nil {
-		release()
 		return nil, domains.AvatarInfo{}, domains.E("AVATAR_INVALID", "provider returned no avatar stream", 502)
 	}
+	handedOff = true
 	return &cancelledReader{ReadCloser: reader, cancel: release}, info, nil
 }

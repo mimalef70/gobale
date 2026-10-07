@@ -123,7 +123,7 @@ func (s *Service) WebhookDetails(ctx context.Context, id string) (domains.Webhoo
 	result := domains.WebhookDetails{WebhookConfig: d.Webhook, SecretConfigured: d.Webhook.Secret != "", RoutingMode: "none", RoutingRules: []domains.WebhookRoutingRule{}}
 	if d.Webhook.URL != "" {
 		result.RoutingMode = "device"
-		result.RoutingRules = append(result.RoutingRules, domains.WebhookRoutingRule{Source: "device", URL: d.Webhook.URL, Events: append([]string{}, d.Webhook.Events...), SecretConfigured: d.Webhook.Secret != ""})
+		result.RoutingRules = append(result.RoutingRules, domains.WebhookRoutingRule{Source: "device", URL: d.Webhook.URL, Events: append([]string{}, d.Webhook.Events...), Filter: d.Webhook.Filter, SecretConfigured: d.Webhook.Secret != ""})
 	}
 	if d.Webhook.URL == "" || s.options.MergeGlobal {
 		for _, target := range s.options.GlobalWebhooks {

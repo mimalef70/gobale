@@ -35,7 +35,7 @@ import (
 func TestOptionalSoak(t *testing.T) {
 	raw := os.Getenv("GOBALE_SOAK_DURATION")
 	if raw == "" {
-		t.Skip("set GOBALE_SOAK_DURATION to enable the synthetic 50-account soak")
+		t.Skip("set GOBALE_SOAK_DURATION to enable the synthetic account soak")
 	}
 	duration, err := time.ParseDuration(raw)
 	if err != nil || duration < time.Second || duration > 48*time.Hour {
@@ -51,6 +51,10 @@ func TestOptionalSoak(t *testing.T) {
 			t.Fatalf("%s must be 1..10000", name)
 		}
 		return n
+	}
+	accounts := integer("GOBALE_SOAK_ACCOUNTS", 50)
+	if accounts > 1000 {
+		t.Fatal("GOBALE_SOAK_ACCOUNTS must be 1..1000")
 	}
 	steadyRate := integer("GOBALE_SOAK_RATE", 20)
 	burstRate := integer("GOBALE_SOAK_BURST_RATE", 100)
@@ -112,7 +116,7 @@ func TestOptionalSoak(t *testing.T) {
 	httpAttempts := int64(0)
 	var failures atomic.Int64
 	var receiverError error
-	accountAcks := make([]int64, 50)
+	accountAcks := make([]int64, accounts)
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		body, e := io.ReadAll(io.LimitReader(r.Body, 128<<10))
 		if e != nil {
@@ -134,7 +138,7 @@ func TestOptionalSoak(t *testing.T) {
 			Created  int64 `json:"created_ns"`
 			Steady   bool  `json:"steady"`
 		}
-		if json.Unmarshal(body, &event) != nil || json.Unmarshal(event.Payload, &payload) != nil || event.ID == "" || payload.Sequence < 1 || payload.Account < 0 || payload.Account >= 50 || event.SessionID != fmt.Sprint("soak-", payload.Account) || event.AccountID != strconv.Itoa(payload.Account+1) {
+		if json.Unmarshal(body, &event) != nil || json.Unmarshal(event.Payload, &payload) != nil || event.ID == "" || payload.Sequence < 1 || payload.Account < 0 || payload.Account >= accounts || event.SessionID != fmt.Sprint("soak-", payload.Account) || event.AccountID != strconv.Itoa(payload.Account+1) {
 			failures.Add(1)
 			w.WriteHeader(400)
 			return
@@ -209,7 +213,7 @@ func TestOptionalSoak(t *testing.T) {
 		if e != nil {
 			t.Fatal(e)
 		}
-		service = New(store, Options{PollInterval: 20 * time.Millisecond, GlobalWebhooks: []storage.WebhookTarget{{URL: server.URL, Secret: "soak-webhook-secret"}}}, factory)
+		service = New(store, Options{PollInterval: 500 * time.Millisecond, GlobalWebhooks: []storage.WebhookTarget{{URL: server.URL, Secret: "soak-webhook-secret"}}}, factory)
 		if e = service.Start(ctx); e != nil {
 			t.Fatal(e)
 		}
@@ -218,7 +222,7 @@ func TestOptionalSoak(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	devices := make([]domains.Device, 50)
+	devices := make([]domains.Device, accounts)
 	for i := range devices {
 		devices[i], err = store.CreateDevice(ctx, fmt.Sprint("soak-", i))
 		if err != nil {
@@ -260,7 +264,9 @@ func TestOptionalSoak(t *testing.T) {
 	disconnectInterval := min(time.Minute, duration/4)
 	nextDisconnect := start.Add(disconnectInterval)
 	accepted := 0
-	accountAccepted := make([]int64, 50)
+	offered := 0
+	skipped := 0
+	accountAccepted := make([]int64, accounts)
 	restarts := 0
 	disconnects := 0
 	var maxHeap uint64
@@ -325,7 +331,7 @@ func TestOptionalSoak(t *testing.T) {
 			nextRestart = now.Add(restartInterval)
 		}
 		if !now.Before(nextDisconnect) {
-			index := disconnects % 50
+			index := disconnects % accounts
 			clientsMu.Lock()
 			client := clients[devices[index].ID]
 			clientsMu.Unlock()
@@ -348,11 +354,13 @@ func TestOptionalSoak(t *testing.T) {
 		if wait := time.Until(deadline); wait > 0 {
 			time.Sleep(wait)
 		}
-		index := accepted % 50
+		index := offered % accounts
+		offered++
 		clientsMu.Lock()
 		client := clients[devices[index].ID]
 		clientsMu.Unlock()
 		if client == nil || client.Status().Transport != "connected" {
+			skipped++
 			continue
 		}
 		sequence := accepted + 1
@@ -366,7 +374,7 @@ func TestOptionalSoak(t *testing.T) {
 		accepted++
 		accountAccepted[index]++
 	}
-	drainDeadline := time.Now().Add(30 * time.Second)
+	drainDeadline := time.Now().Add(5 * time.Minute)
 	var finalStats map[string]int64
 	for time.Now().Before(drainDeadline) {
 		receiveMu.Lock()
@@ -407,7 +415,7 @@ func TestOptionalSoak(t *testing.T) {
 	runtime.GC()
 	var finalMemory runtime.MemStats
 	runtime.ReadMemStats(&finalMemory)
-	report := map[string]any{"synthetic": true, "duration_seconds": duration.Seconds(), "elapsed_with_drain_seconds": time.Since(start).Seconds(), "accounts": 50, "steady_target_events_per_second": steadyRate, "burst_target_events_per_second": burstRate, "configured_burst_seconds": burstDuration.Seconds(), "observed_burst_window_seconds": max(0, min(duration-burstStart.Sub(start), burstDuration).Seconds()), "accepted_events": accepted, "unique_acknowledgements": unique, "http_attempts": httpAttempts, "duplicate_acknowledgements": duplicateAcks, "restarts": restarts, "fake_disconnects": disconnects, "connect_calls": connects.Load(), "p50_ack_latency_upper_bound_ms": percentile(histogram, unique, .5), "p95_ack_latency_upper_bound_ms": percentile(histogram, unique, .95), "p99_ack_latency_upper_bound_ms": percentile(histogram, unique, .99), "p95_persistence_latency_upper_bound_ms": percentile(persistHistogram, int64(accepted), .95), "steady_healthy_acknowledgements": steadyHealthyAcks, "p95_steady_healthy_ack_latency_upper_bound_ms": percentile(steadyHealthyHistogram, steadyHealthyAcks, .95), "sampled_process_heap_max_bytes": maxHeap, "initial_process_heap_after_gc_bytes": initialMemory.HeapAlloc, "post_drain_process_heap_after_gc_bytes": finalMemory.HeapAlloc, "sampled_process_goroutines_max": maxGoroutines, "initial_process_goroutines": initialGoroutines, "post_drain_process_goroutines": runtime.NumGoroutine(), "final_webhook_pending": finalStats["webhook_pending"], "final_webhook_failed": finalStats["webhook_failed"], "measurement_scope": "fake provider, loopback HTTP, process measurements include test harness; not live capacity"}
+	report := map[string]any{"synthetic": true, "duration_seconds": duration.Seconds(), "elapsed_with_drain_seconds": time.Since(start).Seconds(), "accounts": accounts, "offered_events": offered, "skipped_disconnected_events": skipped, "steady_target_events_per_second": steadyRate, "burst_target_events_per_second": burstRate, "configured_burst_seconds": burstDuration.Seconds(), "observed_burst_window_seconds": max(0, min(duration-burstStart.Sub(start), burstDuration).Seconds()), "accepted_events": accepted, "unique_acknowledgements": unique, "http_attempts": httpAttempts, "duplicate_acknowledgements": duplicateAcks, "restarts": restarts, "fake_disconnects": disconnects, "connect_calls": connects.Load(), "p50_ack_latency_upper_bound_ms": percentile(histogram, unique, .5), "p95_ack_latency_upper_bound_ms": percentile(histogram, unique, .95), "p99_ack_latency_upper_bound_ms": percentile(histogram, unique, .99), "p95_persistence_latency_upper_bound_ms": percentile(persistHistogram, int64(accepted), .95), "steady_healthy_acknowledgements": steadyHealthyAcks, "p95_steady_healthy_ack_latency_upper_bound_ms": percentile(steadyHealthyHistogram, steadyHealthyAcks, .95), "sampled_process_heap_max_bytes": maxHeap, "initial_process_heap_after_gc_bytes": initialMemory.HeapAlloc, "post_drain_process_heap_after_gc_bytes": finalMemory.HeapAlloc, "sampled_process_goroutines_max": maxGoroutines, "initial_process_goroutines": initialGoroutines, "post_drain_process_goroutines": runtime.NumGoroutine(), "final_webhook_pending": finalStats["webhook_pending"], "final_webhook_failed": finalStats["webhook_failed"], "measurement_scope": "fake provider, loopback HTTP, process measurements include test harness; not live capacity"}
 	report["receiver_dedupe"] = "SQLite WAL, 2 MiB page cache, fixed-size in-memory counters"
 	report["receiver_durable_unique_acknowledgements"] = durableUnique
 	report["final_webhook_paused"] = finalStats["webhook_paused"]

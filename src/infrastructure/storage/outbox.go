@@ -14,13 +14,14 @@ import (
 	"github.com/mimalef70/gobale/src/domains"
 )
 
-const operationColumns = `o.id,o.connection_id,d.alias,o.request,COALESCE(o.idempotency_key,''),o.payload_hash,o.state,o.result,o.error_code,o.error_message,o.created_at,o.updated_at`
+const operationColumns = `o.id,o.connection_id,d.alias,o.request,COALESCE(o.idempotency_key,''),o.payload_hash,o.state,o.result,o.error_code,o.error_message,o.created_at,o.updated_at,COALESCE((SELECT schedule_id FROM schedule_occurrences so WHERE so.operation_id=o.id AND so.connection_id=o.connection_id),''),(SELECT scheduled_for FROM schedule_occurrences so WHERE so.operation_id=o.id AND so.connection_id=o.connection_id)`
 
 func scanOperation(row scanner) (op domains.Operation, e error) {
 	var request string
 	var result sql.NullString
 	var created, updated int64
-	e = row.Scan(&op.ID, &op.ConnectionID, &op.DeviceID, &request, &op.IdempotencyKey, &op.PayloadHash, &op.State, &result, &op.ErrorCode, &op.ErrorMessage, &created, &updated)
+	var scheduled sql.NullInt64
+	e = row.Scan(&op.ID, &op.ConnectionID, &op.DeviceID, &request, &op.IdempotencyKey, &op.PayloadHash, &op.State, &result, &op.ErrorCode, &op.ErrorMessage, &created, &updated, &op.ScheduleID, &scheduled)
 	if e != nil {
 		return op, dbError(e)
 	}
@@ -31,6 +32,10 @@ func scanOperation(row scanner) (op domains.Operation, e error) {
 		if e = json.Unmarshal([]byte(result.String), &op.Result); e != nil {
 			return op, e
 		}
+	}
+	if scheduled.Valid {
+		t := stamp(scheduled.Int64)
+		op.ScheduledFor = &t
 	}
 	op.CreatedAt = stamp(created)
 	op.UpdatedAt = stamp(updated)
@@ -89,11 +94,8 @@ func (s *Store) enqueueTx(ctx context.Context, tx *sql.Tx, conn string, req doma
 			return empty, false, e
 		}
 	}
-	if req.MediaID != "" {
-		var mediaExists int
-		if e = tx.QueryRowContext(ctx, `SELECT 1 FROM media WHERE connection_id=? AND id=?`, conn, req.MediaID).Scan(&mediaExists); e != nil {
-			return empty, false, dbError(e)
-		}
+	if e = validateMediaReferencesTx(ctx, tx, conn, req); e != nil {
+		return empty, false, e
 	}
 	if limit <= 0 {
 		limit = 10000
@@ -121,44 +123,44 @@ func (s *Store) enqueueTx(ctx context.Context, tx *sql.Tx, conn string, req doma
 	if key != "" {
 		idem = key
 	}
-	if _, e = tx.ExecContext(ctx, `INSERT INTO operations(id,connection_id,request,idempotency_key,payload_hash,state,created_at,updated_at) VALUES(?,?,?,?,?,'queued',?,?)`, id, conn, body, idem, hash, created, created); e != nil {
+	if _, e = tx.ExecContext(ctx, `INSERT INTO operations(id,connection_id,request,idempotency_key,payload_hash,state,created_at,updated_at,queue_order) VALUES(?,?,?,?,?,'queued',?,?,(SELECT COALESCE(MAX(queue_order),0)+1 FROM operations))`, id, conn, body, idem, hash, created, created); e != nil {
 		return empty, false, e
 	}
 	op, e := scanOperation(tx.QueryRowContext(ctx, `SELECT `+operationColumns+` FROM operations o JOIN devices d ON d.connection_id=o.connection_id WHERE o.id=?`, id))
 	return op, true, e
 }
-func (s *Store) Enqueue(ctx context.Context, conn string, req domains.SendRequest, key string, limit int) (domains.Operation, bool, error) {
-	tx, e := s.db.BeginTx(ctx, nil)
+func (s *Store) enqueue(ctx context.Context, conn string, req domains.SendRequest, key string, limit int) (domains.Operation, bool, error) {
+	tx, e := s.beginTx(ctx)
 	if e != nil {
 		return domains.Operation{}, false, e
 	}
-	defer tx.Rollback()
+	defer s.rollbackTx(tx)
 	op, created, e := s.enqueueTx(ctx, tx, conn, req, key, limit)
 	if e != nil {
 		return op, created, e
 	}
-	return op, created, tx.Commit()
+	return op, created, s.commitTx(tx)
 }
 
 // ClaimOperations picks at most one queued operation per device. A provider call
 // is never made until the sending transition has committed.
-func (s *Store) ClaimOperations(ctx context.Context, limit int) ([]domains.Operation, error) {
+func (s *Store) claimOperations(ctx context.Context, limit int) ([]domains.Operation, error) {
 	if limit <= 0 {
 		limit = 50
 	}
 	if limit > 500 {
 		limit = 500
 	}
-	tx, e := s.db.BeginTx(ctx, nil)
+	tx, e := s.beginTx(ctx)
 	if e != nil {
 		return nil, e
 	}
-	defer tx.Rollback()
+	defer s.rollbackTx(tx)
 	rows, e := tx.QueryContext(ctx, `SELECT `+operationColumns+` FROM operations o JOIN devices d ON d.connection_id=o.connection_id
  WHERE o.state='queued' AND d.deleted_at IS NULL
  AND NOT EXISTS(SELECT 1 FROM operations p WHERE p.connection_id=o.connection_id AND p.state='sending')
- AND NOT EXISTS(SELECT 1 FROM operations p WHERE p.connection_id=o.connection_id AND p.state='queued' AND (p.created_at<o.created_at OR (p.created_at=o.created_at AND p.rowid<o.rowid)))
- ORDER BY o.updated_at,o.created_at,o.rowid LIMIT ?`, limit)
+ AND NOT EXISTS(SELECT 1 FROM operations p WHERE p.connection_id=o.connection_id AND p.state='queued' AND p.queue_order<o.queue_order)
+ ORDER BY o.updated_at,o.queue_order LIMIT ?`, limit)
 	if e != nil {
 		return nil, e
 	}
@@ -184,9 +186,9 @@ func (s *Store) ClaimOperations(ctx context.Context, limit int) ([]domains.Opera
 		ops[i].State = "sending"
 		ops[i].UpdatedAt = stamp(t)
 	}
-	return ops, tx.Commit()
+	return ops, s.commitTx(tx)
 }
-func (s *Store) FinishOperation(ctx context.Context, conn, id, state string, result *domains.SendResult, code, message string) error {
+func (s *Store) finishOperation(ctx context.Context, conn, id, state string, result *domains.SendResult, code, message string) error {
 	switch state {
 	case "queued", "succeeded", "failed", "unknown", "cancelled":
 	default:

@@ -107,6 +107,36 @@ func run(parent context.Context, cfg config.Settings) error {
 		return e
 	}
 	defer st.Close()
+	mediaManager, e := mediafile.Open(cfg.MediaRoot, st.MediaFileRegistered)
+	if e != nil {
+		return e
+	}
+	mediaManager.Diagnostic = func(code string) {
+		if code == "MEDIA_ORPHAN_UNVERIFIED" {
+			logrus.WithField("code", code).Warn("Unregistered media file retained without ownership proof")
+			return
+		}
+		logrus.WithField("code", code).Warn("Temporary media cleanup deferred")
+	}
+	cleanupContext, cleanupCancel := context.WithTimeout(ctx, 5*time.Second)
+	if err := mediaManager.Sweep(cleanupContext, 256); err != nil {
+		mediaManager.Diagnostic("MEDIA_CLEANUP_DEFERRED")
+	}
+	if err := mediaManager.CleanupLegacy(cleanupContext, 256); err != nil {
+		mediaManager.Diagnostic("MEDIA_CLEANUP_DEFERRED")
+	}
+	cleanupCancel()
+	mediaContext, stopMedia := context.WithCancel(ctx)
+	mediaDone := make(chan struct{})
+	go func() {
+		defer close(mediaDone)
+		mediaManager.Run(mediaContext)
+	}()
+	defer func() {
+		stopMedia()
+		<-mediaDone
+		_ = mediaManager.Close()
+	}()
 	targets := make([]storage.WebhookTarget, 0, len(cfg.Webhooks))
 	for _, u := range cfg.Webhooks {
 		targets = append(targets, storage.WebhookTarget{URL: u, Secret: cfg.WebhookSecret})
@@ -143,7 +173,7 @@ func run(parent context.Context, cfg config.Settings) error {
 					<-mediaSlots
 					return nil, balemeow.MediaInfo{}, domains.E("MEDIA_NOT_FOUND", "media unavailable", 404)
 				}
-				return &releaseReader{ReadCloser: f, release: func() { <-mediaSlots }}, balemeow.MediaInfo{Name: m.Name, ContentType: m.ContentType, Size: m.Size}, nil
+				return &releaseReader{ReadSeekCloser: f, release: func() { <-mediaSlots }}, balemeow.MediaInfo{Name: m.Name, ContentType: m.ContentType, Size: m.Size}, nil
 			}})
 	}
 
@@ -156,10 +186,11 @@ func run(parent context.Context, cfg config.Settings) error {
 		defer cancel()
 		_ = service.Close(c)
 	}()
-	server, e := rest.New(service, st, rest.Options{UIEnabled: cfg.UIEnabled, UIPublicOrigin: cfg.UIPublicOrigin, UIAssets: assets, BasicAuth: cfg.BasicAuth, BasePath: cfg.BasePath, Version: config.AppVersion, MediaRoot: cfg.MediaRoot, MaxMediaBytes: cfg.MaxMediaBytes, MediaSlots: mediaSlots, SendWait: cfg.SendWait})
+	server, e := rest.New(service, st, rest.Options{UIEnabled: cfg.UIEnabled, UIPublicOrigin: cfg.UIPublicOrigin, UIAssets: assets, BasicAuth: cfg.BasicAuth, BasePath: cfg.BasePath, Version: config.AppVersion, MediaRoot: cfg.MediaRoot, MaxMediaBytes: cfg.MaxMediaBytes, MediaSlots: mediaSlots, MediaManager: mediaManager, SendWait: cfg.SendWait})
 	if e != nil {
 		return e
 	}
+	server.StartMetrics(ctx)
 	addr := net.JoinHostPort(cfg.Host, fmt.Sprint(cfg.Port))
 	logrus.WithFields(logrus.Fields{"address": addr, "version": config.AppVersion, "release_stage": config.ReleaseStage(config.AppVersion)}).Info("GoBale starting")
 	done := make(chan error, 1)
@@ -221,9 +252,13 @@ func writePrivate(path string, b []byte) error {
 }
 
 type releaseReader struct {
-	io.ReadCloser
+	io.ReadSeekCloser
 	once    sync.Once
 	release func()
 }
 
-func (r *releaseReader) Close() error { err := r.ReadCloser.Close(); r.once.Do(r.release); return err }
+func (r *releaseReader) Close() error {
+	err := r.ReadSeekCloser.Close()
+	r.once.Do(r.release)
+	return err
+}

@@ -20,6 +20,9 @@ type WebhookTarget struct {
 	Secret   string
 	Revision int64
 	Device   bool
+	// CurrentDevice is a routing plan resolved under the event transaction.
+	CurrentDevice bool
+	MergeGlobal   bool
 }
 type Chat struct {
 	Peer      domains.Peer  `json:"peer"`
@@ -71,12 +74,12 @@ func (s *Store) insertDelivery(ctx context.Context, tx *sql.Tx, conn, eventID, b
 // AppendEvent atomically writes the event and delivery ledger before advancing
 // its checkpoint. Duplicate events neither enqueue duplicate deliveries nor
 // rewind a checkpoint. Caller ordering defines opaque provider cursor ordering.
-func (s *Store) AppendEvent(ctx context.Context, conn string, event domains.Event, targets []WebhookTarget) (bool, error) {
-	tx, e := s.db.BeginTx(ctx, nil)
+func (s *Store) appendEvent(ctx context.Context, conn string, event domains.Event, targets []WebhookTarget) (bool, error) {
+	tx, e := s.beginTx(ctx)
 	if e != nil {
 		return false, e
 	}
-	defer tx.Rollback()
+	defer s.rollbackTx(tx)
 	d, e := s.scanDevice(tx.QueryRowContext(ctx, `SELECT `+deviceColumns+` FROM devices WHERE connection_id=? AND deleted_at IS NULL`, conn))
 	if e != nil {
 		return false, e
@@ -114,7 +117,7 @@ func (s *Store) AppendEvent(ctx context.Context, conn string, event domains.Even
 		if _, e = s.reconcileOwnMessageTx(ctx, tx, conn, d.AccountID, storedEvent); e != nil {
 			return false, e
 		}
-		return false, tx.Commit()
+		return false, s.commitTx(tx)
 	}
 	switch event.Type {
 	case "message", "message.edited":
@@ -131,6 +134,7 @@ func (s *Store) AppendEvent(ctx context.Context, conn string, event domains.Even
 	if _, e = s.reconcileOwnMessageTx(ctx, tx, conn, d.AccountID, event); e != nil {
 		return false, e
 	}
+	targets = resolveWebhookTargets(d.Webhook, event, targets)
 	seen := map[string]bool{}
 	for _, target := range targets {
 		if seen[target.URL] {
@@ -146,7 +150,7 @@ func (s *Store) AppendEvent(ctx context.Context, conn string, event domains.Even
 			return false, e
 		}
 	}
-	return true, tx.Commit()
+	return true, s.commitTx(tx)
 }
 
 // A native own-message echo proves acceptance even when the RPC response was
@@ -280,18 +284,18 @@ func (s *Store) scanDelivery(row scanner) (v domains.Delivery, err error) {
 	v.CreatedAt = stamp(created)
 	return
 }
-func (s *Store) ClaimDeliveries(ctx context.Context, limit int, at time.Time) ([]domains.Delivery, error) {
+func (s *Store) claimDeliveries(ctx context.Context, limit int, at time.Time) ([]domains.Delivery, error) {
 	if limit <= 0 {
 		limit = 8
 	}
 	if limit > 500 {
 		limit = 500
 	}
-	tx, e := s.db.BeginTx(ctx, nil)
+	tx, e := s.beginTx(ctx)
 	if e != nil {
 		return nil, e
 	}
-	defer tx.Rollback()
+	defer s.rollbackTx(tx)
 	// A URL change while an attempt was in flight must not resurrect its retries.
 	if _, e = tx.ExecContext(ctx, `UPDATE deliveries SET state='paused',last_error='webhook URL changed; explicit replay required' WHERE state IN ('queued','retry') AND EXISTS(SELECT 1 FROM devices d WHERE d.connection_id=deliveries.connection_id AND (d.webhook_revision<>deliveries.revision OR (deliveries.device_config=1 AND d.webhook_url<>deliveries.url)))`); e != nil {
 		return nil, e
@@ -321,9 +325,9 @@ func (s *Store) ClaimDeliveries(ctx context.Context, limit int, at time.Time) ([
 		result[i].State = "delivering"
 		result[i].Attempts++
 	}
-	return result, tx.Commit()
+	return result, s.commitTx(tx)
 }
-func (s *Store) UpdateDelivery(ctx context.Context, conn, id, state string, next time.Time, lastError string) error {
+func (s *Store) updateDelivery(ctx context.Context, conn, id, state string, next time.Time, lastError string) error {
 	switch state {
 	case "delivered", "retry", "failed", "paused", "cancelled":
 	default:
@@ -411,11 +415,11 @@ func (s *Store) ReplayDelivery(ctx context.Context, conn, id string, targets []W
 	if len(targets) == 0 {
 		return nil, domains.E("WEBHOOK_NOT_CONFIGURED", "no webhook targets configured", 409)
 	}
-	tx, e := s.db.BeginTx(ctx, nil)
+	tx, e := s.beginTx(ctx)
 	if e != nil {
 		return nil, e
 	}
-	defer tx.Rollback()
+	defer s.rollbackTx(tx)
 	device, e := s.scanDevice(tx.QueryRowContext(ctx, `SELECT `+deviceColumns+` FROM devices WHERE connection_id=? AND deleted_at IS NULL`, conn))
 	if e != nil {
 		return nil, e
@@ -423,6 +427,14 @@ func (s *Store) ReplayDelivery(ctx context.Context, conn, id string, targets []W
 	var eventID, body string
 	if e = tx.QueryRowContext(ctx, `SELECT event_id,body FROM deliveries WHERE connection_id=? AND id=?`, conn, id).Scan(&eventID, &body); e != nil {
 		return nil, dbError(e)
+	}
+	var event domains.Event
+	if e = json.Unmarshal([]byte(body), &event); e != nil {
+		return nil, e
+	}
+	targets = resolveWebhookTargets(device.Webhook, event, targets)
+	if len(targets) == 0 {
+		return nil, domains.E("NO_WEBHOOK_TARGETS", "no active webhook target accepts this event", 409)
 	}
 	result := []domains.Delivery{}
 	seen := map[string]bool{}
@@ -438,7 +450,7 @@ func (s *Store) ReplayDelivery(ctx context.Context, conn, id string, targets []W
 		v.DeviceID = device.ID
 		result = append(result, v)
 	}
-	return result, tx.Commit()
+	return result, s.commitTx(tx)
 }
 func (s *Store) EventCount(ctx context.Context, conn string) (int, error) {
 	if e := s.active(ctx, conn); e != nil {
@@ -459,11 +471,11 @@ func (t WebhookTarget) String() string {
 // Explicit ReplayDelivery moves payloads to changed destinations or replays
 // successful work with a new queue position.
 func (s *Store) RetryDelivery(ctx context.Context, conn, id string) (domains.Delivery, error) {
-	tx, e := s.db.BeginTx(ctx, nil)
+	tx, e := s.beginTx(ctx)
 	if e != nil {
 		return domains.Delivery{}, e
 	}
-	defer tx.Rollback()
+	defer s.rollbackTx(tx)
 	d, e := s.scanDevice(tx.QueryRowContext(ctx, `SELECT `+deviceColumns+` FROM devices WHERE connection_id=? AND deleted_at IS NULL`, conn))
 	if e != nil {
 		return domains.Delivery{}, e
@@ -490,5 +502,5 @@ func (s *Store) RetryDelivery(ctx context.Context, conn, id string) (domains.Del
 		return domains.Delivery{}, e
 	}
 	replacement.DeviceID = d.ID
-	return replacement, tx.Commit()
+	return replacement, s.commitTx(tx)
 }

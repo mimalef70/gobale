@@ -1,4 +1,15 @@
 export type Scope = { id: string; instance_id: string }
+export type PeerType = 'user' | 'group' | 'channel'
+export type EventDirection = 'incoming' | 'outgoing' | 'unknown'
+export type Peer = { type: PeerType; id: string }
+export type WebhookFilter = {
+  peers?: Peer[]
+  exclude_peers?: Peer[]
+  peer_types?: PeerType[]
+  sender_ids?: string[]
+  exclude_sender_ids?: string[]
+  directions?: EventDirection[]
+}
 export type ConnectionStatus = {
   auth: string
   transport: string
@@ -10,10 +21,12 @@ export type RoutingRule = {
   url: string
   events: string[]
   secret_configured: boolean
+  filter?: WebhookFilter
 }
 export type Webhook = {
   webhook_url: string
   webhook_events: string[] | null
+  webhook_filter?: WebhookFilter
   revision: number
   secret_configured?: boolean
   routing_mode?: 'none' | 'global' | 'device' | 'merged'
@@ -56,4 +69,5 @@ export type WebhookPatch = {
   webhook_url?: string
   webhook_secret?: string
   webhook_events?: string[]
+  webhook_filter?: WebhookFilter
 }

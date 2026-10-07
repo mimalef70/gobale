@@ -52,12 +52,13 @@ func eventually(t *testing.T, check func() bool) {
 }
 
 type fakeWS struct {
-	t             *testing.T
-	server        *httptest.Server
-	dials         atomic.Int32
-	connections   sync.Map
-	handler       func(*websocket.Conn, *wire.ClientMessage)
-	handshakeGate <-chan struct{}
+	t              *testing.T
+	server         *httptest.Server
+	dials          atomic.Int32
+	connections    sync.Map
+	handler        func(*websocket.Conn, *wire.ClientMessage)
+	handshakeGate  <-chan struct{}
+	handshakeDelay time.Duration
 }
 
 func newFakeWS(t *testing.T, handler func(*websocket.Conn, *wire.ClientMessage)) *fakeWS {
@@ -85,6 +86,9 @@ func newFakeWS(t *testing.T, handler func(*websocket.Conn, *wire.ClientMessage))
 				return
 			}
 			if msg.Handshake != nil {
+				if f.handshakeDelay > 0 {
+					time.Sleep(f.handshakeDelay)
+				}
 				if f.handshakeGate != nil {
 					<-f.handshakeGate
 				}

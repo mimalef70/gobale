@@ -1,5 +1,23 @@
 # Changelog
 
+## Unreleased
+
+- Add filtered operation/schedule/event queries, authoritative schedule executions,
+  scheduled forwarding and explicit mentions in text/media captions. Mention and
+  scheduled-forward provider interoperability remain live-unverified.
+- Add per-device peer/sender/direction webhook filters and bilingual panel controls;
+  preserve queued delivery targets and stable retry/replay identity.
+- Schema 6 preserves durable outbox order and records new schedule occurrences
+  atomically. Existing unrecorded occurrence history is marked incomplete.
+- Add cached bounded operational metrics, request deadlines, safe panic responses
+  and Docker log rotation. Keep SQLite WAL/FULL and one process owner.
+- Clean only provably owned temporary uploads after failures/restarts; retain
+  registered uploads and history without TTL. Avoid redundant voice spool copies.
+- Add real process-crash, disk-full and read-only failure tests plus reproducible
+  mixed/native synthetic capacity harnesses. A 300-account or 24-hour production
+  capacity claim requires completed acceptance evidence; no new live claim or
+  automatic backup facility is included.
+
 ## 1.0.0 — 2026-10-06
 
 The first 1.0 gateway release includes the embedded administrative panel, durable

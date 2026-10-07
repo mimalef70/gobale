@@ -220,6 +220,46 @@ test('webhook edit omits existing secret and renders effective routing', async (
   expect(patch?.headers['x-device-instance']).toBe(scope.instance_id)
   expect(patch?.headers['x-csrf-token']).toBe('synthetic-csrf')
 })
+test('delivery filter controls remain accessible in English and Persian mobile views', async ({
+  page,
+}, testInfo) => {
+  const api = await mock(page)
+  await login(page)
+  await page.getByRole('link', { name: 'Manage support-demo' }).click()
+  await page.getByRole('link', { name: 'Webhook', exact: true }).click()
+  await page.getByText('Delivery filters', { exact: true }).click()
+  await page.getByLabel('Include peers', { exact: true }).fill('user:123\ngroup:456')
+  await page.getByLabel('Exclude sender IDs', { exact: true }).fill('789')
+  await page.getByLabel('Unknown direction', { exact: true }).check()
+  let report = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
+  expect(report.violations).toEqual([])
+  await page.screenshot({
+    path: testInfo.outputPath('webhook-filters-desktop.png'),
+    fullPage: true,
+  })
+  await page.getByRole('button', { name: 'زبان فارسی' }).click()
+  await page.getByRole('button', { name: 'تغییر تم' }).click()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(page.getByLabel('مخاطبان مجاز', { exact: true })).toHaveValue('user:123\ngroup:456')
+  report = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21aa']).analyze()
+  expect(report.violations).toEqual([])
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({
+    path: testInfo.outputPath('webhook-filters-fa-mobile.png'),
+    fullPage: true,
+  })
+  await page.getByRole('button', { name: 'ذخیرهٔ تغییرات' }).click()
+  expect(api.recorded.find((r) => r.method === 'PATCH')?.body).toEqual({
+    webhook_filter: {
+      peers: [
+        { type: 'user', id: '123' },
+        { type: 'group', id: '456' },
+      ],
+      exclude_sender_ids: ['789'],
+      directions: ['unknown'],
+    },
+  })
+})
 test('deliveries keep payload inert, distinguish retry/replay and scope all requests', async ({
   page,
 }) => {

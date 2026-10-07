@@ -127,7 +127,13 @@ wrong master keys are rejected. Roll back with a compatible database snapshot,
 not an arbitrary older binary against a newer schema. Check release notes for
 protocol and storage changes before replacing the running version.
 
-Schema 5 adds durable webhook queue positions. Existing rows retain their
+Schema 6 adds durable outbox positions, authoritative schedule occurrences, event
+query indexes and device webhook filters. Migration preserves existing queue order.
+Old executions are not inferred from client-controlled idempotency keys; schedules
+with earlier occurrences expose `occurrence_history_complete: false`. New
+occurrences, operations and schedule advancement commit together.
+
+Schema 5 introduced durable webhook queue positions. Existing rows retain their
 creation order (including row-order ties); new manual retries keep their original
 position. A retry already reordered by an older version cannot be retrospectively
 resequenced because that version recorded no retry-versus-replay lineage. Older
@@ -143,8 +149,10 @@ deliveries or move recovery checkpoints. Failed repair transactions roll back.
 
 ## Retention and disk use
 
-This release retains data without an automatic TTL or background cleaner. It
-does not promise bounded disk consumption or provide selective erasure commands.
+Registered uploads, events, delivery history, operations, schedules and idempotency
+records have no automatic TTL. Disk consumption is not bounded by the queue limits.
+A single bounded cleaner removes only proven application-owned temporary uploads;
+it does not implement historical retention or selective erasure.
 
 | Data | Retention behavior |
 | --- | --- |
@@ -190,4 +198,101 @@ reconciliation and repeated webhook delivery.
 
 Current protocol and operational limitations and verified scope are summarized in the
 [README](../readme.md). Worker limits, synthetic benchmarks and two-account tests
-must not be interpreted as a proven fifty-real-account deployment capacity.
+must not be interpreted as proven live deployment capacity.
+
+
+### Metrics and request limits
+
+`/metrics` reads cached queue/disk/media snapshots. The background sampler runs
+once every five seconds; media traversal is incremental and bounded. Inspect
+`gobale_metrics_snapshot_timestamp_seconds` and
+`gobale_metrics_snapshot_stale` before using cached values. Last successful
+samples remain available during storage failures; `/ready` returns 503.
+Metrics include SQLite pool waits, transaction/commit/persistence latency,
+reviewed SQLite error categories, busy workers, reconnect attempts, queue ages,
+database/WAL/media bytes and available storage. `gobale_storage_free_bytes`
+measures the database filesystem; `gobale_media_free_bytes` measures the media
+filesystem independently, with snapshot component `media_disk`. Labels contain no account,
+message, credentials or destination identifiers.
+
+Synchronous JSON operations have a 45-second context deadline. Immediate sends
+wait up to 40 seconds and then return their durable operation; disconnecting an
+HTTP client does not cancel accepted work. Streaming media retains its own
+transfer lifetime. Recovered handler panics return a fixed 500 response without
+panic text. Docker Compose rotates five log files of 10 MiB each.
+
+### Temporary uploads
+
+The gateway exclusively locks its media root as well as its database. Upload
+intents live under `.gobale-staging`; an active upload cannot be swept. Successful
+registration retains the immutable final file and removes its temporary intent.
+Crash recovery checks all registrations, including deleted connections. Database
+errors, ambiguous commit outcomes, unexpected paths and ownership conflicts keep
+the files for diagnosis. A minute-based worker retries released intents.
+
+Legacy `.upload-*` files are considered only during startup and only after
+ownership and registration checks. Unregistered final files without ownership
+proof are reported rather than deleted. Never scan global temporary directories
+or manually remove files while GoBale owns the data. Schedules share registered
+uploads: completing or cancelling one schedule does not delete that media.
+
+### Operation and event queries
+
+`GET /send/operations` filters durable work by `state`, `kind`, `operation`,
+`peer`, `schedule_id`, `created_after` and `created_before`. `GET /send/schedules`
+supports the same applicable filters using `state`. Inspect
+`GET /send/schedules/{id}/occurrences` for each materialized execution and its
+current operation result. Schedule completion means no future executions remain,
+not that every provider send succeeded.
+
+`GET /events` and `GET /chat/{peer}/messages` search locally stored events using
+`search`, `event`, `direction`, `sender_id`, `start_time`, `end_time` and
+`media_only`; `/events` also takes `peer=type:id`. Search is a case-sensitive
+literal Unicode substring of reviewed text/caption fields, at most 512 UTF-8
+bytes. Percent and underscore are literal characters. Edits/deletions remain
+separate events; this is neither reconstructed chat history nor a provider import.
+Queries are scoped to the selected immutable connection. Lower time bounds are
+inclusive, upper bounds exclusive; pagination defaults to 50 with a maximum 100.
+
+Ordinary text/media sends and schedules accept `mentions: ["123", "456"]`:
+up to 100 unique canonical positive uint32 strings and nonempty message/caption.
+Mentions are included in idempotency comparisons. Their live provider behavior
+has not been newly verified by these offline changes.
+
+Scheduled `message.forward` uses the existing `operation`/`payload` schedule
+shape, with `peer`, `source_peer`, signed-string `message_id`, positive-string
+`source_date` and optional `hide_sender`. Every occurrence gets its own persisted
+RID. The source reference is retained, not a copy of its content. A missing source
+at execution produces the normal failed/unknown outcome; unknown work is not
+blindly resent. Scheduled forwarding remains live-unverified.
+
+### Reproducible capacity acceptance
+
+The mixed test uses real REST handlers, SQLite and signed HTTP webhooks with a
+synthetic provider. The separate native test uses real balemeow clients and a
+local WebSocket/RPC fixture. Neither establishes a provider account quota.
+The acceptance target is 300 connections, Linux with 4 CPU / 8 GiB, 60 incoming
+events/s and 10 new sends/s (8 immediate, 2 scheduled), a threefold 60-second
+burst, ten read/search requests/s and one 1 MiB upload every ten seconds.
+Production worker counts and the 500 ms poll interval are retained.
+
+```sh
+# Uses only synthetic identities and isolated Docker volumes, no Bale network.
+python3 scripts/start_soak.py --duration 10m --warmup 0s --accounts 300 --wait
+# Full frozen-binary sequence: smoke, 50/150/300 comparison, 1h, then 24h.
+python3 scripts/run_capacity.py
+# Collect a detached run's final verdict; running never means passed.
+python3 scripts/start_soak.py --collect artifacts/soak/RUN/run.json
+# Optional native transport fixture; uses no live accounts.
+(cd src && GOBALE_NATIVE_CAPACITY=1 GOBALE_SOAK_ACCOUNTS=300 go test ./internal/balemeow -run '^TestOptionalNativeCapacity$' -count=1 -v)
+```
+
+The Docker workload uses the shipped pure-Go SQLite build and records commit,
+source fingerprint, binary checksum, image ID, resource bounds, seed, rates and
+final verdict. Source changes invalidate reuse of its frozen binary. A 24-hour
+run requires a passed one-hour disk-growth measurement with 50% headroom; lack of
+space fails the gate rather than deleting retained work. Reports distinguish
+scheduled load, actual offered/admitted/rejected work, generator misses and
+completed work. Output stays in ignored `artifacts/soak/`. A launch or an
+unfinished run is not acceptance evidence. Actual live checks require separately
+identified operator-controlled accounts and recipients.

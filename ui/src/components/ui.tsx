@@ -77,6 +77,7 @@ export function ErrorNotice({ error }: { error: unknown }) {
     CHALLENGE_EXPIRED: 'errors.expiredCode',
     AUTH_RESEND_TOO_SOON: 'errors.cooldown',
     WEBHOOK_SECRET_REQUIRED: 'errors.webhookSecret',
+    INVALID_WEBHOOK_FILTER: 'invalidWebhookFilter',
     UI_LOGIN_RATE_LIMITED: 'errors.rateLimited',
     INVALID_PHONE: 'errors.invalidPhone',
     DELIVERY_CONFLICT: 'errors.conflict',

@@ -22,11 +22,11 @@ func (s *Service) CreateScheduleIdempotent(ctx context.Context, id string, reque
 		// Only reviewed message producers may recur. Administrative operations,
 		// stories and financial actions are never admitted by this scheduler.
 		switch request.Operation {
-		case "send.poll", "send.sticker", "send.contact", "send.location", "send.template":
+		case "message.forward", "send.poll", "send.sticker", "send.contact", "send.location", "send.template":
 		default:
 			return domains.Schedule{}, domains.E("INVALID_REQUEST", "this operation cannot be scheduled", 400)
 		}
-		if (request.Kind != "" && request.Kind != "operation") || request.Phone != "" || request.Text != "" || request.ReplyMessageID != "" || request.MediaID != "" {
+		if (request.Kind != "" && request.Kind != "operation") || request.Phone != "" || request.Text != "" || request.ReplyMessageID != "" || request.MediaID != "" || len(request.Mentions) > 0 {
 			return domains.Schedule{}, domains.E("INVALID_REQUEST", "scheduled operations take message fields inside payload", 400)
 		}
 		normalized, peer, err := normalizeMutation(request.Operation, request.Payload)
@@ -167,7 +167,7 @@ func (s *Service) materializeSchedule(job domains.Schedule) {
 			next = &candidate
 		}
 	}
-	// Storage atomically enqueues an occurrence with a stable idempotency key and
+	// Storage atomically enqueues an occurrence with an authoritative occurrence record and
 	// advances this schedule. A restart between these actions cannot duplicate it.
 	_, err = s.store.MaterializeSchedule(s.ctx, job.ConnectionID, job.ID, job.NextAt, next, s.options.QueueLimit)
 	s.workerError(err)

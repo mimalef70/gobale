@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "snapshot_date": "2026-10-06",
+  "snapshot_date": "2026-10-07",
   "scope": "GoBale implementation and recorded validation snapshot. Native operation IDs are not endpoint counts or a compatibility percentage. docs/openapi.yaml is the complete public API contract.",
-  "verification": "Offline Go tests, race, purego and vet passed at the recorded snapshot. An implemented status proves code exists, not live interoperability. Only the explicit, dated observations below and AGENTS.md describe live coverage; unmentioned capabilities remain live-unverified. Route observations retain their original test scope and must not be generalized to every option.",
+  "verification": "2026-10-06: offline Go tests, race, purego and vet passed at the original snapshot. Dated 2026-10-07 notes below add synthetic regression evidence only. Implemented status proves code exists, not live interoperability. Only explicit dated observations and AGENTS.md describe live coverage; unmentioned capabilities remain live-unverified. Route observations retain their original scope and do not generalize to new options.",
   "statuses": {
     "implemented": "Reviewed implementation exists; no live coverage is implied.",
     "implemented_with_limits": "Reviewed implementation exists with explicit limits or unresolved behavior.",
@@ -1362,6 +1362,9 @@
       "path": "/send/image",
       "verification": [
         "one-account live + offline"
+      ],
+      "notes": [
+        "2026-10-07 additive mentions/scheduled-forward options are offline-tested only where applicable; original live observations do not cover these new options."
       ]
     },
     {
@@ -1379,6 +1382,9 @@
       "path": "/send/message",
       "verification": [
         "two-account live + offline"
+      ],
+      "notes": [
+        "2026-10-07 additive mentions/scheduled-forward options are offline-tested only where applicable; original live observations do not cover these new options."
       ]
     },
     {
@@ -1526,6 +1532,27 @@
       "verification": [
         "offline protocol fixtures only; live unverified"
       ]
+    },
+    {
+      "method": "GET",
+      "path": "/events",
+      "verification": [
+        "2026-10-07 offline scoped REST/storage fixtures only; local queries perform no provider call"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/send/operations",
+      "verification": [
+        "2026-10-07 offline scoped REST/storage fixtures only; local queries perform no provider call"
+      ]
+    },
+    {
+      "method": "GET",
+      "path": "/send/schedules/{schedule_id}/occurrences",
+      "verification": [
+        "2026-10-07 offline scoped REST/storage fixtures only; local queries perform no provider call"
+      ]
     }
   ],
   "service_surfaces": [
@@ -1625,6 +1652,36 @@
         "ui/src/App.tsx"
       ],
       "note": "2026-10-06: embedded bilingual account and webhook administration. Offline tests verify cookie/Basic isolation, CSRF/Origin guards, immutable instance selection, challenge refresh/cooldowns and 50-account local snapshots without provider RPC. This UI does not add chat/operator workflows or extend native protocol/live capacity evidence. Browser and packaging tests are separate from live Bale verification. Recorded acceptance: 10 frontend unit tests and 27 Chromium/Firefox/WebKit checks passed, including real Go REST with synthetic provider accounts and /gateway base path. Six isolated Docker smokes passed on native Linux arm64 and emulated Linux amd64; packaged macOS arm64 UI login/restart smoke passed. No new live Bale account/protocol validation is implied."
+    },
+    {
+      "capability": "explicit_mentions",
+      "status": "implemented_with_limits",
+      "note": "2026-10-07: positive uint32 string validation, independent literal packed-field wire test, native-client fake-server send and stored schedule/idempotency tests passed. Ordinary text and media captions accept mentions; provider interoperability for mentions remains live-unverified."
+    },
+    {
+      "capability": "operation_queries_and_occurrences",
+      "status": "implemented",
+      "note": "2026-10-07: schema-6 migration/order preservation, scoped operation/schedule queries, atomic occurrence mappings, collision prevention and actual subprocess termination tests passed with synthetic data. Older unmapped history remains explicitly incomplete."
+    },
+    {
+      "capability": "webhook_filters_and_local_search",
+      "status": "implemented",
+      "note": "2026-10-07: peer/sender/direction routing is evaluated atomically with event persistence; offline tests cover current filters, unchanged pending deliveries, replay, immutable connection isolation and literal Unicode text/caption search. Local event search is not exhaustive provider history or a reconstructed transcript."
+    },
+    {
+      "capability": "scheduled_forward",
+      "status": "implemented_with_limits",
+      "note": "2026-10-07: offline tests cover retained source references, fresh persisted RID per occurrence and ambiguous outcomes without blind resend. Scheduled forwarding has not been live-tested; no new forward own-message reconciliation proof was enabled."
+    },
+    {
+      "capability": "owned_temporary_media_cleanup",
+      "status": "implemented_with_limits",
+      "note": "2026-10-07: real abrupt-process fixtures and offline/race tests cover staging ownership, registered/shared media protection, tombstoned connections and conflicting metadata. Registered files and historical records have no TTL. Cleanup is not data erasure or a complete backup feature."
+    },
+    {
+      "capability": "synthetic_capacity_acceptance",
+      "status": "implemented_with_limits",
+      "note": "2026-10-07: parameterized mixed REST/storage/webhook and native WebSocket/RPC fixtures exist. A 300-client macOS local-protocol run passed handshake, restored checkpoint recovery, RPC, updates and reconnect; short mixed fixtures passed. This is not 300 native Bale accounts. Linux comparison/hourly/24-hour gates require their exact completed run manifests; launching them alone is not passing evidence."
     }
   ]
 }

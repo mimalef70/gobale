@@ -23,13 +23,15 @@ import (
 )
 
 type Store struct {
-	db   *sql.DB
-	aead cipher.AEAD
-	lock *os.File
+	db      *sql.DB
+	aead    cipher.AEAD
+	lock    *os.File
+	dbPath  string
+	metrics storageMetrics
 }
 type scanner interface{ Scan(...any) error }
 
-const schemaVersion = 5
+const schemaVersion = 6
 
 func now() int64               { return time.Now().UTC().UnixMilli() }
 func stamp(ms int64) time.Time { return time.UnixMilli(ms).UTC() }
@@ -123,7 +125,7 @@ func Open(path string, key []byte) (s *Store, err error) {
 	}
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
-	s = &Store{db: db, aead: aead, lock: lock}
+	s = &Store{db: db, aead: aead, lock: lock, dbPath: abs}
 	defer func() {
 		if err != nil {
 			db.Close()
@@ -240,9 +242,16 @@ func (s *Store) migrate(ctx context.Context) error {
 					return fmt.Errorf("migrate active delivery indexes: %w", e)
 				}
 			}
-			if _, e = tx.ExecContext(ctx, `UPDATE gobale_meta SET version=? WHERE id=1`, schemaVersion); e != nil {
-				return e
+		}
+		if version <= 5 {
+			for _, ddl := range apiFeatureMigration {
+				if _, e = tx.ExecContext(ctx, ddl); e != nil {
+					return fmt.Errorf("migrate API features: %w", e)
+				}
 			}
+		}
+		if _, e = tx.ExecContext(ctx, `UPDATE gobale_meta SET version=? WHERE id=1`, schemaVersion); e != nil {
+			return e
 		}
 		return tx.Commit()
 	}
@@ -263,10 +272,10 @@ func (s *Store) migrate(ctx context.Context) error {
 
 var schema = []string{
 	`CREATE TABLE gobale_meta(id INTEGER PRIMARY KEY CHECK(id=1),identity TEXT NOT NULL,version INTEGER NOT NULL,key_check BLOB NOT NULL)`,
-	`CREATE TABLE devices(connection_id TEXT PRIMARY KEY,alias TEXT NOT NULL,account_id TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,deleted_at INTEGER,webhook_url TEXT NOT NULL DEFAULT '',webhook_secret BLOB,webhook_events TEXT NOT NULL DEFAULT '[]',webhook_revision INTEGER NOT NULL DEFAULT 1,checkpoint TEXT NOT NULL DEFAULT '')`,
+	`CREATE TABLE devices(connection_id TEXT PRIMARY KEY,alias TEXT NOT NULL,account_id TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,deleted_at INTEGER,webhook_url TEXT NOT NULL DEFAULT '',webhook_secret BLOB,webhook_events TEXT NOT NULL DEFAULT '[]',webhook_filter TEXT NOT NULL DEFAULT '{}',webhook_revision INTEGER NOT NULL DEFAULT 1,checkpoint TEXT NOT NULL DEFAULT '')`,
 	`CREATE UNIQUE INDEX devices_live_alias ON devices(alias) WHERE deleted_at IS NULL`,
 	`CREATE TABLE sessions(connection_id TEXT PRIMARY KEY REFERENCES devices(connection_id),cipher BLOB NOT NULL)`,
-	`CREATE TABLE operations(id TEXT PRIMARY KEY,connection_id TEXT NOT NULL REFERENCES devices(connection_id),request TEXT NOT NULL,idempotency_key TEXT,payload_hash TEXT NOT NULL,state TEXT NOT NULL,result TEXT,error_code TEXT NOT NULL DEFAULT '',error_message TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,UNIQUE(connection_id,idempotency_key))`,
+	`CREATE TABLE operations(id TEXT PRIMARY KEY,connection_id TEXT NOT NULL REFERENCES devices(connection_id),request TEXT NOT NULL,idempotency_key TEXT,payload_hash TEXT NOT NULL,state TEXT NOT NULL,result TEXT,error_code TEXT NOT NULL DEFAULT '',error_message TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,queue_order INTEGER NOT NULL DEFAULT 0,UNIQUE(connection_id,idempotency_key))`,
 	`CREATE INDEX operations_queue ON operations(state,created_at)`,
 	`CREATE INDEX operations_connection ON operations(connection_id,created_at)`,
 	`CREATE TABLE events(id TEXT NOT NULL,connection_id TEXT NOT NULL REFERENCES devices(connection_id),peer_key TEXT NOT NULL,type TEXT NOT NULL,message_id TEXT NOT NULL,event_time INTEGER NOT NULL,body TEXT NOT NULL,created_at INTEGER NOT NULL,PRIMARY KEY(connection_id,id))`,
@@ -283,6 +292,14 @@ var schema = []string{
 	deliveryActiveIndexes[1],
 	deliveryQueueOrderIndex,
 	storedMessageProofIndex,
+	operationQueueOrderIndex,
+	operationPendingIndex,
+	operationInflightIndex,
+	operationScopeIndex,
+	scheduleScopeIndex,
+	occurrenceSchema,
+	eventOrderIndex,
+	mediaPathIndex,
 }
 
 func (s *Store) active(ctx context.Context, conn string) error {

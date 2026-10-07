@@ -107,6 +107,26 @@ const en = {
   eventsHint:
     'One event name per line. Leave empty for all events. Existing custom names are preserved.',
   effectiveRouting: 'Effective routing',
+  deliveryFilters: 'Delivery filters',
+  deliveryFiltersHint:
+    'These filters apply to the device destination only. Values within a field match any; different fields must all match. Exclusions take priority. Empty fields allow all values. Global destinations keep their own routing.',
+  includePeers: 'Include peers',
+  excludePeers: 'Exclude peers',
+  peerFilterHint:
+    'One type:id per line, using user, group or channel. Up to 100 unique entries. IDs must be positive whole numbers up to 4294967295, without leading zeros.',
+  includeSenders: 'Include sender IDs',
+  excludeSenders: 'Exclude sender IDs',
+  senderFilterHint:
+    'One sender ID per line, up to 100 unique entries. Use positive whole numbers up to 4294967295, without leading zeros.',
+  peerTypes: 'Peer types',
+  directions: 'Event direction',
+  filterPeer: { user: 'Users', group: 'Groups', channel: 'Channels' },
+  filterDirection: { incoming: 'Incoming', outgoing: 'Outgoing', unknown: 'Unknown direction' },
+  unknownDirectionHint:
+    'Select Unknown direction to include events whose direction could not be established. Leaving every direction unchecked allows all directions.',
+  noDeliveryFilters: 'No additional delivery filters',
+  invalidWebhookFilter:
+    'Check the filter format, remove duplicate entries and keep each list within 100 values.',
   global: 'Global',
   device: 'Device',
   merged: 'Device + global',
@@ -315,6 +335,26 @@ const fa: typeof en = {
   eventFilter: 'فیلتر رویدادها',
   eventsHint: 'نام هر رویداد در یک خط. خالی یعنی همهٔ رویدادها. نام‌های سفارشی قبلی حفظ می‌شوند.',
   effectiveRouting: 'مقصدهای مؤثر',
+  deliveryFilters: 'فیلترهای تحویل',
+  deliveryFiltersHint:
+    'این فیلترها فقط برای مقصد اختصاصی اتصال هستند. تطبیق با یکی از مقادیر هر فیلد کافی است؛ همهٔ فیلدها باید هم‌زمان تطبیق داشته باشند. حذف‌ها اولویت دارند. فیلد خالی همهٔ مقادیر را می‌پذیرد. مقصدهای سراسری تنظیمات خود را حفظ می‌کنند.',
+  includePeers: 'مخاطبان مجاز',
+  excludePeers: 'مخاطبان مستثنا',
+  peerFilterHint:
+    'در هر خط یک type:id با نوع user یا group یا channel؛ حداکثر ۱۰۰ مقدار یکتا. شناسه باید عدد صحیح مثبت تا 4294967295 و بدون صفر ابتدایی باشد.',
+  includeSenders: 'شناسهٔ فرستندگان مجاز',
+  excludeSenders: 'شناسهٔ فرستندگان مستثنا',
+  senderFilterHint:
+    'در هر خط یک شناسهٔ فرستنده؛ حداکثر ۱۰۰ مقدار یکتا. عدد صحیح مثبت تا 4294967295 و بدون صفر ابتدایی وارد کنید.',
+  peerTypes: 'نوع مخاطب',
+  directions: 'جهت رویداد',
+  filterPeer: { user: 'کاربران', group: 'گروه‌ها', channel: 'کانال‌ها' },
+  filterDirection: { incoming: 'ورودی', outgoing: 'خروجی', unknown: 'جهت نامشخص' },
+  unknownDirectionHint:
+    'برای دریافت رویدادهایی که جهتشان مشخص نشده، «جهت نامشخص» را انتخاب کنید. انتخاب نکردن هیچ جهت یعنی پذیرش همهٔ جهت‌ها.',
+  noDeliveryFilters: 'بدون فیلتر تحویل اضافی',
+  invalidWebhookFilter:
+    'قالب فیلتر را بررسی کنید، مقادیر تکراری را بردارید و هر فهرست را به ۱۰۰ مقدار محدود کنید.',
   global: 'سراسری',
   device: 'اختصاصی',
   merged: 'اختصاصی و سراسری',

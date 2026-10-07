@@ -5,14 +5,13 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"strconv"
 	"time"
 
 	"github.com/mimalef70/gobale/src/domains"
 	"github.com/mimalef70/gobale/src/domains/send"
 )
 
-const scheduleColumns = `s.id,s.connection_id,d.alias,s.request,s.state,s.next_at,s.occurrence_count,s.created_at`
+const scheduleColumns = `s.id,s.connection_id,d.alias,s.request,s.state,s.next_at,s.occurrence_count,s.created_at,(s.occurrence_count=(SELECT COUNT(*) FROM schedule_occurrences so WHERE so.connection_id=s.connection_id AND so.schedule_id=s.id))`
 const scheduleIdempotencySchema = `CREATE TABLE schedule_idempotency(connection_id TEXT NOT NULL REFERENCES devices(connection_id),idempotency_key TEXT NOT NULL,payload_hash TEXT NOT NULL,schedule_id TEXT NOT NULL UNIQUE REFERENCES schedules(id),PRIMARY KEY(connection_id,idempotency_key))`
 
 type rowQuerier interface {
@@ -65,7 +64,7 @@ func (s *Store) LookupScheduleIdempotent(ctx context.Context, conn string, reque
 func scanSchedule(row scanner) (v domains.Schedule, e error) {
 	var request string
 	var next, created int64
-	e = row.Scan(&v.ID, &v.ConnectionID, &v.DeviceID, &request, &v.State, &next, &v.Count, &created)
+	e = row.Scan(&v.ID, &v.ConnectionID, &v.DeviceID, &request, &v.State, &next, &v.Count, &created, &v.OccurrenceHistoryComplete)
 	if e != nil {
 		return v, dbError(e)
 	}
@@ -78,32 +77,29 @@ func (s *Store) CreateSchedule(ctx context.Context, conn string, request domains
 	return s.CreateScheduleIdempotent(ctx, conn, request, next, "")
 }
 
-func (s *Store) CreateScheduleIdempotent(ctx context.Context, conn string, request domains.SendRequest, next time.Time, key string) (domains.Schedule, error) {
+func (s *Store) createScheduleIdempotent(ctx context.Context, conn string, request domains.SendRequest, next time.Time, key string) (domains.Schedule, error) {
 	body, e := marshal(request)
 	if e != nil {
 		return domains.Schedule{}, e
 	}
-	tx, e := s.db.BeginTx(ctx, nil)
+	tx, e := s.beginTx(ctx)
 	if e != nil {
 		return domains.Schedule{}, e
 	}
-	defer tx.Rollback()
+	defer s.rollbackTx(tx)
 	if e = activeTx(ctx, tx, conn); e != nil {
 		return domains.Schedule{}, e
 	}
 	if existing, found, e := lookupScheduleIdempotent(ctx, tx, conn, request, key); e != nil {
 		return domains.Schedule{}, e
 	} else if found {
-		return existing, tx.Commit()
+		return existing, s.commitTx(tx)
 	}
 	if next.IsZero() {
 		return domains.Schedule{}, domains.E("INVALID_SCHEDULE", "next run time is required", 400)
 	}
-	if request.MediaID != "" {
-		var mediaExists int
-		if e = tx.QueryRowContext(ctx, `SELECT 1 FROM media WHERE connection_id=? AND id=?`, conn, request.MediaID).Scan(&mediaExists); e != nil {
-			return domains.Schedule{}, dbError(e)
-		}
+	if e = validateMediaReferencesTx(ctx, tx, conn, request); e != nil {
+		return domains.Schedule{}, e
 	}
 	id := newID()
 	if _, e = tx.ExecContext(ctx, `INSERT INTO schedules(id,connection_id,request,state,next_at,created_at) VALUES(?,?,?,'active',?,?)`, id, conn, body, next.UnixMilli(), now()); e != nil {
@@ -122,7 +118,7 @@ func (s *Store) CreateScheduleIdempotent(ctx context.Context, conn string, reque
 	if e != nil {
 		return v, e
 	}
-	return v, tx.Commit()
+	return v, s.commitTx(tx)
 }
 func (s *Store) GetSchedule(ctx context.Context, conn, id string) (domains.Schedule, error) {
 	return scanSchedule(s.db.QueryRowContext(ctx, `SELECT `+scheduleColumns+` FROM schedules s JOIN devices d ON d.connection_id=s.connection_id WHERE s.connection_id=? AND s.id=? AND d.deleted_at IS NULL`, conn, id))
@@ -192,12 +188,12 @@ func (s *Store) DueSchedules(ctx context.Context, at time.Time, limit int) ([]do
 // MaterializeSchedule atomically consumes the exact due occurrence, enqueues its
 // send and advances the schedule. Passing nil next completes a one-shot or final
 // recurrence. The runtime computes the next time with the shared calendar rules.
-func (s *Store) MaterializeSchedule(ctx context.Context, conn, id string, expected time.Time, next *time.Time, limit int) (domains.Operation, error) {
-	tx, e := s.db.BeginTx(ctx, nil)
+func (s *Store) materializeSchedule(ctx context.Context, conn, id string, expected time.Time, next *time.Time, limit int) (domains.Operation, error) {
+	tx, e := s.beginTx(ctx)
 	if e != nil {
 		return domains.Operation{}, e
 	}
-	defer tx.Rollback()
+	defer s.rollbackTx(tx)
 	v, e := scanSchedule(tx.QueryRowContext(ctx, `SELECT `+scheduleColumns+` FROM schedules s JOIN devices d ON d.connection_id=s.connection_id WHERE s.connection_id=? AND s.id=? AND d.deleted_at IS NULL`, conn, id))
 	if e != nil {
 		return domains.Operation{}, e
@@ -211,10 +207,16 @@ func (s *Store) MaterializeSchedule(ctx context.Context, conn, id string, expect
 	request := v.Request
 	request.ScheduleOptions = send.ScheduleOptions{}
 	request.RequestID = ""
-	op, _, e := s.enqueueTx(ctx, tx, conn, request, "schedule:"+id+":"+strconv.FormatInt(expected.UnixMilli(), 10), limit)
+	op, _, e := s.enqueueTx(ctx, tx, conn, request, "", limit)
 	if e != nil {
 		return op, e
 	}
+	if _, e = tx.ExecContext(ctx, `INSERT INTO schedule_occurrences(connection_id,schedule_id,occurrence_number,scheduled_for,operation_id,created_at) VALUES(?,?,?,?,?,?)`, conn, id, v.Count+1, expected.UnixMilli(), op.ID, now()); e != nil {
+		return op, e
+	}
+	op.ScheduleID = id
+	t := stamp(expected.UnixMilli())
+	op.ScheduledFor = &t
 	state := "completed"
 	nextMS := expected.UnixMilli()
 	if next != nil {
@@ -224,5 +226,5 @@ func (s *Store) MaterializeSchedule(ctx context.Context, conn, id string, expect
 	if _, e = tx.ExecContext(ctx, `UPDATE schedules SET state=?,next_at=?,occurrence_count=occurrence_count+1 WHERE id=? AND connection_id=?`, state, nextMS, id, conn); e != nil {
 		return op, e
 	}
-	return op, tx.Commit()
+	return op, s.commitTx(tx)
 }

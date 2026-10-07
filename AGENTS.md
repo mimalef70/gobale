@@ -14,6 +14,15 @@ import Fiber, SQL or webhook dispatchers. Use domain interfaces at the boundary.
 REST handles HTTP contracts; usecases coordinate account lifecycle; storage owns
 transactions and durable work.
 
+Backward compatibility is not a product requirement. Maintain one current API
+and configuration contract; do not add legacy aliases, parallel implementations
+or fallback formats solely to support older GoBale clients. Update current
+consumers, documentation and tests together when contracts change. Application
+and storage schema version identifiers remain useful for identifying builds and
+rejecting incompatible databases. This policy does not authorize discarding
+existing sessions, history or accepted work; upgrading existing data versus a
+fresh installation is a separate deployment decision.
+
 The reviewed public Bale Web schema is `5.7.0+173855`. Protocol observations
 are evidence, not runtime dependencies or a guarantee of current compatibility.
 
@@ -141,6 +150,13 @@ Development evidence recorded on **2026-10-06**, not a claim about later runs:
   long-duration resource stability and deployment retention acceptance remain gates.
 - Linux arm64/amd64 installation/restart smokes passed; amd64 was emulated on the
   development Mac. Cross-building macOS is not a runtime interoperability test.
+
+Additional offline implementation evidence on **2026-10-07**: schema-6 outbox
+order/occurrence migrations, scoped queries and webhook filters, owned temporary
+media cleanup, literal mention encoding and real process-crash boundaries have
+synthetic regression coverage. Mentions and scheduled forwarding remain
+live-unverified. Capacity runners record exact binaries and completed verdicts;
+neither a 300-client local fixture nor a launched 24-hour job proves live capacity.
 
 Keep native capability coverage and known limitations in
 [`capabilities.json`](src/internal/balemeow/testdata/coverage/capabilities.json).

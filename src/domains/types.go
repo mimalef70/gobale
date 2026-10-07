@@ -49,15 +49,17 @@ func (p Peer) Validate() error {
 }
 
 type WebhookConfig struct {
-	URL      string   `json:"webhook_url"`
-	Secret   string   `json:"-"`
-	Events   []string `json:"webhook_events"`
-	Revision int64    `json:"revision"`
+	URL      string        `json:"webhook_url"`
+	Secret   string        `json:"-"`
+	Events   []string      `json:"webhook_events"`
+	Revision int64         `json:"revision"`
+	Filter   WebhookFilter `json:"webhook_filter"`
 }
 type WebhookPatch struct {
-	URL    *string   `json:"webhook_url"`
-	Secret *string   `json:"webhook_secret"`
-	Events *[]string `json:"webhook_events"`
+	URL    *string        `json:"webhook_url"`
+	Secret *string        `json:"webhook_secret"`
+	Events *[]string      `json:"webhook_events"`
+	Filter *WebhookFilter `json:"webhook_filter"`
 }
 type Device struct {
 	ID           string        `json:"id"`
@@ -98,6 +100,7 @@ type SendRequest struct {
 	Phone          string          `json:"phone,omitempty"`
 	Kind           string          `json:"kind,omitempty"`
 	Text           string          `json:"message,omitempty"`
+	Mentions       []string        `json:"mentions,omitempty"`
 	ReplyMessageID string          `json:"reply_message_id,omitempty"`
 	MediaID        string          `json:"media_id,omitempty"`
 	RequestID      string          `json:"request_id,omitempty"`
@@ -137,6 +140,8 @@ type Client interface {
 type ClientFactory func(Device) Client
 type Operation struct {
 	ID             string      `json:"send_id"`
+	ScheduleID     string      `json:"schedule_id,omitempty"`
+	ScheduledFor   *time.Time  `json:"scheduled_for,omitempty"`
 	ConnectionID   string      `json:"-"`
 	DeviceID       string      `json:"device_id"`
 	Request        SendRequest `json:"request"`
@@ -166,14 +171,15 @@ type Delivery struct {
 	CreatedAt    time.Time       `json:"created_at"`
 }
 type Schedule struct {
-	ID           string      `json:"id"`
-	ConnectionID string      `json:"-"`
-	DeviceID     string      `json:"device_id"`
-	Request      SendRequest `json:"request"`
-	State        string      `json:"status"`
-	NextAt       time.Time   `json:"next_run_at"`
-	Count        int         `json:"occurrence_count"`
-	CreatedAt    time.Time   `json:"created_at"`
+	ID                        string      `json:"id"`
+	ConnectionID              string      `json:"-"`
+	DeviceID                  string      `json:"device_id"`
+	Request                   SendRequest `json:"request"`
+	State                     string      `json:"status"`
+	NextAt                    time.Time   `json:"next_run_at"`
+	Count                     int         `json:"occurrence_count"`
+	OccurrenceHistoryComplete bool        `json:"occurrence_history_complete"`
+	CreatedAt                 time.Time   `json:"created_at"`
 }
 type Media struct {
 	ID           string    `json:"id"`
@@ -186,6 +192,9 @@ type Media struct {
 }
 
 func (r SendRequest) Validate() error {
+	if err := ValidateMentions(r.Text, r.Mentions); err != nil {
+		return err
+	}
 	if r.Phone != "" && (r.Peer.Type != "" || r.Peer.ID != "") {
 		return E("INVALID_REQUEST", "provide exactly one destination: peer or phone", 400)
 	}

@@ -12,6 +12,7 @@ import (
 // Older migration tests subsequently remove indexes absent from their version.
 func restoreLegacyDeliveryOrder(t *testing.T, s *Store) {
 	t.Helper()
+	restoreV5APISchema(t, s)
 	for _, ddl := range []string{
 		`DROP INDEX events_message_proof`,
 		`DROP INDEX deliveries_pending_order`,

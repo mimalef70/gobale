@@ -149,11 +149,7 @@ func decodeEvents(account string, data []byte) ([]domains.Event, error) {
 			peer = ex
 		}
 		body := decoratedPayload(msg.Message, msg.QuotedMessage, msg.Previous, msg.Thread, msg.GroupedId, msg.AuthorSign)
-		sender := strconv.FormatUint(uint64(msg.SenderId), 10)
-		direction := "incoming"
-		if sender == account {
-			direction = "outgoing"
-		}
+		sender, direction := eventActor(account, int64(msg.SenderId))
 		event := domains.Event{Type: "message", AccountID: account, Peer: peer, MessageID: strconv.FormatInt(msg.Rid, 10), SenderID: sender, Direction: direction, Time: time.UnixMilli(msg.Date).UTC(), Payload: body, Media: providerMedia(msg.Message)}
 		event.ID = eventHash(account + "|message|" + messageIdentityPeer(peer) + "|" + event.MessageID)
 		events = append(events, event)
@@ -164,11 +160,7 @@ func decodeEvents(account string, data []byte) ([]domains.Event, error) {
 			return nil, updateFault("UPDATE_EDIT_INVALID")
 		}
 		body := messagePayload(edit.Message)
-		sender := strconv.FormatUint(uint64(edit.GetUpdaterUserId().GetValue()), 10)
-		direction := "incoming"
-		if sender == account {
-			direction = "outgoing"
-		}
+		sender, direction := eventActor(account, int64(edit.GetUpdaterUserId().GetValue()))
 		event := domains.Event{Type: "message.edited", AccountID: account, Peer: peer, MessageID: strconv.FormatInt(edit.Rid, 10), SenderID: sender, Direction: direction, Time: time.UnixMilli(edit.GetDate().GetValue()).UTC(), Payload: body, Media: providerMedia(edit.Message)}
 		event.ID = eventHash(account + "|edit|" + peer.Key() + "|" + event.MessageID + "|" + strconv.FormatInt(edit.GetDate().GetValue(), 10) + "|" + string(body))
 		events = append(events, event)

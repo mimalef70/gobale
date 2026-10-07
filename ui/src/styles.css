@@ -1059,6 +1059,36 @@ tbody tr:hover {
   border-bottom: 1px solid var(--border);
   font-size: 12px;
 }
+.webhook-filter-editor {
+  margin-block: 1.5rem;
+  border-block: 1px solid var(--border);
+  padding-block: 1rem;
+}
+.webhook-filter-editor summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+.webhook-filter-options {
+  border: 0;
+  padding: 0;
+  margin-block: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.webhook-filter-options legend {
+  margin-block-end: 0.5rem;
+  font-weight: 600;
+}
+.webhook-filter-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.webhook-filter-options input {
+  width: 1rem;
+  min-height: 1rem;
+}
 .routing-rule:last-child {
   border: 0;
 }

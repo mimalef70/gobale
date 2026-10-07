@@ -52,10 +52,11 @@ type LoginState struct {
 }
 
 type WebhookRoutingRule struct {
-	Source           string   `json:"source"`
-	URL              string   `json:"url"`
-	Events           []string `json:"events"`
-	SecretConfigured bool     `json:"secret_configured"`
+	Source           string        `json:"source"`
+	URL              string        `json:"url"`
+	Events           []string      `json:"events"`
+	Filter           WebhookFilter `json:"filter"`
+	SecretConfigured bool          `json:"secret_configured"`
 }
 
 type WebhookDetails struct {

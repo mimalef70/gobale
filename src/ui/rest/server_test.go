@@ -144,6 +144,9 @@ func setupAPIWithFactory(t *testing.T, base string, factory domains.ClientFactor
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 		defer cancel()
 		require.NoError(t, svc.Close(ctx))
+		if srv.opts.MediaManager != nil {
+			require.NoError(t, srv.opts.MediaManager.Close())
+		}
 		require.NoError(t, st.Close())
 	})
 	return srv, svc

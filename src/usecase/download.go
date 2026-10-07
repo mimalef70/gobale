@@ -50,15 +50,23 @@ func (s *Service) Download(ctx context.Context, id string, peer domains.Peer, me
 		stopService = context.AfterFunc(serviceContext, cancel)
 	}
 	release := func() { stopService(); cancel() }
+	handedOff := false
+	defer func() {
+		if !handedOff {
+			release()
+		}
+	}()
 	reader, err := downloader.Download(lifetime, descriptor)
 	if err != nil {
-		release()
+		if reader != nil {
+			_ = reader.Close()
+		}
 		return nil, domains.ProviderMedia{}, safeError(err)
 	}
 	if reader == nil {
-		release()
 		return nil, domains.ProviderMedia{}, domains.E("INVALID_PROVIDER_MEDIA", "provider returned no media stream", 502)
 	}
+	handedOff = true
 	return &cancelledReader{ReadCloser: reader, cancel: release}, descriptor, nil
 }
 

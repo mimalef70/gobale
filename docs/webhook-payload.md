@@ -28,6 +28,33 @@ supported. Filtering an event from an existing override does not fall back to
 globals unless merge mode is enabled. Without a device URL, its filter does not
 filter global deliveries. Global settings are loaded at process startup.
 
+`webhook_filter` adds peer, peer-type, sender and direction constraints:
+
+```json
+{
+  "webhook_filter": {
+    "peer_types": ["user"],
+    "directions": ["incoming"],
+    "exclude_sender_ids": ["123"]
+  }
+}
+```
+
+Supported fields are `peers`, `exclude_peers` (arrays of `{type,id}`),
+`peer_types`, `sender_ids`, `exclude_sender_ids` and `directions`. ID lists accept
+at most 100 unique canonical positive uint32 strings. Directions are `incoming`,
+`outgoing` and `unknown`. Values within one list are ORed; different fields are
+ANDed; exclusions win. Empty lists impose no restriction. Missing metadata cannot
+satisfy an include rule. Omit the object to preserve it, send `{}` to clear it;
+`null` is rejected. The administrative webhook editor exposes the same rules.
+
+Routing is evaluated inside the event-acceptance transaction. Rejecting delivery
+does not discard the event or prevent its checkpoint from committing. Filter
+changes affect new events and explicit replay; pending deliveries and their
+stable event identities are unchanged. Global destinations retain existing merge
+semantics. An absent sender is omitted and its direction is `unknown`; an edit's
+updater is not guessed to be the original message author.
+
 ### Event names
 
 Use these exact strings in `webhook_events`. The catalog describes decoded
@@ -80,7 +107,7 @@ Synthetic incoming-message example:
 | `session_id` | Local device alias used by `X-Device-Id`, such as `support`. |
 | `device_id` | Connected Bale account ID, not the local alias. |
 | `peer` | Conversation type/ID where applicable; account-level notifications may have empty peer fields. |
-| `message_id`, `sender_id`, `direction` | Optional event-specific fields; message direction is `incoming` or `outgoing`. |
+| `message_id`, `sender_id`, `direction` | Optional event-specific fields; message direction is `incoming`, `outgoing` or `unknown` when provenance is absent. |
 | `timestamp` | RFC3339 event timestamp; no universal ordering guarantee is implied. |
 | `payload` | Normalized event-specific content; not raw provider protobuf. |
 

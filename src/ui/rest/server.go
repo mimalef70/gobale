@@ -13,15 +13,15 @@ import (
 	pkgError "github.com/mimalef70/gobale/src/pkg/error"
 	"io"
 	"net/http"
-	"runtime"
-	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/mimalef70/gobale/src/config"
 	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/gobale/src/infrastructure/mediafile"
 	"github.com/mimalef70/gobale/src/infrastructure/storage"
 	"github.com/mimalef70/gobale/src/pkg/utils"
 	"github.com/mimalef70/gobale/src/ui/web"
@@ -33,16 +33,21 @@ type Options struct {
 	UIPublicOrigin                          string
 	UIAssets                                *web.Bundle
 	MediaSlots                              chan struct{}
+	MediaManager                            *mediafile.Manager
 	BasicAuth, BasePath, Version, MediaRoot string
 	MaxMediaBytes                           int64
 	SendWait                                time.Duration
+	RequestTimeout                          time.Duration
 }
 type Server struct {
-	App        *fiber.App
-	service    *usecase.Service
-	store      *storage.Store
-	opts       Options
-	mediaSlots chan struct{}
+	App         *fiber.App
+	service     *usecase.Service
+	store       *storage.Store
+	opts        Options
+	mediaSlots  chan struct{}
+	mediaOnce   sync.Once
+	mediaErr    error
+	operational serverMetrics
 }
 
 func New(service *usecase.Service, store *storage.Store, opts Options) (*Server, error) {
@@ -59,12 +64,16 @@ func New(service *usecase.Service, store *storage.Store, opts Options) (*Server,
 	if opts.SendWait <= 0 {
 		opts.SendWait = 40 * time.Second
 	}
+	if opts.RequestTimeout <= 0 {
+		opts.RequestTimeout = 45 * time.Second
+	}
 	slots := opts.MediaSlots
 	if slots == nil {
 		slots = make(chan struct{}, 4)
 	}
 	s := &Server{service: service, store: store, opts: opts, mediaSlots: slots}
 	s.App = fiber.New(fiber.Config{AppName: "GoBale", BodyLimit: int(opts.MaxMediaBytes + 4096), StreamRequestBody: true, DisablePreParseMultipartForm: true, ReadTimeout: 60 * time.Second, WriteTimeout: 60 * time.Second, ErrorHandler: s.handleError})
+	s.App.Use(s.recoverRequest, s.requestDeadline)
 	r := s.App.Group(opts.BasePath)
 	if opts.UIEnabled {
 		if err := s.registerBrowserUI(r); err != nil {
@@ -94,10 +103,12 @@ func New(service *usecase.Service, store *storage.Store, opts Options) (*Server,
 		return s.provider(c.Params("operation"))(c)
 	})
 	r.Get("/app/status", s.status)
+	r.Get("/send/operations", s.operations)
 	r.Get("/send/operations/:send_id", s.operation)
-	r.Get("/send/schedules", s.schedules)
+	r.Get("/send/schedules", s.schedulesFiltered)
 	r.Post("/send/schedules", s.schedule)
 	r.Get("/send/schedules/:schedule_id", s.getSchedule)
+	r.Get("/send/schedules/:schedule_id/occurrences", s.scheduleOccurrences)
 	for _, action := range []string{"pause", "resume", "cancel"} {
 		r.Post("/send/schedules/:schedule_id/"+action, s.scheduleAction(action))
 	}
@@ -105,7 +116,8 @@ func New(service *usecase.Service, store *storage.Store, opts Options) (*Server,
 		r.Post("/send/"+kind, s.send(kind))
 	}
 	r.Get("/chats", s.chats)
-	r.Get("/chat/:chat_jid/messages", s.messages)
+	r.Get("/events", s.events)
+	r.Get("/chat/:chat_jid/messages", s.events)
 	r.Get("/chat/:chat_jid/history", s.provider("chat.history"))
 	r.Post("/media", s.upload)
 	r.Post("/media/fetch", s.fetchMedia)
@@ -233,6 +245,13 @@ func decode(c fiber.Ctx, v any) error {
 	if err = domains.ValidateJSONObject(body); err != nil {
 		return err
 	}
+	var fields map[string]json.RawMessage
+	if err = json.Unmarshal(body, &fields); err != nil {
+		return domains.E("INVALID_REQUEST", "invalid JSON body", 400)
+	}
+	if raw, ok := fields["webhook_filter"]; ok && bytes.Equal(bytes.TrimSpace(raw), []byte("null")) {
+		return domains.E("INVALID_WEBHOOK_FILTER", "webhook_filter must be an object", 400)
+	}
 	if err = json.Unmarshal(body, v); err != nil {
 		return domains.E("INVALID_REQUEST", "invalid JSON body", 400)
 	}
@@ -300,10 +319,11 @@ func (s *Server) devices(c fiber.Ctx) error {
 }
 func (s *Server) createDevice(c fiber.Ctx) error {
 	var req struct {
-		ID     string    `json:"device_id"`
-		URL    *string   `json:"webhook_url"`
-		Secret *string   `json:"webhook_secret"`
-		Events *[]string `json:"webhook_events"`
+		ID     string                 `json:"device_id"`
+		URL    *string                `json:"webhook_url"`
+		Secret *string                `json:"webhook_secret"`
+		Events *[]string              `json:"webhook_events"`
+		Filter *domains.WebhookFilter `json:"webhook_filter"`
 	}
 	if e := decode(c, &req); e != nil {
 		return e
@@ -319,8 +339,8 @@ func (s *Server) createDevice(c fiber.Ctx) error {
 		return e
 	}
 	c.SetContext(ctx)
-	if req.URL != nil || req.Secret != nil || req.Events != nil {
-		v.Webhook, e = s.service.PatchWebhook(c.Context(), v.ID, domains.WebhookPatch{URL: req.URL, Secret: req.Secret, Events: req.Events})
+	if req.URL != nil || req.Secret != nil || req.Events != nil || req.Filter != nil {
+		v.Webhook, e = s.service.PatchWebhook(c.Context(), v.ID, domains.WebhookPatch{URL: req.URL, Secret: req.Secret, Events: req.Events, Filter: req.Filter})
 		if e != nil {
 			_ = s.service.DeleteDevice(c.Context(), v.ID)
 			return e
@@ -403,20 +423,28 @@ func (s *Server) send(kind string) fiber.Handler {
 	}
 }
 func (s *Server) awaitOperation(c fiber.Ctx, deviceID string, op domains.Operation) error {
-	var e error
 	ctx, cancel := context.WithTimeout(c.Context(), s.opts.SendWait)
 	defer cancel()
 	timer := time.NewTicker(50 * time.Millisecond)
 	defer timer.Stop()
+	accepted := func() error {
+		return c.Status(202).JSON(utils.ResponseData{Code: "ACCEPTED", Message: "Send accepted; inspect send_id for outcome", Results: op})
+	}
 	for op.State == "queued" || op.State == "sending" {
 		select {
 		case <-ctx.Done():
-			return c.Status(202).JSON(utils.ResponseData{Code: "ACCEPTED", Message: "Send accepted; inspect send_id for outcome", Results: op})
+			return accepted()
 		case <-timer.C:
-			op, e = s.service.GetOperation(c.Context(), deviceID, op.ID)
+			current, e := s.service.GetOperation(ctx, deviceID, op.ID)
 			if e != nil {
+				// A poll can race either deadline. Preserve the already-durable
+				// operation instead of replacing it with a failed read's zero value.
+				if ctx.Err() != nil {
+					return accepted()
+				}
 				return e
 			}
+			op = current
 		}
 	}
 	if op.State == "unknown" {
@@ -672,40 +700,6 @@ func operationQueryValue(field domains.FieldSchema, value string) (any, error) {
 }
 func (s *Server) info(c fiber.Ctx) error {
 	return success(c, map[string]any{"name": "GoBale", "version": s.opts.Version, "release_stage": config.ReleaseStage(s.opts.Version), "provider": "bale", "capabilities": map[string]any{"multi_device": true, "per_device_webhook": true, "durable_outbox": true, "scheduled_sends": true, "short_restart_recovery_verified": true, "live_accounts_tested": 2}, "protocol_note": "Native implementation; provider capability verification is documented separately"})
-}
-func (s *Server) metrics(c fiber.Ctx) error {
-	stats, err := s.store.Stats(c.Context())
-	if err != nil {
-		return err
-	}
-	var b strings.Builder
-	keys := make([]string, 0, len(stats))
-	for k := range stats {
-		keys = append(keys, k)
-	}
-	sort.Strings(keys)
-	for _, k := range keys {
-		fmt.Fprintf(&b, "# TYPE gobale_%s gauge\ngobale_%s %d\n", k, k, stats[k])
-	}
-	m := s.service.WorkerMetrics()
-	fmt.Fprintf(&b, "# TYPE gobale_send_attempts_total counter\ngobale_send_attempts_total %d\ngobale_send_unknown_total %d\ngobale_webhook_attempts_total %d\ngobale_webhook_failures_total %d\ngobale_worker_errors_total %d\n", m.SendAttempts, m.SendUnknown, m.WebhookAttempts, m.WebhookFailures, m.WorkerErrors)
-	for _, h := range []struct {
-		name    string
-		buckets map[string]uint64
-		sum     float64
-		count   uint64
-	}{{"send_duration_seconds", m.SendDurationBuckets, m.SendDurationSeconds, m.SendAttempts}, {"webhook_duration_seconds", m.WebhookDurationBuckets, m.WebhookDurationSeconds, m.WebhookAttempts}} {
-		fmt.Fprintf(&b, "# TYPE gobale_%s histogram\n", h.name)
-		for _, bound := range []string{"0.01", "0.1", "1", "5", "10", "40", "+Inf"} {
-			fmt.Fprintf(&b, "gobale_%s_bucket{le=%q} %d\n", h.name, bound, h.buckets[bound])
-		}
-		fmt.Fprintf(&b, "gobale_%s_sum %g\ngobale_%s_count %d\n", h.name, h.sum, h.name, h.count)
-	}
-	var mem runtime.MemStats
-	runtime.ReadMemStats(&mem)
-	fmt.Fprintf(&b, "gobale_go_goroutines %d\ngobale_go_heap_bytes %d\n", runtime.NumGoroutine(), mem.HeapAlloc)
-	c.Set("Content-Type", "text/plain; version=0.0.4")
-	return c.SendString(b.String())
 }
 
 type ProviderRoute struct{ Method, Path, Operation string }

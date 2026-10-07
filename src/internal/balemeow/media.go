@@ -148,7 +148,7 @@ func (c *Client) sendMedia(ctx context.Context, r domains.SendRequest, peer *wir
 	// for ordinary user/group uploads (channel uploads are deliberately unsupported).
 	document := &wire.DocumentMessage{FileId: upload.FileId, AccessHash: uid, FileSize: int32(info.Size), Name: name, MimeType: contentType, Ext: ext}
 	if r.Text != "" {
-		document.Caption = &wire.TextMessage{Text: r.Text}
+		document.Caption = mentionedText(r.Text, r.Mentions)
 	}
 	request := &wire.SendMessageRequest{Peer: peer, ExPeer: extendedPeer(peer, r.Peer), Rid: rid, Message: &wire.Message{Document: document}}
 	if quoted != 0 {

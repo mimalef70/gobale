@@ -536,7 +536,7 @@ func (c *Client) Send(ctx context.Context, request domains.SendRequest) (domains
 	if request.Kind != "" && request.Kind != "text" {
 		return c.sendMedia(ctx, request, peer, rid)
 	}
-	payload := &wire.SendMessageRequest{Peer: peer, ExPeer: extendedPeer(peer, request.Peer), Rid: rid, Message: &wire.Message{Text: &wire.TextMessage{Text: request.Text}}}
+	payload := &wire.SendMessageRequest{Peer: peer, ExPeer: extendedPeer(peer, request.Peer), Rid: rid, Message: &wire.Message{Text: mentionedText(request.Text, request.Mentions)}}
 	if request.ReplyMessageID != "" {
 		quoted, err := messageID(request.ReplyMessageID)
 		if err != nil {

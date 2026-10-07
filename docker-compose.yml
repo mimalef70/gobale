@@ -1,5 +1,10 @@
 services:
   gobale:
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "5"
     image: ${GOBALE_IMAGE:-ghcr.io/mimalef70/gobale:v1.0.0}
     build:
       context: .

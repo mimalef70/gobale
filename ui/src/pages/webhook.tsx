@@ -4,8 +4,10 @@ import { useTranslation } from 'react-i18next'
 import { LockKeyhole, Webhook as WebhookIcon } from 'lucide-react'
 import type { Device, Webhook } from '../lib/types'
 import { useRequestSignal } from '../lib/query'
-import { devicePath, request, webhookPatch } from '../lib/api'
+import { APIError, devicePath, request, webhookPatch } from '../lib/api'
 import { Button, ErrorNotice, Field, Notice, Spinner } from '../components/ui'
+import { WebhookFilterFields, WebhookFilterSummary } from '../components/webhook-filter'
+import { filterDraft, parseFilterDraft } from '../lib/webhook-filter'
 export function WebhookSettings({ device }: { device: Device }) {
   const { t } = useTranslation()
   const [saved, setSaved] = useState(false)
@@ -48,6 +50,9 @@ function WebhookForm({
   const cache = useQueryClient()
   const [url, setURL] = useState(config.webhook_url)
   const [events, setEvents] = useState((config.webhook_events ?? []).join('\n'))
+  const [filter, setFilter] = useState(() => filterDraft(config.webhook_filter))
+  const filterChanged =
+    JSON.stringify(filter) !== JSON.stringify(filterDraft(config.webhook_filter))
   const [replaceSecret, setReplaceSecret] = useState(false)
   const [secret, setSecret] = useState('')
   const [busy, setBusy] = useState(false)
@@ -68,9 +73,25 @@ function WebhookForm({
     setError(undefined)
     onDirty()
     try {
+      let parsedFilter
+      try {
+        parsedFilter = parseFilterDraft(filter)
+      } catch {
+        throw new APIError(400, 'INVALID_WEBHOOK_FILTER', 'Invalid delivery filter')
+      }
       await request(devicePath(device, '/webhook'), {
         method: 'PATCH',
-        body: patch,
+        body: webhookPatch(
+          config,
+          url,
+          events
+            .split('\n')
+            .map((s) => s.trim())
+            .filter(Boolean),
+          replaceSecret,
+          secret,
+          parsedFilter,
+        ),
         scope: device,
         signal: getSignal(),
       })
@@ -157,10 +178,21 @@ function WebhookForm({
               aria-describedby="webhook-events-hint"
             />
           </Field>
+          <WebhookFilterFields
+            draft={filter}
+            onChange={(next) => {
+              setFilter(next)
+              onDirty()
+            }}
+          />
           <Notice>{t('changesApply')}</Notice>
           <ErrorNotice error={error} />
           <div className="form-footer">
-            <Button busy={busy} disabled={!Object.keys(patch).length} type="submit">
+            <Button
+              busy={busy}
+              disabled={!Object.keys(patch).length && !filterChanged}
+              type="submit"
+            >
               {t('save')}
             </Button>
           </div>
@@ -175,6 +207,7 @@ function WebhookForm({
             <strong>{t(rule.source)}</strong>
             <code dir="ltr">{rule.url}</code>
             <small>{rule.events.length ? rule.events.join(', ') : t('allEvents')}</small>
+            <WebhookFilterSummary filter={rule.filter} />
             <small>
               {t('signature')}: {t(rule.secret_configured ? 'enabled' : 'disabled')}
             </small>

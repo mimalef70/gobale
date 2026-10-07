@@ -15,15 +15,18 @@ import (
 
 var aliasPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 
-const deviceColumns = `alias,connection_id,account_id,created_at,webhook_url,webhook_secret,webhook_events,webhook_revision`
+const deviceColumns = `alias,connection_id,account_id,created_at,webhook_url,webhook_secret,webhook_events,webhook_revision,webhook_filter`
 
 func (s *Store) scanDevice(row scanner) (d domains.Device, err error) {
 	var created int64
 	var secret []byte
-	var events string
-	err = row.Scan(&d.ID, &d.ConnectionID, &d.AccountID, &created, &d.Webhook.URL, &secret, &events, &d.Webhook.Revision)
+	var events, filter string
+	err = row.Scan(&d.ID, &d.ConnectionID, &d.AccountID, &created, &d.Webhook.URL, &secret, &events, &d.Webhook.Revision, &filter)
 	if err != nil {
 		return d, dbError(err)
+	}
+	if err = json.Unmarshal([]byte(filter), &d.Webhook.Filter); err != nil {
+		return d, err
 	}
 	d.InstanceID = d.InstanceToken()
 	d.CreatedAt = stamp(created)
@@ -199,6 +202,11 @@ func ValidateWebhookURL(raw string) error {
 	return nil
 }
 func (s *Store) PatchWebhook(ctx context.Context, conn string, p domains.WebhookPatch) (domains.WebhookConfig, error) {
+	if p.Filter != nil {
+		if err := p.Filter.Validate(); err != nil {
+			return domains.WebhookConfig{}, err
+		}
+	}
 	if p.URL != nil {
 		if e := ValidateWebhookURL(*p.URL); e != nil {
 			return domains.WebhookConfig{}, e
@@ -239,6 +247,9 @@ func (s *Store) PatchWebhook(ctx context.Context, conn string, p domains.Webhook
 	if p.Events != nil {
 		cfg.Events = *p.Events
 	}
+	if p.Filter != nil {
+		cfg.Filter = *p.Filter
+	}
 	if cfg.Events == nil {
 		cfg.Events = []string{}
 	}
@@ -250,7 +261,11 @@ func (s *Store) PatchWebhook(ctx context.Context, conn string, p domains.Webhook
 	if e != nil {
 		return cfg, e
 	}
-	if _, e = tx.ExecContext(ctx, `UPDATE devices SET webhook_url=?,webhook_secret=?,webhook_events=?,webhook_revision=? WHERE connection_id=?`, cfg.URL, cipher, events, cfg.Revision, conn); e != nil {
+	filter, e := marshal(cfg.Filter)
+	if e != nil {
+		return cfg, e
+	}
+	if _, e = tx.ExecContext(ctx, `UPDATE devices SET webhook_url=?,webhook_secret=?,webhook_events=?,webhook_revision=?,webhook_filter=? WHERE connection_id=?`, cfg.URL, cipher, events, cfg.Revision, filter, conn); e != nil {
 		return cfg, e
 	}
 	if urlChanged {
@@ -274,6 +289,9 @@ func (s *Store) Stats(ctx context.Context) (map[string]int64, error) {
 	result := map[string]int64{}
 	for _, item := range []struct{ name, query string }{
 		{"devices", `SELECT COUNT(*) FROM devices WHERE deleted_at IS NULL`},
+		{"outbox_sending", `SELECT COUNT(*) FROM operations WHERE state='sending'`},
+		{"outbox_failed", `SELECT COUNT(*) FROM operations WHERE state='failed'`},
+		{"schedules_active", `SELECT COUNT(*) FROM schedules WHERE state='active'`},
 		{"outbox_queued", `SELECT COUNT(*) FROM operations WHERE state='queued'`},
 		{"outbox_unknown", `SELECT COUNT(*) FROM operations WHERE state='unknown'`},
 		{"webhook_pending", `SELECT COUNT(*) FROM deliveries WHERE state IN ('queued','retry','delivering')`},

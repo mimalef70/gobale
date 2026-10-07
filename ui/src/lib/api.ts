@@ -1,4 +1,5 @@
-import type { Scope, Session } from './types'
+import type { Scope, Session, WebhookFilter, WebhookPatch } from './types'
+import { filterKey } from './webhook-filter'
 export class APIError extends Error {
   constructor(
     public status: number,
@@ -94,12 +95,10 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
         body: options.body === undefined ? undefined : JSON.stringify(options.body),
       },
     )
-    const envelope = await response
-      .json()
-      .catch(() => ({
-        code: 'INVALID_RESPONSE',
-        message: 'The server returned an invalid response.',
-      }))
+    const envelope = await response.json().catch(() => ({
+      code: 'INVALID_RESPONSE',
+      message: 'The server returned an invalid response.',
+    }))
     if (generation !== sessionGeneration || options.signal?.aborted)
       throw new DOMException('Request is no longer current', 'AbortError')
     if (!response.ok) {
@@ -133,16 +132,23 @@ export function devicePath(scope: Scope, suffix = '') {
   return `devices/${encodeURIComponent(scope.id)}${suffix}`
 }
 export function webhookPatch(
-  original: { webhook_url: string; webhook_events: string[] | null },
+  original: {
+    webhook_url: string
+    webhook_events: string[] | null
+    webhook_filter?: WebhookFilter
+  },
   url: string,
   events: string[],
   replaceSecret: boolean,
   secret: string,
+  filter?: WebhookFilter,
 ) {
-  const patch: Record<string, unknown> = {}
+  const patch: WebhookPatch = {}
   if (url !== original.webhook_url) patch.webhook_url = url
   if (JSON.stringify(events) !== JSON.stringify(original.webhook_events ?? []))
     patch.webhook_events = events
   if (replaceSecret) patch.webhook_secret = secret
+  if (filter !== undefined && filterKey(filter) !== filterKey(original.webhook_filter))
+    patch.webhook_filter = filter
   return patch
 }
