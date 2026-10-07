@@ -5,7 +5,7 @@ services:
       options:
         max-size: "10m"
         max-file: "5"
-    image: ${GOBALE_IMAGE:-ghcr.io/mimalef70/gobale:v2.0.0}
+    image: ${GOBALE_IMAGE:-ghcr.io/mimalef70/gobale:v2.0.1}
     build:
       context: .
       dockerfile: docker/golang.Dockerfile

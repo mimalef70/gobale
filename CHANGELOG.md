@@ -1,11 +1,14 @@
 # Changelog
 
-## 2.0.0 — 2026-10-07
+## 2.0.1 — 2026-10-07
 
 GoBale 2.0 introduces a breaking machine-API contract for safe multi-account
 integrations, together with durable provisioning, richer local queries and
 operational improvements. Update consumers with the gateway and back up the
 complete storage volume and encryption key before upgrading from 1.x.
+
+The earlier `v2.0.0` source tag was not published as release archives or container
+images. This section includes the full 2.0 change set.
 
 ### Breaking API and storage upgrade
 
@@ -33,6 +36,10 @@ complete storage volume and encryption key before upgrading from 1.x.
 
 ### Features and reliability
 
+- Wait for SQLite driver rollback and connection close before releasing the
+  process ownership lock. A replacement process cannot open the database while
+  cancellation cleanup is still running; a failed or timed-out drain retains
+  ownership for a later close attempt.
 - Add filtered operation, schedule and local event queries, authoritative
   schedule executions, scheduled forwarding and explicit mentions in text/media
   captions. Each schedule occurrence and its operation commit together.

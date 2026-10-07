@@ -2,7 +2,7 @@
 
 This guide describes GoBale 2.0. Required machine-API instance guards,
 `webhook_filter` and new-event `instance_id` were introduced in
-[2.0.0](../CHANGELOG.md#200--2026-10-07). Use the documentation from the same tag
+[2.0.1](../CHANGELOG.md#201--2026-10-07). Use the documentation from the same tag
 as your installed release; the hosted API reference follows `main`. Previously
 stored webhook bodies retain their original bytes and may lack `instance_id`.
 

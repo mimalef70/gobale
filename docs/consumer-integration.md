@@ -2,7 +2,7 @@
 
 This guide describes the GoBale 2.0 API contract. Atomic keyed provisioning,
 mandatory machine-API instance guards, required send/schedule keys and new-event
-`instance_id` were introduced in [2.0.0](../CHANGELOG.md#200--2026-10-07).
+`instance_id` were introduced in [2.0.1](../CHANGELOG.md#201--2026-10-07).
 Consumers upgrading from 1.x must adopt these rules with the gateway upgrade.
 Use the documentation and OpenAPI from the same tag as your installed release;
 the hosted API reference follows `main` and can advance beyond a release.

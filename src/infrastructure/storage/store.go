@@ -14,6 +14,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,10 +30,20 @@ type Store struct {
 	dbPath          string
 	metrics         storageMetrics
 	provisioningKey []byte
+	closeMu         sync.Mutex
+	closed          bool
 }
 type scanner interface{ Scan(...any) error }
 
 const schemaVersion = 7
+
+// An unsuccessful startup has no caller-owned Store to retry closing. If its
+// bounded cleanup cannot drain, retain the owner until process exit rather than
+// let an os.File finalizer release the flock before SQLite cleanup completes.
+var failedOpenOwners struct {
+	sync.Mutex
+	stores []*Store
+}
 
 func now() int64               { return time.Now().UTC().UnixMilli() }
 func stamp(ms int64) time.Time { return time.UnixMilli(ms).UTC() }
@@ -86,8 +97,9 @@ func Open(path string, key []byte) (s *Store, err error) {
 		lock.Close()
 		return nil, fmt.Errorf("database is already owned by another GoBale process: %w", err)
 	}
+	lockTransferred := false
 	defer func() {
-		if err != nil {
+		if err != nil && !lockTransferred {
 			unix.Flock(int(lock.Fd()), unix.LOCK_UN)
 			lock.Close()
 		}
@@ -127,9 +139,18 @@ func Open(path string, key []byte) (s *Store, err error) {
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
 	s = &Store{db: db, aead: aead, lock: lock, dbPath: abs, provisioningKey: deriveProvisioningKey(key)}
+	owned := s
+	lockTransferred = true
 	defer func() {
 		if err != nil {
-			db.Close()
+			cleanupCtx, cleanupCancel := context.WithTimeout(context.Background(), 30*time.Second)
+			defer cleanupCancel()
+			if closeErr := owned.closeFailedOpen(cleanupCtx); closeErr != nil {
+				failedOpenOwners.Lock()
+				failedOpenOwners.stores = append(failedOpenOwners.stores, owned)
+				failedOpenOwners.Unlock()
+				err = errors.Join(err, fmt.Errorf("startup cleanup incomplete; database ownership retained until process exit: %w", closeErr))
+			}
 		}
 	}()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -165,10 +186,68 @@ func (s *Store) Close() error {
 	if s == nil {
 		return nil
 	}
-	err := s.db.Close()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return s.closeWithContext(ctx)
+}
+
+func (s *Store) closeWithContext(ctx context.Context) error {
+	s.closeMu.Lock()
+	defer s.closeMu.Unlock()
+	if s.closed {
+		return nil
+	}
+	// database/sql may finish a cancelled transaction's rollback after the
+	// calling worker has returned. DB.Close alone does not wait for an in-use
+	// driver connection. Lease our sole connection to drain that cleanup while
+	// retaining the process lock; a failed drain leaves the store owned/retryable.
+	conn, err := s.db.Conn(ctx)
+	if err != nil {
+		return fmt.Errorf("drain storage before close: %w", err)
+	}
+	// Stop admission while the lease is held, then return it to the closed pool.
+	// This synchronously retires the underlying SQLite connection before another
+	// owner can acquire the flock, including an immediate in-process reopen.
+	dbErr := s.db.Close()
+	err = errors.Join(dbErr, conn.Close())
+	if err != nil {
+		return err
+	}
+	return s.releaseOwnership()
+}
+
+// Startup can fail before SQLite opens a connection. Close the pool without
+// trying to open the rejected database again, then wait for any cancellation
+// rollback to retire its driver connection. database/sql counts it as open
+// until the driver's Close has returned. Unlike normal Close, no caller will
+// need this failed-start pool to remain usable after a drain timeout.
+func (s *Store) closeFailedOpen(ctx context.Context) error {
+	s.closeMu.Lock()
+	defer s.closeMu.Unlock()
+	if s.closed {
+		return nil
+	}
+	if err := s.db.Close(); err != nil {
+		return err
+	}
+	ticker := time.NewTicker(time.Millisecond)
+	defer ticker.Stop()
+	for s.db.Stats().OpenConnections != 0 {
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("drain failed storage startup: %w", ctx.Err())
+		case <-ticker.C:
+		}
+	}
+	return s.releaseOwnership()
+}
+
+// The caller holds closeMu and has verified all driver connections retired.
+func (s *Store) releaseOwnership() error {
+	s.closed = true
 	unlock := unix.Flock(int(s.lock.Fd()), unix.LOCK_UN)
 	closeErr := s.lock.Close()
-	return errors.Join(err, unlock, closeErr)
+	return errors.Join(unlock, closeErr)
 }
 func (s *Store) Ping(ctx context.Context) error { return s.db.PingContext(ctx) }
 func (s *Store) encrypt(plain []byte, aad string) ([]byte, error) {

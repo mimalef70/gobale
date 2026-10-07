@@ -20,7 +20,7 @@ RUN mkdir -p /runtime/storages && touch /runtime/storages/.keep
 RUN CGO_ENABLED=0 GOOS=$TARGETOS GOARCH=$TARGETARCH go build -tags purego -trimpath -ldflags='-s -w' -o /gobale .
 
 FROM gcr.io/distroless/static-debian12:nonroot@sha256:afa5c872c891853ca7fcf1f12c3edb23f7eeef36189728842dd51042ff57f7ab
-ARG VERSION=2.0.0
+ARG VERSION=2.0.1
 ARG REVISION=unknown
 LABEL org.opencontainers.image.title="GoBale" \
       org.opencontainers.image.description="Native Go multi-account Bale gateway with REST APIs and durable webhooks" \

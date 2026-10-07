@@ -61,7 +61,7 @@ not a customer login page or a chat inbox.
 
 ## Release status
 
-**The installation commands and API examples below target GoBale 2.0.0.**
+**The installation commands and API examples below target GoBale 2.0.1.**
 The online API reference follows `main` and can advance beyond a release; use the
 documentation and OpenAPI shipped with your installed version. Historical 1.x
 behavior remains documented in the
@@ -73,7 +73,7 @@ require `Idempotency-Key`. The release also adds local search, webhook filters,
 occurrence tracking and per-connection queue limits, and migrates storage to
 schema 7. Update consumers with the gateway, and follow the
 [upgrade procedure](docs/operations.md#backup-restore-and-upgrades) before
-replacing an existing deployment. See the [2.0.0 changes](CHANGELOG.md#200--2026-10-07).
+replacing an existing deployment. See the [2.0.1 changes](CHANGELOG.md#201--2026-10-07).
 
 GoBale uses Bale's user-account protocol and is **not an official Bale API or SDK**.
 Core login, messaging, media, voice and selected group operations have been tested
@@ -91,12 +91,12 @@ and any two-step password. The default listener is `http://127.0.0.1:3000`.
 ### Docker Compose
 
 Requires Docker with Compose v2 and Git. No host Go or Node installation is needed.
-Check out the matching release configuration and pull the v2.0.0 image:
+Check out the matching release configuration and pull the v2.0.1 image:
 
 ```sh
-git clone --branch v2.0.0 --depth 1 https://github.com/mimalef70/gobale.git
+git clone --branch v2.0.1 --depth 1 https://github.com/mimalef70/gobale.git
 cd gobale
-export GOBALE_IMAGE='ghcr.io/mimalef70/gobale:v2.0.0'
+export GOBALE_IMAGE='ghcr.io/mimalef70/gobale:v2.0.1'
 docker pull "$GOBALE_IMAGE"
 
 docker run --rm --user "$(id -u):$(id -g)" \
@@ -127,16 +127,16 @@ only on localhost. It does not import a host `storages/` directory. Keep the vol
 when recreating the container; `docker compose down -v` deletes it. Read
 [Operations](docs/operations.md) before changing images or exposing the service.
 
-Both `ghcr.io/mimalef70/gobale:v2.0.0` and `mimalef70/gobale:v2.0.0` select this
-release. To use Docker Hub, set `GOBALE_IMAGE='mimalef70/gobale:v2.0.0'` before
+Both `ghcr.io/mimalef70/gobale:v2.0.1` and `mimalef70/gobale:v2.0.1` select this
+release. To use Docker Hub, set `GOBALE_IMAGE='mimalef70/gobale:v2.0.1'` before
 pulling and starting it. `GOBALE_IMAGE` is a Compose setting. Release tags are
 fixed; a source push does not republish them. For standalone Docker, see
 [Docker without Compose](docs/operations.md#docker-without-compose).
 
 ### Native binary
 
-Download the v2.0.0 archive for your operating system and architecture from
-[Releases](https://github.com/mimalef70/gobale/releases/tag/v2.0.0), verify its checksum,
+Download the v2.0.1 archive for your operating system and architecture from
+[Releases](https://github.com/mimalef70/gobale/releases/tag/v2.0.1), verify its checksum,
 and put `gobale` on your `PATH`. Linux and macOS archives cover amd64 and arm64.
 Use the documentation included in that archive for its API contract.
 
@@ -164,7 +164,7 @@ provider revocation can require a new login.
 Requires Go **1.26.6**, Node **24.12+**, Python **3.11+**, Make and a C compiler:
 
 ```sh
-git clone --branch v2.0.0 --depth 1 https://github.com/mimalef70/gobale.git
+git clone --branch v2.0.1 --depth 1 https://github.com/mimalef70/gobale.git
 cd gobale
 make build
 ./bin/gobale init --bale-web-client
