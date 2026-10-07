@@ -20,6 +20,10 @@ concurrency:
 env:
   GO_VERSION: '1.26.6'
   GOTOOLCHAIN: local
+  # Public image names must not cross job outputs: Actions can suppress an
+  # output containing the Docker Hub username when that username is a secret.
+  GHCR_IMAGE: ghcr.io/mimalef70/gobale
+  DOCKERHUB_IMAGE: docker.io/mimalef70/gobale
 
 jobs:
   prepare:
@@ -33,8 +37,6 @@ jobs:
     outputs:
       sha: ${{ steps.identity.outputs.sha }}
       version: ${{ steps.identity.outputs.version }}
-      image: ${{ steps.identity.outputs.image }}
-      dockerhub_image: ${{ steps.identity.outputs.dockerhub_image }}
     steps:
       - name: Require an explicit SemVer release tag and publishing credentials
         env:
@@ -78,7 +80,7 @@ jobs:
           status = re.findall(r'^HTTP/\S+\s+(\d+)', existing.stdout, re.MULTILINE)
           assert existing.returncode != 0 and status and status[-1] == '404', 'Release already exists or its absence could not be verified; inspect before retrying'
           with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
-              out.write('sha=' + sha + '\nversion=' + tag[1:] + '\nimage=ghcr.io/' + os.environ['GITHUB_REPOSITORY'].lower() + '\ndockerhub_image=docker.io/mimalef70/gobale\n')
+              out.write('sha=' + sha + '\nversion=' + tag[1:] + '\n')
           PY
       - name: Verify both registry version tags are absent before packaging
         env:
@@ -160,8 +162,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            ${{ needs.prepare.outputs.image }}:${{ inputs.tag }}
-            ${{ needs.prepare.outputs.dockerhub_image }}:${{ inputs.tag }}
+            ${{ env.GHCR_IMAGE }}:${{ inputs.tag }}
+            ${{ env.DOCKERHUB_IMAGE }}:${{ inputs.tag }}
           provenance: mode=max
           sbom: true
           labels: |
@@ -202,8 +204,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ inputs.tag }}
-          IMAGE: ${{ needs.prepare.outputs.image }}
-          DOCKERHUB_IMAGE: ${{ needs.prepare.outputs.dockerhub_image }}
+          IMAGE: ${{ env.GHCR_IMAGE }}
+          DOCKERHUB_IMAGE: ${{ env.DOCKERHUB_IMAGE }}
           IMAGE_DIGEST: ${{ needs.image.outputs.digest }}
           EXPECTED_SHA: ${{ needs.prepare.outputs.sha }}
         run: |

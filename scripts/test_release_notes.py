@@ -131,14 +131,37 @@ class PublicationWorkflowTest(unittest.TestCase):
         self.assertTrue(options["push"])
         self.assertTrue(options["sbom"])
         self.assertEqual(options["tags"].strip().splitlines(), [
-            "${{ needs.prepare.outputs.image }}:${{ inputs.tag }}",
-            "${{ needs.prepare.outputs.dockerhub_image }}:${{ inputs.tag }}"])
+            "${{ env.GHCR_IMAGE }}:${{ inputs.tag }}",
+            "${{ env.DOCKERHUB_IMAGE }}:${{ inputs.tag }}"])
         self.assertIn("release_registry.py absent", steps[build_index - 1]["run"])
         self.assertIn("release_registry.py published", steps[build_index + 1]["run"])
         logins = [step for step in steps if step.get("uses", "").startswith("docker/login-action@")]
         self.assertEqual({step["with"]["registry"] for step in logins}, {"ghcr.io", "docker.io"})
         for step in logins:
             self.assertEqual(step["uses"], "docker/login-action@dbcb813823bdd20940b903addbd779551569679f")
+
+    def test_secret_username_cannot_suppress_public_image_names_between_jobs(self):
+        import yaml
+        source = (Path(__file__).resolve().parents[1] / ".github/workflows/release.yml").read_text()
+        workflow = yaml.safe_load(source)
+        jobs = workflow["jobs"]
+        # Actions suppresses any job output containing a configured secret's
+        # value, including the public Docker Hub username. No image name may
+        # depend on that output transport, even though it is safe to log masked.
+        self.assertEqual(set(jobs["prepare"]["outputs"]), {"sha", "version"})
+        self.assertNotIn("needs.prepare.outputs.image", source)
+        self.assertNotIn("needs.prepare.outputs.dockerhub_image", source)
+        self.assertEqual(workflow["env"]["GHCR_IMAGE"], "ghcr.io/mimalef70/gobale")
+        self.assertEqual(workflow["env"]["DOCKERHUB_IMAGE"], "docker.io/mimalef70/gobale")
+        build = next(step for step in jobs["image"]["steps"] if step.get("id") == "build")
+        tags = build["with"]["tags"].replace("${{ inputs.tag }}", "v2.0.0")
+        for key in ("GHCR_IMAGE", "DOCKERHUB_IMAGE"):
+            tags = tags.replace("${{ env." + key + " }}", workflow["env"][key])
+        self.assertEqual(tags.strip().splitlines(), ["ghcr.io/mimalef70/gobale:v2.0.0",
+                                                  "docker.io/mimalef70/gobale:v2.0.0"])
+        publisher = jobs["release"]["steps"][-1]["env"]
+        self.assertEqual(publisher["IMAGE"], "${{ env.GHCR_IMAGE }}")
+        self.assertEqual(publisher["DOCKERHUB_IMAGE"], "${{ env.DOCKERHUB_IMAGE }}")
 
 
 class RegistryPublicationTest(unittest.TestCase):
