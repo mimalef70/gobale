@@ -63,6 +63,7 @@ func TestMediaProviderPanicReleasesSlotAndContextBeforeNextTransfer(t *testing.T
 				req := httptest.NewRequest("GET", "/gateway"+path, nil)
 				req.SetBasicAuth("test", "password")
 				req.Header.Set("X-Device-Id", d.ID)
+				scopeTestRequest(t, s, req)
 				res, err := s.App.Test(req)
 				require.NoError(t, err)
 				body, err := io.ReadAll(res.Body)

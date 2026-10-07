@@ -53,6 +53,7 @@ func TestVoiceRouteUsesScopedMediaDurableIdempotencyAndSchedule(t *testing.T) {
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("X-Device-Id", device)
 		r.Header.Set("Idempotency-Key", "one-voice")
+		scopeTestRequest(t, srv, r)
 		res, err := srv.App.Test(r)
 		require.NoError(t, err)
 		if device == "two" {

@@ -41,7 +41,7 @@ func (s *Service) Send(ctx context.Context, id string, request domains.SendReque
 	}
 	// Storage resolves idempotency before checking media, so a completed send
 	// can still be inspected through its key after an old asset is retired.
-	operation, _, err := s.store.Enqueue(ctx, d.ConnectionID, request, key, s.options.QueueLimit)
+	operation, _, err := s.store.Enqueue(ctx, d.ConnectionID, request, key, s.admissionLimits())
 	return operation, err
 }
 func (s *Service) GetOperation(ctx context.Context, id, operationID string) (domains.Operation, error) {

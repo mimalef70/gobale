@@ -23,7 +23,7 @@ func TestOwnEchoReconcilesDurablyWithoutRetry(t *testing.T) {
 			s, path := testStore(t)
 			d := device(t, s, "echo")
 			require.NoError(t, s.BindAccount(ctx, d.ConnectionID, "456"))
-			op, _, err := s.Enqueue(ctx, d.ConnectionID, textRequest("hello"), "echo-request", 10)
+			op, _, err := s.Enqueue(ctx, d.ConnectionID, textRequest("hello"), "echo-request", AdmissionLimits{Global: 10})
 			require.NoError(t, err)
 			claimed, err := s.ClaimOperations(ctx, 1)
 			require.NoError(t, err)
@@ -93,7 +93,7 @@ func TestOwnEchoRequiresExactTrustedIdentity(t *testing.T) {
 			req.RequestID = "987654321"
 			echo := ownEcho(domains.Operation{Request: req})
 			tc.mutate(&req, &echo)
-			op, _, err := s.Enqueue(ctx, d.ConnectionID, req, "", 10)
+			op, _, err := s.Enqueue(ctx, d.ConnectionID, req, "", AdmissionLimits{Global: 10})
 			require.NoError(t, err)
 			_, err = s.ClaimOperations(ctx, 1)
 			require.NoError(t, err)
@@ -114,7 +114,7 @@ func TestOwnEchoScopeTerminalStatesAndRollback(t *testing.T) {
 	for _, d := range []domains.Device{a, b} {
 		require.NoError(t, s.BindAccount(ctx, d.ConnectionID, "456"))
 	}
-	op, _, err := s.Enqueue(ctx, a.ConnectionID, textRequest("hello"), "", 10)
+	op, _, err := s.Enqueue(ctx, a.ConnectionID, textRequest("hello"), "", AdmissionLimits{Global: 10})
 	require.NoError(t, err)
 	_, err = s.ClaimOperations(ctx, 1)
 	require.NoError(t, err)
@@ -137,7 +137,7 @@ func TestOwnEchoScopeTerminalStatesAndRollback(t *testing.T) {
 	require.Empty(t, cp)
 
 	for _, state := range []string{"queued", "failed", "cancelled"} {
-		op, _, err = s.Enqueue(ctx, a.ConnectionID, textRequest(state), "", 10)
+		op, _, err = s.Enqueue(ctx, a.ConnectionID, textRequest(state), "", AdmissionLimits{Global: 10})
 		require.NoError(t, err)
 		if state != "queued" {
 			// Arrange a prior authoritative terminal decision independently.
@@ -160,7 +160,7 @@ func TestOwnEchoReconcilesOnlyReviewedMessageProducingOperations(t *testing.T) {
 			d := device(t, s, "rich-echo")
 			require.NoError(t, s.BindAccount(ctx, d.ConnectionID, "456"))
 			req := domains.SendRequest{Kind: "operation", Operation: name, Peer: domains.Peer{Type: "channel", ID: "77"}, Payload: json.RawMessage(`{}`)}
-			op, _, err := s.Enqueue(ctx, d.ConnectionID, req, "rich-once", 10)
+			op, _, err := s.Enqueue(ctx, d.ConnectionID, req, "rich-once", AdmissionLimits{Global: 10})
 			require.NoError(t, err)
 			_, err = s.ClaimOperations(ctx, 1)
 			require.NoError(t, err)
@@ -201,7 +201,7 @@ func TestVoiceEchoRequiresExactProofAndReleasesMediaAndCapacity(t *testing.T) {
 	}
 	require.NoError(t, s.SaveMedia(ctx, domains.Media{ID: "voice", ConnectionID: d.ConnectionID, Path: "synthetic.ogg", Size: 100}))
 	req := domains.SendRequest{Kind: "voice", Peer: domains.Peer{Type: "user", ID: "9007199254740993"}, MediaID: "voice"}
-	op, _, err := s.Enqueue(ctx, d.ConnectionID, req, "voice-once", 1)
+	op, _, err := s.Enqueue(ctx, d.ConnectionID, req, "voice-once", AdmissionLimits{Global: 1})
 	require.NoError(t, err)
 	jobs, err := s.ClaimOperations(ctx, 1)
 	require.NoError(t, err)
@@ -235,7 +235,7 @@ func TestVoiceEchoRequiresExactProofAndReleasesMediaAndCapacity(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "unknown", got.State)
 	errorCode(t, s.DeleteMedia(ctx, d.ConnectionID, "voice"), "MEDIA_IN_USE")
-	_, _, err = s.Enqueue(ctx, d.ConnectionID, textRequest("next"), "next", 1)
+	_, _, err = s.Enqueue(ctx, d.ConnectionID, textRequest("next"), "next", AdmissionLimits{Global: 1})
 	errorCode(t, err, "QUEUE_FULL")
 	_, err = s.AppendEvent(ctx, d.ConnectionID, proof, nil)
 	require.NoError(t, err)
@@ -246,7 +246,7 @@ func TestVoiceEchoRequiresExactProofAndReleasesMediaAndCapacity(t *testing.T) {
 	require.Equal(t, op.Request.RequestID, got.Result.MessageID)
 	require.Empty(t, got.ErrorCode)
 	require.NoError(t, s.DeleteMedia(ctx, d.ConnectionID, "voice"))
-	_, _, err = s.Enqueue(ctx, d.ConnectionID, textRequest("next"), "next", 1)
+	_, _, err = s.Enqueue(ctx, d.ConnectionID, textRequest("next"), "next", AdmissionLimits{Global: 1})
 	require.NoError(t, err)
 	// A late timeout cannot undo the proven result or make another send eligible.
 	errorCode(t, s.FinishOperation(ctx, d.ConnectionID, op.ID, "unknown", nil, "SEND_UNKNOWN", "late response"), "OPERATION_CONFLICT")
@@ -262,7 +262,7 @@ func TestOwnEchoReconcilesAllOrdinaryMediaKinds(t *testing.T) {
 				require.NoError(t, s.BindAccount(ctx, d.ConnectionID, "456"))
 				require.NoError(t, s.SaveMedia(ctx, domains.Media{ID: "media", ConnectionID: d.ConnectionID, Path: "synthetic", Size: 100}))
 				req := domains.SendRequest{Kind: kind, Peer: domains.Peer{Type: "user", ID: "123"}, MediaID: "media"}
-				op, _, err := s.Enqueue(ctx, d.ConnectionID, req, "once", 1)
+				op, _, err := s.Enqueue(ctx, d.ConnectionID, req, "once", AdmissionLimits{Global: 1})
 				require.NoError(t, err)
 				_, err = s.ClaimOperations(ctx, 1)
 				require.NoError(t, err)

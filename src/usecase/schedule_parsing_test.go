@@ -51,7 +51,7 @@ func TestPersistedWhitespaceScheduleKeepsIdempotency(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	jobs, err := st.DueSchedules(ctx, time.Now(), 10)
+	jobs, err := st.DueSchedules(ctx, time.Now(), 10, time.Time{}, "")
 	if err != nil || len(jobs) != 1 {
 		t.Fatalf("load persisted due schedule: %v %v", jobs, err)
 	}

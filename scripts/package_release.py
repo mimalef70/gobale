@@ -35,7 +35,10 @@ def approved_files():
         ["git", "ls-files", "-co", "--exclude-standard", "-z"], cwd=ROOT
     ).decode().split("\0"))
     paths = [ROOT / name for name in TOP_LEVEL]
-    paths.extend(ROOT / name for name in ("docs/openapi.yaml", "docs/operations.md", "docs/webhook-payload.md"))
+    paths.extend(ROOT / name for name in (
+        "docs/openapi.yaml", "docs/operations.md", "docs/webhook-payload.md",
+        "docs/consumer-integration.md",
+    ))
     for directory in ("assets",):
         paths.extend(sorted(p for p in (ROOT / directory).rglob("*")
                             if p.is_file() and p.relative_to(ROOT).as_posix() in candidates))

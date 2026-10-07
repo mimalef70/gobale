@@ -16,11 +16,11 @@ class CapacityRunnerTest(unittest.TestCase):
     def record(self):
         return {"harness": "mixed", "container": "fixture-container-id", "name": "gobale-soak-fixture", "image_id": "sha256:fixture-image",
                 "container_started_at": "synthetic-start", "duration": "1h", "warmup": "10m", "synthetic_accounts": 300,
-                "event_rate": 60, "send_rate": 10, "seed": 1, "architecture": "arm64", "source_sha256": "fixture-source", "binary_sha256": "fixture-binary"}
+                "event_rate": 60, "send_rate": 10, "seed": 1, "architecture": "arm64", "source_sha256": "fixture-source", "binary_sha256": "fixture-binary", "queue_limit": 1000, "connection_queue_limit": 100}
 
     def result(self):
         return {"passed": True, "measurement_scope": "synthetic provider, real REST/storage/webhook; process includes bounded harness", "accounts": 300,
-                "event_rate": 60, "send_rate": 10, "seed": 1, "duration_seconds": 3600, "warmup_seconds": 600, "measured_disk_growth_bytes": 1024**3}
+                "event_rate": 60, "send_rate": 10, "seed": 1, "duration_seconds": 3600, "warmup_seconds": 600, "measured_disk_growth_bytes": 1024**3, "queue_limit": 1000, "connection_queue_limit": 100}
 
     def test_disk_budget_and_unusable_growth_evidence(self):
         self.assertEqual(start_soak.required_disk_bytes(self.result(), 86400), 38 * start_soak.GIB)
@@ -34,7 +34,7 @@ class CapacityRunnerTest(unittest.TestCase):
         expected = self.record()
         evidence = dict(expected, status="passed", result=self.result())
         start_soak.validate_evidence(evidence, expected, 86400, 38 * start_soak.GIB)
-        for key in ("binary_sha256", "source_sha256", "image_id", "architecture", "seed", "event_rate", "send_rate", "synthetic_accounts"):
+        for key in ("binary_sha256", "source_sha256", "image_id", "architecture", "seed", "event_rate", "send_rate", "synthetic_accounts", "queue_limit", "connection_queue_limit"):
             bad = dict(evidence, **{key: "changed"})
             with self.subTest(key=key), self.assertRaises(ValueError):
                 start_soak.validate_evidence(bad, expected, 86400, 100 * start_soak.GIB)
@@ -56,7 +56,7 @@ class CapacityRunnerTest(unittest.TestCase):
     def test_pass_requires_boolean_and_exact_result_scope(self):
         state = {"ExitCode": 0, "OOMKilled": False}
         self.assertTrue(start_soak.valid_result(self.record(), state, self.result()))
-        for field, value in (("passed", "true"), ("passed", 1), ("accounts", 50), ("duration_seconds", 10), ("seed", 2), ("warmup_seconds", 0), ("measurement_scope", "unknown")):
+        for field, value in (("passed", "true"), ("passed", 1), ("accounts", 50), ("duration_seconds", 10), ("seed", 2), ("warmup_seconds", 0), ("measurement_scope", "unknown"), ("queue_limit", 999), ("connection_queue_limit", 0), ("connection_queue_limit", None)):
             with self.subTest(field=field):
                 self.assertFalse(start_soak.valid_result(self.record(), state, dict(self.result(), **{field: value})))
         self.assertFalse(start_soak.valid_result(self.record(), dict(state, OOMKilled=True), self.result()))
@@ -142,6 +142,17 @@ class CapacityRunnerTest(unittest.TestCase):
             with patch.object(run_capacity.sys, "argv", ["run_capacity.py", "--resume", str(manifest)]), patch("sys.stderr"), self.assertRaises(SystemExit):
                 run_capacity.main()
             self.assertEqual(before, manifest.read_bytes())
+
+    def test_collection_preserves_interrupted_evidence(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "run.json"
+            for status in ("interrupted_source_revision", "interrupted_resource_profile"):
+                start_soak.save_record(path, dict(self.record(), status=status))
+                before = path.read_bytes()
+                with patch.object(start_soak, "docker") as docker:
+                    self.assertEqual(status, start_soak.collect(path)["status"])
+                    docker.assert_not_called()
+                self.assertEqual(before, path.read_bytes())
 
 
 if __name__ == "__main__":

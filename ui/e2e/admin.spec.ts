@@ -93,6 +93,7 @@ async function mock(page: Page, options: { count?: number; signedIn?: boolean } 
       return answer({ server_time: new Date().toISOString(), devices })
     if (path === 'api/devices' && method === 'POST') {
       expect(body?.device_id).toBeTruthy()
+      expect(route.request().headers()['idempotency-key']).toBeTruthy()
       const d = device(String(body?.device_id), 'new-instance')
       devices.push(d)
       return answer(d, 201)

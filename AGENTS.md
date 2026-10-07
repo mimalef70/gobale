@@ -7,7 +7,8 @@ webhooks. Keep one module in `src` and the `cmd / ui/rest / usecase / domains /
 infrastructure` layers. The embedded administrative UI lives in `ui/` and is served
 from `src/ui/web`; there is no browser or Node runtime. Keep its scope to account
 lifecycle, status and webhook administration; no chat or sending console. Consumers own
-their users and permissions; do not depend on MuChat's models.
+their users and permissions; do not depend on any consumer's models. Keep implementation,
+tests and integration documentation independent of any specific consumer application.
 
 `internal/balemeow` owns transport, authentication, RPC and updates. It must not
 import Fiber, SQL or webhook dispatchers. Use domain interfaces at the boundary.
@@ -157,6 +158,13 @@ media cleanup, literal mention encoding and real process-crash boundaries have
 synthetic regression coverage. Mentions and scheduled forwarding remain
 live-unverified. Capacity runners record exact binaries and completed verdicts;
 neither a 300-client local fixture nor a launched 24-hour job proves live capacity.
+
+Additional consumer-contract evidence on **2026-10-07**: synthetic default, purego
+and race tests cover schema-7 atomic device provisioning, mandatory instance
+preconditions, three isolated connection workflows and byte-identical signed
+webhook retry after restart. Per-connection admission and bounded scheduler
+pagination preserve progress for other accounts. This does not establish consumer
+application integration, customer authorization or live-account capacity.
 
 Keep native capability coverage and known limitations in
 [`capabilities.json`](src/internal/balemeow/testdata/coverage/capabilities.json).

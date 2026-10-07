@@ -52,6 +52,7 @@ func TestRemoteDownloadUsesScopedReferenceAndReleasesSlot(t *testing.T) {
 		r := httptest.NewRequest("GET", "/message/456/download?peer=user:123", nil)
 		r.SetBasicAuth("test", "password")
 		r.Header.Set("X-Device-Id", device)
+		scopeTestRequest(t, srv, r)
 		res, err := srv.App.Test(r)
 		require.NoError(t, err)
 		b, err := io.ReadAll(res.Body)

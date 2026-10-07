@@ -23,15 +23,16 @@ import (
 )
 
 type Store struct {
-	db      *sql.DB
-	aead    cipher.AEAD
-	lock    *os.File
-	dbPath  string
-	metrics storageMetrics
+	db              *sql.DB
+	aead            cipher.AEAD
+	lock            *os.File
+	dbPath          string
+	metrics         storageMetrics
+	provisioningKey []byte
 }
 type scanner interface{ Scan(...any) error }
 
-const schemaVersion = 6
+const schemaVersion = 7
 
 func now() int64               { return time.Now().UTC().UnixMilli() }
 func stamp(ms int64) time.Time { return time.UnixMilli(ms).UTC() }
@@ -125,7 +126,7 @@ func Open(path string, key []byte) (s *Store, err error) {
 	}
 	db.SetMaxOpenConns(1)
 	db.SetMaxIdleConns(1)
-	s = &Store{db: db, aead: aead, lock: lock, dbPath: abs}
+	s = &Store{db: db, aead: aead, lock: lock, dbPath: abs, provisioningKey: deriveProvisioningKey(key)}
 	defer func() {
 		if err != nil {
 			db.Close()
@@ -250,6 +251,11 @@ func (s *Store) migrate(ctx context.Context) error {
 				}
 			}
 		}
+		if version <= 6 {
+			if _, e = tx.ExecContext(ctx, provisioningSchema); e != nil {
+				return fmt.Errorf("migrate device provisioning: %w", e)
+			}
+		}
 		if _, e = tx.ExecContext(ctx, `UPDATE gobale_meta SET version=? WHERE id=1`, schemaVersion); e != nil {
 			return e
 		}
@@ -300,6 +306,7 @@ var schema = []string{
 	occurrenceSchema,
 	eventOrderIndex,
 	mediaPathIndex,
+	provisioningSchema,
 }
 
 func (s *Store) active(ctx context.Context, conn string) error {

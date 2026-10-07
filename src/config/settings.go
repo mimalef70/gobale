@@ -14,20 +14,20 @@ import (
 const AppVersion = "1.0.0"
 
 type Settings struct {
-	UIEnabled                                                               bool
-	UIPublicOrigin                                                          string
-	Host                                                                    string
-	Port                                                                    int
-	BasicAuth, BasePath, Database, MediaRoot                                string
-	MasterKey                                                               []byte
-	GRPCEndpoint, WebSocketEndpoint, Origin, APIKey, DeviceTitle            string
-	AppID, APIVersion                                                       uint32
-	Webhooks                                                                []string
-	WebhookSecret                                                           string
-	WebhookMergeGlobal                                                      bool
-	MaxMediaBytes                                                           int64
-	SendWait                                                                time.Duration
-	SendWorkers, WebhookWorkers, ReconnectWorkers, MediaWorkers, QueueLimit int
+	UIEnabled                                                                                     bool
+	UIPublicOrigin                                                                                string
+	Host                                                                                          string
+	Port                                                                                          int
+	BasicAuth, BasePath, Database, MediaRoot                                                      string
+	MasterKey                                                                                     []byte
+	GRPCEndpoint, WebSocketEndpoint, Origin, APIKey, DeviceTitle                                  string
+	AppID, APIVersion                                                                             uint32
+	Webhooks                                                                                      []string
+	WebhookSecret                                                                                 string
+	WebhookMergeGlobal                                                                            bool
+	MaxMediaBytes                                                                                 int64
+	SendWait                                                                                      time.Duration
+	SendWorkers, WebhookWorkers, ReconnectWorkers, MediaWorkers, QueueLimit, ConnectionQueueLimit int
 }
 
 func Load(v *viper.Viper) (Settings, error) {
@@ -48,7 +48,7 @@ func Load(v *viper.Viper) (Settings, error) {
 		value         *int
 		fallback, max int
 	}{
-		{"send-workers", &s.SendWorkers, 4, 64}, {"webhook-workers", &s.WebhookWorkers, 8, 64}, {"reconnect-workers", &s.ReconnectWorkers, 4, 4}, {"media-workers", &s.MediaWorkers, 4, 64}, {"queue-limit", &s.QueueLimit, 1000, 100000},
+		{"send-workers", &s.SendWorkers, 4, 64}, {"webhook-workers", &s.WebhookWorkers, 8, 64}, {"reconnect-workers", &s.ReconnectWorkers, 4, 4}, {"media-workers", &s.MediaWorkers, 4, 64}, {"queue-limit", &s.QueueLimit, 1000, 100000}, {"connection-queue-limit", &s.ConnectionQueueLimit, 100, 100000},
 	} {
 		*option.value = option.fallback
 		if v.IsSet(option.name) {

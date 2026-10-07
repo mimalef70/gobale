@@ -18,7 +18,7 @@ func legacyUnknownVoice(t *testing.T, s *Store, d domains.Device, name string, m
 	t.Helper()
 	ctx := context.Background()
 	req := domains.SendRequest{Kind: "voice", Peer: domains.Peer{Type: "user", ID: "123"}}
-	op, _, err := s.Enqueue(ctx, d.ConnectionID, req, name, 1000)
+	op, _, err := s.Enqueue(ctx, d.ConnectionID, req, name, AdmissionLimits{Global: 1000, Connection: 1000})
 	require.NoError(t, err)
 	echo := ownEcho(op)
 	echo.Payload = json.RawMessage(`{"kind":"document","media_type":"voice","mime_type":"audio/ogg","duration":1000}`)

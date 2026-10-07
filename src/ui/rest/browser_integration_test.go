@@ -186,12 +186,12 @@ func TestBrowserIntegrationInstanceGuardRejectsReplacedAlias(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, replacement.ConnectionID, current.ConnectionID)
 	require.Empty(t, current.Webhook.URL)
-	// Optional instance guard on Basic API has the same check, while clients that
-	// omit it remain compatible with the pre-UI API contract.
+	// Machine and browser APIs both require the same immutable precondition.
 	res, out := browserIntegrationRequest(t, srv, browserIntegrationSession{}, "GET", "/devices/same", nil, browserInstance(original), true)
 	require.Equal(t, 409, res.StatusCode, out)
 	res, out = browserIntegrationRequest(t, srv, browserIntegrationSession{}, "GET", "/devices/same", nil, nil, true)
-	require.Equal(t, 200, res.StatusCode, out)
+	require.Equal(t, 400, res.StatusCode, out)
+	require.Equal(t, "DEVICE_INSTANCE_REQUIRED", out["code"])
 }
 
 func TestBrowserIntegrationFiftyAccountSnapshotIsLocal(t *testing.T) {
@@ -406,7 +406,7 @@ func TestBrowserIntegrationOpenAPIRegistryParity(t *testing.T) {
 				require.True(t, params["header:X-Device-Instance"].Required, path)
 				for _, p := range basic.Parameters {
 					if p.Name == "X-Device-Instance" {
-						require.False(t, p.Required, "browser cloning made Basic instance mandatory")
+						require.True(t, p.Required, "machine API must require the immutable instance")
 					}
 				}
 			}

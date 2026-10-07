@@ -18,19 +18,19 @@ func TestMentionIdempotencyAndSchedulePersistence(t *testing.T) {
 	d, err := st.CreateDevice(ctx, "mention")
 	require.NoError(t, err)
 	request := domains.SendRequest{Peer: domains.Peer{Type: "user", ID: "77"}, Kind: "text", Text: "synthetic", Mentions: []string{"1"}}
-	op, _, err := st.Enqueue(ctx, d.ConnectionID, request, "same", 100)
+	op, _, err := st.Enqueue(ctx, d.ConnectionID, request, "same", AdmissionLimits{Global: 100})
 	require.NoError(t, err)
-	again, created, err := st.Enqueue(ctx, d.ConnectionID, request, "same", 100)
+	again, created, err := st.Enqueue(ctx, d.ConnectionID, request, "same", AdmissionLimits{Global: 100})
 	require.NoError(t, err)
 	require.False(t, created)
 	require.Equal(t, op.ID, again.ID)
 	request.Mentions = []string{"2"}
-	_, _, err = st.Enqueue(ctx, d.ConnectionID, request, "same", 100)
+	_, _, err = st.Enqueue(ctx, d.ConnectionID, request, "same", AdmissionLimits{Global: 100})
 	require.Error(t, err)
 	at := time.Now().UTC()
 	schedule, err := st.CreateSchedule(ctx, d.ConnectionID, request, at)
 	require.NoError(t, err)
-	occurrence, err := st.MaterializeSchedule(ctx, d.ConnectionID, schedule.ID, at, nil, 100)
+	occurrence, err := st.MaterializeSchedule(ctx, d.ConnectionID, schedule.ID, at, nil, AdmissionLimits{Global: 100})
 	require.NoError(t, err)
 	require.Equal(t, []string{"2"}, occurrence.Request.Mentions)
 }

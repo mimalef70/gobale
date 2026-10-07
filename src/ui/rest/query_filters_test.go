@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/gobale/src/infrastructure/storage"
 	"github.com/stretchr/testify/require"
 	"net/url"
 	"sync/atomic"
@@ -22,7 +23,7 @@ func TestCoreQueryRESTContractsAndConnectionScope(t *testing.T) {
 	due := time.Now().Add(time.Hour).UTC().Truncate(time.Millisecond)
 	job, err := s.store.CreateSchedule(ctx, d.ConnectionID, domains.SendRequest{Peer: domains.Peer{Type: "user", ID: "42"}, Kind: "text", Text: "fixture"}, due)
 	require.NoError(t, err)
-	op, err := s.store.MaterializeSchedule(ctx, d.ConnectionID, job.ID, due, nil, 20)
+	op, err := s.store.MaterializeSchedule(ctx, d.ConnectionID, job.ID, due, nil, storage.AdmissionLimits{Global: 20})
 	require.NoError(t, err)
 	status, body := apiRequest(t, s, "GET", "/send/operations?schedule_id="+job.ID+"&kind=text&peer=user:42", "one", nil)
 	require.Equal(t, 200, status)

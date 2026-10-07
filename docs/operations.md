@@ -15,6 +15,21 @@ application must authorize its own users and organizations. Keep the listener
 private or use TLS at the ingress. An explicit invalid device selector fails;
 reusing a deleted alias does not transfer its old connection's data or work.
 
+All account-scoped machine and browser requests require an explicit selector and
+`X-Device-Instance` matching the saved connection. The consuming backend derives
+these from an authorized channel record; customer browsers never receive the
+administrative Basic credentials. Missing selectors/instances fail with 400;
+stale instances fail with 409 before provider work. See the
+[consumer integration contract](consumer-integration.md).
+
+`APP_CONNECTION_QUEUE_LIMIT` defaults to 100 outstanding operations per immutable
+connection, alongside the global `APP_QUEUE_LIMIT` of 1000. Both include queued,
+sending and unknown work. Full admission returns 429 `CONNECTION_QUEUE_FULL` or
+`QUEUE_FULL`; no new operation is accepted. Identical idempotent retries can still
+read existing work. Scheduled occurrences blocked by admission remain due and
+unconsumed. These are storage bounds, not customer billing or authorization:
+consumers still enforce their own connection, request and upload budgets.
+
 Sessions and stored secrets are encrypted with the deployment key. Ordinary
 messages, webhook bodies and media are **not application-encrypted**. Protect the
 data directory, logs and backups; use encrypted storage where required. Never
@@ -67,7 +82,8 @@ out of URLs and proxy logs. Only language/theme are saved in localStorage.
 do not authorize the public Basic API, and Basic alone does not authorize UI API.
 All account-scoped UI requests require `X-Device-Instance`. A stale tab gets
 `409 DEVICE_INSTANCE_CHANGED` if its alias now belongs to another connection.
-External Basic clients can opt into this guard while existing clients remain valid.
+External Basic clients must also send `X-Device-Instance` on every account-scoped
+request; update existing consumers before using the current API contract.
 
 Snapshots read local status and batch queue counts; polling does not call Bale.
 Lists refresh every ten seconds, active login every three and delivery lists every
@@ -126,6 +142,14 @@ Migrations run at startup; take a backup before upgrading. Foreign databases and
 wrong master keys are rejected. Roll back with a compatible database snapshot,
 not an arbitrary older binary against a newer schema. Check release notes for
 protocol and storage changes before replacing the running version.
+
+Schema 7 adds the device provisioning journal. Connection, initial encrypted
+webhook configuration and provisioning key commit together. Replays retain the
+original immutable connection, including after restart; retired keys cannot attach
+to a reused alias. Existing sessions, events, deliveries and checkpoints remain.
+The current HTTP contract requires provisioning keys and immutable instance
+headers; update API consumers with the binary. Stored webhook bodies from before
+the instance field was introduced remain byte-identical on retry and replay.
 
 Schema 6 adds durable outbox positions, authoritative schedule occurrences, event
 query indexes and device webhook filters. Migration preserves existing queue order.

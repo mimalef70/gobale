@@ -11,6 +11,7 @@ Configure a device through `PATCH /devices/{device_id}/webhook`:
 
 ```sh
 curl --fail-with-body --user "$APP_BASIC_AUTH" \
+  -H "X-Device-Instance: $GOBALE_INSTANCE" \
   -X PATCH -H 'Content-Type: application/json' \
   --data '{"webhook_url":"https://your-app.example/bale/events","webhook_secret":"REPLACE_WITH_A_RANDOM_SECRET","webhook_events":["message","message.edited","message.deleted"]}' \
   http://127.0.0.1:3000/devices/support/webhook
@@ -91,6 +92,7 @@ Synthetic incoming-message example:
   "event": "message",
   "device_id": "123",
   "session_id": "support",
+  "instance_id": "1111111111111111111111111111111111111111111111111111111111111111",
   "peer": {"type": "user", "id": "456"},
   "message_id": "987654321",
   "sender_id": "456",
@@ -105,6 +107,7 @@ Synthetic incoming-message example:
 | `event_id` | Stable, connection-scoped event identity; use it for durable deduplication. |
 | `event` | Event name, such as `message` or `message.edited`. |
 | `session_id` | Local device alias used by `X-Device-Id`, such as `support`. |
+| `instance_id` | Immutable connection identity, matching the saved device instance; present on newly persisted events. |
 | `device_id` | Connected Bale account ID, not the local alias. |
 | `peer` | Conversation type/ID where applicable; account-level notifications may have empty peer fields. |
 | `message_id`, `sender_id`, `direction` | Optional event-specific fields; message direction is `incoming`, `outgoing` or `unknown` when provenance is absent. |
@@ -114,6 +117,16 @@ Synthetic incoming-message example:
 Keep all IDs as strings. Message/file IDs may be negative signed 64-bit values;
 they must not pass through a JavaScript `Number`. Do not parse meaning from
 `event_id` or infer tenant permission from the device alias alone.
+
+After verifying the raw-body signature, match `session_id`, `instance_id` and the
+authenticated Bale account to the consumer's saved channel binding. The gateway
+sets these fields from storage, never from untrusted provider metadata. A channel
+with no authenticated account binding may durably hold early events until the
+login result is reconciled; do not guess ownership from message content.
+Historical bodies created before `instance_id` was introduced are preserved on
+retry/replay. Do not automatically bind such a body to a newly created channel;
+handle it through the operator's existing connection record. See the
+[consumer integration contract](consumer-integration.md).
 
 Every delivery includes:
 
@@ -184,11 +197,11 @@ remain in the delivery ledger.
 Use the same selected device for inspection and administrative recovery:
 
 ```sh
-curl --user "$APP_BASIC_AUTH" -H 'X-Device-Id: support' \
+curl --user "$APP_BASIC_AUTH" -H 'X-Device-Id: support' -H "X-Device-Instance: $GOBALE_INSTANCE" \
   'http://127.0.0.1:3000/deliveries?limit=20'
-curl --user "$APP_BASIC_AUTH" -H 'X-Device-Id: support' -X POST \
+curl --user "$APP_BASIC_AUTH" -H 'X-Device-Id: support' -H "X-Device-Instance: $GOBALE_INSTANCE" -X POST \
   http://127.0.0.1:3000/deliveries/DELIVERY_ID/retry
-curl --user "$APP_BASIC_AUTH" -H 'X-Device-Id: support' -X POST \
+curl --user "$APP_BASIC_AUTH" -H 'X-Device-Id: support' -H "X-Device-Instance: $GOBALE_INSTANCE" -X POST \
   http://127.0.0.1:3000/deliveries/DELIVERY_ID/replay
 ```
 

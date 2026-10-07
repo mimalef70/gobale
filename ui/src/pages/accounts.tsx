@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { useQueryClient } from '@tanstack/react-query'
@@ -29,6 +29,7 @@ export function Accounts({ overview }: { overview: Overview }) {
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>()
+  const provision = useRef<{ name: string; key: string } | null>(null)
   const devices = overview.devices ?? []
   const attention = (d: Device) =>
     ['gap_detected', 'degraded'].includes(d.status.recovery) || d.deliveries.failed > 0
@@ -47,14 +48,19 @@ export function Accounts({ overview }: { overview: Overview }) {
     setBusy(true)
     setError(undefined)
     try {
+      const alias = name.trim()
+      if (!provision.current || provision.current.name !== alias)
+        provision.current = { name: alias, key: crypto.randomUUID() }
       const device = await request<Device>('devices', {
         method: 'POST',
-        body: { device_id: name.trim() },
+        body: { device_id: alias },
+        idempotencyKey: provision.current.key,
         signal: getSignal(),
       })
       await cache.invalidateQueries({ queryKey: ['overview'] })
       setCreateOpen(false)
       setName('')
+      provision.current = null
       navigate(deviceURL(device, 'login'))
     } catch (e) {
       setError(e)

@@ -20,6 +20,22 @@ import urllib.request
 image = sys.argv[1] if len(sys.argv) > 1 else "gobale:dev"
 
 
+def wait_mapped_port(docker, name):
+    """Docker restart can finish before its ephemeral port mapping is visible."""
+    deadline = time.monotonic() + 30
+    while time.monotonic() < deadline:
+        try:
+            mapping = docker("port", name, "3000/tcp")
+        except subprocess.CalledProcessError:
+            mapping = ""
+        for line in mapping.splitlines():
+            host, separator, port = line.rpartition(":")
+            if host and separator and port.isdecimal() and 1 <= int(port) <= 65535:
+                return port
+        time.sleep(.2)
+    raise RuntimeError("container HTTP port mapping did not become available within 30 seconds")
+
+
 def scenario(base_path="", ui_enabled=True):
     name = "gobale-smoke-" + secrets.token_hex(5)
     volume = name + "-data"
@@ -41,6 +57,8 @@ def scenario(base_path="", ui_enabled=True):
     def request(path, data=None, method=None, *, basic=True, session=False,
                 csrf=None, instance=None, headers=None, expected=200):
         request_headers = {"Content-Type": "application/json"}
+        if (method or ("POST" if data is not None else "GET")) == "POST" and path == "/devices":
+            request_headers["Idempotency-Key"] = secrets.token_hex(16)
         if basic:
             request_headers["Authorization"] = "Basic " + auth
         if session or csrf is not None:
@@ -93,7 +111,7 @@ def scenario(base_path="", ui_enabled=True):
                "-e", "APP_BASIC_AUTH", "-e", "APP_MASTER_KEY", "-e", "APP_BASE_PATH",
                "-e", "APP_UI_ENABLED", "-e", "APP_UI_PUBLIC_ORIGIN",
                "-v", volume + ":/app/storages", "-p", "127.0.0.1::3000", image)
-        port = docker("port", name, "3000/tcp").rsplit(":", 1)[1]
+        port = wait_mapped_port(docker, name)
         origin = "http://127.0.0.1:" + port
         ready()
         created = request("/devices", {"device_id": "smoke"}, expected=201)[0]["results"]
@@ -137,7 +155,7 @@ def scenario(base_path="", ui_enabled=True):
             request("/ui/api/devices/smoke", method="DELETE", basic=False, session=True,
                     instance=created["instance_id"], expected=403)
             request("/ui/api/send/message", {}, basic=False, session=True, csrf=csrf, expected=404)
-            request("/devices/smoke", method="DELETE")
+            request("/devices/smoke", method="DELETE", instance=created["instance_id"])
             replaced = request("/devices", {"device_id": "smoke"}, expected=201)[0]["results"]
             assert replaced["instance_id"] != created["instance_id"]
             request("/ui/api/devices/smoke/status", basic=False, session=True,
@@ -154,10 +172,10 @@ def scenario(base_path="", ui_enabled=True):
         docker("restart", name)
         # Docker may allocate a new ephemeral host port after a restart; cookie
         # scope is host/path, so the old cookie still reaches the restarted UI.
-        port = docker("port", name, "3000/tcp").rsplit(":", 1)[1]
+        port = wait_mapped_port(docker, name)
         origin = "http://127.0.0.1:" + port
         ready()
-        restored = request("/devices/smoke")[0]["results"]
+        restored = request("/devices/smoke", instance=created["instance_id"])[0]["results"]
         assert restored == created, "device changed or disappeared after restart"
         if ui_enabled:
             request("/ui/auth/session", method="GET", basic=False, session=True,

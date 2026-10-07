@@ -85,7 +85,6 @@ func TestHTTPAccountSelectionSurvivesAliasReuse(t *testing.T) {
 	}{
 		{"send-header", "POST", "/send/message", `{"peer":{"type":"user","id":"42"},"message":"original account"}`, true},
 		{"send-query", "POST", "/send/message?device_id=shared", `{"peer":{"type":"user","id":"42"},"message":"original account"}`, false},
-		{"send-implicit", "POST", "/send/message", `{"peer":{"type":"user","id":"42"},"message":"original account"}`, false},
 		{"schedule", "POST", "/send/schedules", scheduled, true},
 		{"scheduled-send", "POST", "/send/message", scheduled, true},
 		{"provider-read", "GET", "/user/info", `{}`, true},
@@ -125,9 +124,9 @@ func TestHTTPAccountSelectionSurvivesAliasReuse(t *testing.T) {
 			require.NoError(t, err)
 			defer conn.Close()
 			require.NoError(t, conn.SetDeadline(time.Now().Add(10*time.Second)))
-			header := ""
+			header := "X-Device-Instance: " + original.InstanceToken() + "\r\n"
 			if tc.header {
-				header = "X-Device-Id: shared\r\n"
+				header += "X-Device-Id: shared\r\n"
 			}
 			_, err = fmt.Fprintf(conn, "%s %s HTTP/1.1\r\nHost: localhost\r\nAuthorization: Basic dGVzdDpwYXNzd29yZA==\r\n%sContent-Type: application/json\r\nIdempotency-Key: scope-regression\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n", tc.method, tc.path, header)
 			require.NoError(t, err)

@@ -40,7 +40,7 @@ func TestSQLiteFullAndReadOnlyNeverAcceptOrAdvanceCheckpoint(t *testing.T) {
 			require.NoError(t, st.db.QueryRow(`SELECT COUNT(*) FROM deliveries`).Scan(&deliveries))
 			require.Zero(t, events)
 			require.Zero(t, deliveries)
-			_, _, err = st.Enqueue(ctx, d.ConnectionID, domains.SendRequest{Kind: "text", Peer: domains.Peer{Type: "user", ID: "77"}, Text: strings.Repeat("x", 1<<20)}, "failed", 1000)
+			_, _, err = st.Enqueue(ctx, d.ConnectionID, domains.SendRequest{Kind: "text", Peer: domains.Peer{Type: "user", ID: "77"}, Text: strings.Repeat("x", 1<<20)}, "failed", AdmissionLimits{Global: 1000})
 			require.Error(t, err)
 			var operations int
 			require.NoError(t, st.db.QueryRow(`SELECT COUNT(*) FROM operations`).Scan(&operations))

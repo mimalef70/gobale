@@ -2,6 +2,16 @@
 
 ## Unreleased
 
+- Require explicit account selection and immutable instance headers on machine
+  and browser APIs. REST sends, schedules and device provisioning require stable
+  idempotency keys; update consumers with this contract change.
+- Atomically provision devices and initial webhooks with a schema-7 journal;
+  repeated requests preserve the original connection through restart/deletion.
+- Add immutable connection identity to new event/webhook bodies and per-connection
+  queue admission (default 100), with independent global limits and safe schedule
+  deferral. Previously persisted delivery bodies keep their exact retry identity.
+- Document backend channel ownership and provider-specific integration contracts; GoBale
+  remains independent of consumer user/organization models.
 - Add filtered operation/schedule/event queries, authoritative schedule executions,
   scheduled forwarding and explicit mentions in text/media captions. Mention and
   scheduled-forward provider interoperability remain live-unverified.
@@ -22,7 +32,7 @@
 
 The first 1.0 gateway release includes the embedded administrative panel, durable
 account-isolation and recovery fixes, four native binary archives, and a non-root
-Linux amd64/arm64 container. The release is independent of MuChat.
+Linux amd64/arm64 container.
 
 - Embedded English/Persian administrative UI at `/ui/`, with account login and
   lifecycle, recovery status, per-device webhook settings and delivery management.

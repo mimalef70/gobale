@@ -69,6 +69,7 @@ export type RequestOptions = {
   scope?: Scope
   signal?: AbortSignal
   auth?: boolean
+  idempotencyKey?: string
 }
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const generation = sessionGeneration
@@ -76,6 +77,7 @@ export async function request<T>(path: string, options: RequestOptions = {}): Pr
   const headers = new Headers({ Accept: 'application/json' })
   if (options.body !== undefined) headers.set('Content-Type', 'application/json')
   if (method !== 'GET' && csrf) headers.set('X-CSRF-Token', csrf)
+  if (options.idempotencyKey) headers.set('Idempotency-Key', options.idempotencyKey)
   if (options.scope) {
     headers.set('X-Device-Id', options.scope.id)
     headers.set('X-Device-Instance', options.scope.instance_id)

@@ -141,10 +141,10 @@ func (s *Store) AppendEvent(ctx context.Context, conn string, event domains.Even
 	defer func() { s.observePersistence("append_event", start, err) }()
 	return s.appendEvent(ctx, conn, event, targets)
 }
-func (s *Store) Enqueue(ctx context.Context, conn string, req domains.SendRequest, key string, limit int) (op domains.Operation, created bool, err error) {
+func (s *Store) Enqueue(ctx context.Context, conn string, req domains.SendRequest, key string, limits AdmissionLimits) (op domains.Operation, created bool, err error) {
 	start := time.Now()
 	defer func() { s.observePersistence("enqueue", start, err) }()
-	return s.enqueue(ctx, conn, req, key, limit)
+	return s.enqueue(ctx, conn, req, key, limits)
 }
 func (s *Store) ClaimOperations(ctx context.Context, limit int) (ops []domains.Operation, err error) {
 	start := time.Now()
@@ -166,10 +166,10 @@ func (s *Store) UpdateDelivery(ctx context.Context, conn, id, state string, next
 	defer func() { s.observePersistence("update_delivery", start, err) }()
 	return s.updateDelivery(ctx, conn, id, state, next, lastError)
 }
-func (s *Store) MaterializeSchedule(ctx context.Context, conn, id string, expected time.Time, next *time.Time, limit int) (op domains.Operation, err error) {
+func (s *Store) MaterializeSchedule(ctx context.Context, conn, id string, expected time.Time, next *time.Time, limits AdmissionLimits) (op domains.Operation, err error) {
 	start := time.Now()
 	defer func() { s.observePersistence("schedule_occurrence", start, err) }()
-	return s.materializeSchedule(ctx, conn, id, expected, next, limit)
+	return s.materializeSchedule(ctx, conn, id, expected, next, limits)
 }
 func (s *Store) CreateScheduleIdempotent(ctx context.Context, conn string, request domains.SendRequest, next time.Time, key string) (schedule domains.Schedule, err error) {
 	start := time.Now()

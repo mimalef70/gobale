@@ -39,6 +39,8 @@ contracts: ## Verify generated OpenAPI, coverage inventory, and release tooling.
 	python3 scripts/generate_openapi.py --check
 	python3 scripts/check_capabilities.py
 	python3 -m unittest discover -s scripts -p 'test_release_notes.py'
+	python3 -m unittest discover -s scripts -p 'test_capacity_runner.py'
+	python3 -m unittest discover -s scripts -p 'test_docker_smoke.py'
 
 vuln: ## Scan default and shipped purego builds using pinned govulncheck.
 	cd src && go run golang.org/x/vuln/cmd/govulncheck@v1.8.0 ./...

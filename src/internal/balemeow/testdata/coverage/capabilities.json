@@ -1682,6 +1682,11 @@
       "capability": "synthetic_capacity_acceptance",
       "status": "implemented_with_limits",
       "note": "2026-10-07: parameterized mixed REST/storage/webhook and native WebSocket/RPC fixtures exist. A 300-client macOS local-protocol run passed handshake, restored checkpoint recovery, RPC, updates and reconnect; short mixed fixtures passed. This is not 300 native Bale accounts. Linux comparison/hourly/24-hour gates require their exact completed run manifests; launching them alone is not passing evidence."
+    },
+    {
+      "capability": "consumer_connection_contract",
+      "status": "implemented_with_limits",
+      "note": "2026-10-07 offline default/purego/race fixtures verify schema-7 atomic keyed provisioning, concurrent/restart replay and retired aliases, mandatory machine/browser instance guards, three isolated account workflows, unchanged signed webhook retry after SQLite reopen, and required REST send/schedule idempotency. Newly persisted envelopes include authoritative instance_id; historical bodies stay unchanged. Per-connection backlog admission and bounded schedule scanning prevent a full connection hiding other due work. The receiver example verifies a configured binding before durable acceptance. No consumer application integration, tenant ACL, live-provider expansion or production capacity is established by these synthetic tests."
     }
   ]
 }

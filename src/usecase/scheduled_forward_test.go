@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/gobale/src/infrastructure/storage"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"
@@ -32,9 +33,9 @@ func TestScheduledForwardReferencesAndFreshOccurrenceIDs(t *testing.T) {
 	require.NoError(t, err)
 	require.Zero(t, count)
 	second := job.NextAt.Add(24 * time.Hour)
-	first, err := st.MaterializeSchedule(ctx, d.ConnectionID, job.ID, job.NextAt, &second, 10)
+	first, err := st.MaterializeSchedule(ctx, d.ConnectionID, job.ID, job.NextAt, &second, storage.AdmissionLimits{Global: 10})
 	require.NoError(t, err)
-	secondOp, err := st.MaterializeSchedule(ctx, d.ConnectionID, job.ID, second, nil, 10)
+	secondOp, err := st.MaterializeSchedule(ctx, d.ConnectionID, job.ID, second, nil, storage.AdmissionLimits{Global: 10})
 	require.NoError(t, err)
 	require.NotEqual(t, first.Request.RequestID, secondOp.Request.RequestID)
 	listed, err := svc.ListOperationsFiltered(ctx, d.ID, domains.OperationFilter{Operation: "message.forward", ScheduleID: job.ID})

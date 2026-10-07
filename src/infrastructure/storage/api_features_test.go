@@ -12,6 +12,7 @@ import (
 // Downgrade only synthetic fixtures. Runtime migrations reject partial schemas.
 func restoreV5APISchema(t *testing.T, s *Store) {
 	t.Helper()
+	restoreV6ProvisioningSchema(t, s)
 	for _, ddl := range []string{`DROP TABLE schedule_occurrences`, `DROP INDEX operations_scope_id`, `DROP INDEX schedules_scope_id`, `DROP INDEX operations_queue_order`, `DROP INDEX operations_pending_order`, `DROP INDEX operations_inflight`, `ALTER TABLE operations DROP COLUMN queue_order`, `DROP INDEX events_connection_time`, `DROP INDEX media_path`, `ALTER TABLE devices DROP COLUMN webhook_filter`} {
 		_, err := s.db.Exec(ddl)
 		require.NoError(t, err)
@@ -23,7 +24,7 @@ func TestOperationOrderMigrationAndVacuum(t *testing.T) {
 	d := device(t, s, "order")
 	var ids []string
 	for _, name := range []string{"later", "first", "second"} {
-		op, _, err := s.Enqueue(ctx, d.ConnectionID, textRequest(name), name, 10)
+		op, _, err := s.Enqueue(ctx, d.ConnectionID, textRequest(name), name, AdmissionLimits{Global: 10})
 		require.NoError(t, err)
 		ids = append(ids, op.ID)
 	}
@@ -40,7 +41,7 @@ func TestOperationOrderMigrationAndVacuum(t *testing.T) {
 	defer upgraded.Close()
 	var version int
 	require.NoError(t, upgraded.db.QueryRow(`SELECT version FROM gobale_meta`).Scan(&version))
-	require.Equal(t, 6, version)
+	require.Equal(t, schemaVersion, version)
 	_, err = upgraded.db.Exec(`VACUUM`)
 	require.NoError(t, err)
 	for _, id := range []string{ids[1], ids[2], ids[0]} {
@@ -60,9 +61,9 @@ func TestScheduleOccurrenceAtomicMappingNoPublicKeyCollision(t *testing.T) {
 	due := time.UnixMilli(123456).UTC()
 	job, err := s.CreateSchedule(ctx, d.ConnectionID, req, due)
 	require.NoError(t, err)
-	fake, _, err := s.Enqueue(ctx, d.ConnectionID, req, "schedule:"+job.ID+":123456", 10)
+	fake, _, err := s.Enqueue(ctx, d.ConnectionID, req, "schedule:"+job.ID+":123456", AdmissionLimits{Global: 10})
 	require.NoError(t, err)
-	_, err = s.MaterializeSchedule(ctx, d.ConnectionID, job.ID, due, nil, 1)
+	_, err = s.MaterializeSchedule(ctx, d.ConnectionID, job.ID, due, nil, AdmissionLimits{Global: 1})
 	errorCode(t, err, "QUEUE_FULL")
 	unchanged, err := s.GetSchedule(ctx, d.ConnectionID, job.ID)
 	require.NoError(t, err)
@@ -72,18 +73,18 @@ func TestScheduleOccurrenceAtomicMappingNoPublicKeyCollision(t *testing.T) {
 	require.Empty(t, occ)
 	_, err = s.db.Exec(`CREATE TRIGGER occurrence_failure BEFORE INSERT ON schedule_occurrences BEGIN SELECT RAISE(ABORT,'synthetic failure'); END`)
 	require.NoError(t, err)
-	_, err = s.MaterializeSchedule(ctx, d.ConnectionID, job.ID, due, nil, 10)
+	_, err = s.MaterializeSchedule(ctx, d.ConnectionID, job.ID, due, nil, AdmissionLimits{Global: 10})
 	require.Error(t, err)
 	ops, err := s.ListOperations(ctx, d.ConnectionID, 10, 0)
 	require.NoError(t, err)
 	require.Len(t, ops, 1)
 	_, err = s.db.Exec(`DROP TRIGGER occurrence_failure`)
 	require.NoError(t, err)
-	op, err := s.MaterializeSchedule(ctx, d.ConnectionID, job.ID, due, nil, 10)
+	op, err := s.MaterializeSchedule(ctx, d.ConnectionID, job.ID, due, nil, AdmissionLimits{Global: 10})
 	require.NoError(t, err)
 	require.NotEqual(t, fake.ID, op.ID)
 	require.NotEqual(t, fake.Request.RequestID, op.Request.RequestID)
-	_, err = s.MaterializeSchedule(ctx, d.ConnectionID, job.ID, due, nil, 10)
+	_, err = s.MaterializeSchedule(ctx, d.ConnectionID, job.ID, due, nil, AdmissionLimits{Global: 10})
 	errorCode(t, err, "SCHEDULE_CONFLICT")
 	got, err := s.GetOperation(ctx, d.ConnectionID, op.ID)
 	require.NoError(t, err)
@@ -228,7 +229,7 @@ func TestAPIMigrationFailureRollsBackVersionAndColumns(t *testing.T) {
 	require.NoError(t, err)
 	require.NoError(t, s.migrate(ctx))
 	require.NoError(t, s.db.QueryRow(`SELECT version FROM gobale_meta`).Scan(&version))
-	require.Equal(t, 6, version)
+	require.Equal(t, schemaVersion, version)
 }
 func TestWorkFiltersTimeBoundariesAndOccurrenceScope(t *testing.T) {
 	ctx := context.Background()
@@ -236,7 +237,7 @@ func TestWorkFiltersTimeBoundariesAndOccurrenceScope(t *testing.T) {
 	d := device(t, s, "filter-work")
 	other := device(t, s, "other-work")
 	req := domains.SendRequest{Kind: "text", Peer: domains.Peer{Type: "user", ID: "42"}, Text: "synthetic"}
-	op, _, err := s.Enqueue(ctx, d.ConnectionID, req, "one", 10)
+	op, _, err := s.Enqueue(ctx, d.ConnectionID, req, "one", AdmissionLimits{Global: 10})
 	require.NoError(t, err)
 	start := op.CreatedAt
 	end := start.Add(time.Millisecond)

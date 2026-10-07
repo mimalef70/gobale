@@ -44,7 +44,7 @@ func (s *Service) Mutate(ctx context.Context, id, operation string, payload json
 	if err := json.Unmarshal(normalized, &media); err == nil {
 		request.MediaID = media.MediaID
 	}
-	op, _, err := s.store.Enqueue(ctx, device.ConnectionID, request, key, s.options.QueueLimit)
+	op, _, err := s.store.Enqueue(ctx, device.ConnectionID, request, key, s.admissionLimits())
 	return op, err
 }
 

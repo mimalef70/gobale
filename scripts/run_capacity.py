@@ -8,7 +8,7 @@ from pathlib import Path
 import subprocess
 import sys
 
-from start_soak import GIB, required_disk_bytes, save_record
+from start_soak import GIB, QUEUE_LIMIT, CONNECTION_QUEUE_LIMIT, required_disk_bytes, save_record
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -39,7 +39,8 @@ def main():
     else:
         out = ROOT / "artifacts" / "soak" / ("acceptance-" + name)
         out.mkdir(parents=True, exist_ok=False)
-        record = {"status": "running", "scope": "synthetic Linux 4 CPU / 8 GiB; not live provider capacity", "short_stage_disk_gib": args.max_disk_gib, "soak_requested": not args.skip_soak, "phases": []}
+        record = {"status": "running", "scope": "synthetic Linux 4 CPU / 8 GiB; not live provider capacity", "short_stage_disk_gib": args.max_disk_gib, "soak_requested": not args.skip_soak,
+                  "mixed_admission_limits": {"global": QUEUE_LIMIT, "connection": CONNECTION_QUEUE_LIMIT}, "phases": []}
         manifest = out / "acceptance.json"
     def save():
         save_record(manifest, record)

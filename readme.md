@@ -13,7 +13,7 @@ with its phone number and login code, receive signed webhook events, and send
 replies from your own inbox, support system or workflow.
 
 Sponsored by **[MuChat](https://mu.chat)**. GoBale is independent open-source
-software and works with any application; it has no dependency on MuChat.
+software available to everyone and works with any application through its public API.
 
 [Releases](https://github.com/mimalef70/gobale/releases) ·
 [Container images](https://github.com/users/mimalef70/packages/container/package/gobale) ·
@@ -96,6 +96,7 @@ command-line arguments, logs and public issues.
 | `APP_RECONNECT_WORKERS` | `--reconnect-workers` | `4` | 1–4 concurrent reconnects |
 | `APP_MEDIA_WORKERS` | `--media-workers` | `4` | 1–64 shared media transfer slots |
 | `APP_QUEUE_LIMIT` | `--queue-limit` | `1000` | 1–100000 queued, sending and unknown operations |
+| `APP_CONNECTION_QUEUE_LIMIT` | `--connection-queue-limit` | `100` | 1–100000 queued, sending and unknown operations per immutable connection; independent of the global limit |
 | `APP_MAX_MEDIA_BYTES` | `--max-media-bytes` | `67108864` | Per-file bytes, 1–1073741824 |
 
 `init` sets `APP_MASTER_KEY_FILE=master.key`. The file takes precedence when both
@@ -266,9 +267,12 @@ set -a
 set +a
 GOBALE_URL='http://127.0.0.1:3000'
 GOBALE_DEVICE='support'
+GOBALE_INSTANCE=$(curl --silent --show-error --fail-with-body --user "$APP_BASIC_AUTH" \
+  "$GOBALE_URL/devices" | jq -er --arg id "$GOBALE_DEVICE" \
+  '.results[] | select(.id == $id) | .instance_id')
 gobale_api() {
   curl --silent --show-error --fail-with-body --user "$APP_BASIC_AUTH" \
-    -H "X-Device-Id: $GOBALE_DEVICE" "$@"
+    -H "X-Device-Id: $GOBALE_DEVICE" -H "X-Device-Instance: $GOBALE_INSTANCE" "$@"
 }
 
 curl --fail-with-body "$GOBALE_URL/health"
@@ -281,18 +285,27 @@ both transport and recovery: a connected socket alone does not mean the inbox is
 fully recovered. Initial connection establishes a current baseline; it does not
 automatically import the entire old inbox.
 
-Select devices with `X-Device-Id`, or `device_id` query when the header is absent.
-Implicit selection works only with one registered device. An explicit invalid
-selector never falls back. Data belongs to an immutable connection: reusing a
+Select devices explicitly with the route's device ID, `X-Device-Id`, or `device_id`
+query, even with one registered device. Multiple selectors must agree. Every
+account-scoped read and mutation also requires `X-Device-Instance` from creation
+or the device list. Missing instance is 400; a replaced instance is 409. Consumers
+must keep this identity in their channel record, not refresh it automatically
+when an old request fails. An invalid selector never falls back. Data belongs to an immutable connection: reusing a
 deleted alias does not inherit its old jobs, history or media. Every request stays
 bound to its originally selected connection, including while its body is read;
 deleting that connection never redirects the request to a replacement account.
 
-For application-managed login, use `POST /devices`, then `/devices/{device_id}/login`
+For application-managed login, use `POST /devices` with a persisted
+`Idempotency-Key` and the initial webhook configuration. Connection, configuration
+and key commit atomically: 201 creates, 200 replays the same connection, and a
+changed request or retired connection returns 409. Then use `/devices/{device_id}/login`
 with `phone`, `/devices/{device_id}/login/code` with `challenge_id` and `code`, and
 `/devices/{device_id}/login/password` with the challenge and password if requested.
 Keep codes in request bodies. A
 device already bound to one account cannot be used for a different account.
+All REST sends and schedule creation also require a stable `Idempotency-Key`.
+See the [consumer integration contract](docs/consumer-integration.md) for channel
+ownership, webhook acceptance and the differences from a GOWA integration.
 
 ### Messages and history
 

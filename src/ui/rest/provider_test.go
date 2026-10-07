@@ -52,6 +52,7 @@ func TestProviderGETQueryPeerAndBooleanUseTypedNativeValues(t *testing.T) {
 		r := httptest.NewRequest("GET", path, nil)
 		r.SetBasicAuth("test", "password")
 		r.Header.Set("X-Device-Id", "one")
+		scopeTestRequest(t, s, r)
 		res, err := s.App.Test(r)
 		require.NoError(t, err)
 		require.Equal(t, 200, res.StatusCode, path)
@@ -67,6 +68,8 @@ func TestProviderGETQueryPeerAndBooleanUseTypedNativeValues(t *testing.T) {
 	for _, path := range []string{"/group/participants?peer=77", "/user/my/groups?is_owner=maybe"} {
 		r := httptest.NewRequest("GET", path, nil)
 		r.SetBasicAuth("test", "password")
+		r.Header.Set("X-Device-Id", "one")
+		scopeTestRequest(t, s, r)
 		res, err := s.App.Test(r)
 		require.NoError(t, err)
 		require.Equal(t, 400, res.StatusCode, path)
@@ -97,6 +100,7 @@ func TestProviderGETWithoutBodyOverRealTCP(t *testing.T) {
 	require.NoError(t, err)
 	r.SetBasicAuth("test", "password")
 	r.Header.Set("X-Device-Id", "one")
+	scopeTestRequest(t, s, r)
 	client := &http.Client{Timeout: time.Second}
 	res, err := client.Do(r)
 	require.NoError(t, err)
@@ -134,6 +138,7 @@ func TestReviewedGroupMutationsUseDurableRESTDispatch(t *testing.T) {
 		r.Header.Set("X-Device-Id", "one")
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("Idempotency-Key", test.operation)
+		scopeTestRequest(t, s, r)
 		res, err := s.App.Test(r)
 		require.NoError(t, err)
 		require.Equal(t, 200, res.StatusCode)

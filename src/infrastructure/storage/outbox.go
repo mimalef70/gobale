@@ -61,7 +61,7 @@ func requestID() (string, error) {
 	}
 	return strconv.FormatUint(v, 10), nil
 }
-func (s *Store) enqueueTx(ctx context.Context, tx *sql.Tx, conn string, req domains.SendRequest, key string, limit int) (domains.Operation, bool, error) {
+func (s *Store) enqueueTx(ctx context.Context, tx *sql.Tx, conn string, req domains.SendRequest, key string, limits AdmissionLimits) (domains.Operation, bool, error) {
 	var empty domains.Operation
 	if e := activeTx(ctx, tx, conn); e != nil {
 		return empty, false, e
@@ -97,15 +97,18 @@ func (s *Store) enqueueTx(ctx context.Context, tx *sql.Tx, conn string, req doma
 	if e = validateMediaReferencesTx(ctx, tx, conn, req); e != nil {
 		return empty, false, e
 	}
-	if limit <= 0 {
-		limit = 10000
-	}
-	var count int
-	if e = tx.QueryRowContext(ctx, `SELECT COUNT(*) FROM operations WHERE state IN ('queued','sending','unknown')`).Scan(&count); e != nil {
+	limits = limits.normalized()
+	var count, connectionCount int
+	// Filter by indexed outstanding states, rather than a connection's retained
+	// terminal history. Check both counts atomically with insertion, after idempotency.
+	if e = tx.QueryRowContext(ctx, `SELECT COUNT(*),COALESCE(SUM(connection_id=?),0) FROM operations WHERE state IN ('queued','sending','unknown')`, conn).Scan(&count, &connectionCount); e != nil {
 		return empty, false, e
 	}
-	if count >= limit {
+	if count >= limits.Global {
 		return empty, false, &domains.Error{Code: "QUEUE_FULL", Message: "outbound queue is full; retry later", HTTP: 429, Retryable: true}
+	}
+	if connectionCount >= limits.Connection {
+		return empty, false, &domains.Error{Code: "CONNECTION_QUEUE_FULL", Message: "connection outbound queue is full; retry later", HTTP: 429, Retryable: true}
 	}
 	if req.RequestID == "" {
 		req.RequestID, e = requestID()
@@ -129,13 +132,13 @@ func (s *Store) enqueueTx(ctx context.Context, tx *sql.Tx, conn string, req doma
 	op, e := scanOperation(tx.QueryRowContext(ctx, `SELECT `+operationColumns+` FROM operations o JOIN devices d ON d.connection_id=o.connection_id WHERE o.id=?`, id))
 	return op, true, e
 }
-func (s *Store) enqueue(ctx context.Context, conn string, req domains.SendRequest, key string, limit int) (domains.Operation, bool, error) {
+func (s *Store) enqueue(ctx context.Context, conn string, req domains.SendRequest, key string, limits AdmissionLimits) (domains.Operation, bool, error) {
 	tx, e := s.beginTx(ctx)
 	if e != nil {
 		return domains.Operation{}, false, e
 	}
 	defer s.rollbackTx(tx)
-	op, created, e := s.enqueueTx(ctx, tx, conn, req, key, limit)
+	op, created, e := s.enqueueTx(ctx, tx, conn, req, key, limits)
 	if e != nil {
 		return op, created, e
 	}

@@ -259,21 +259,51 @@ func decode(c fiber.Ctx, v any) error {
 }
 func (s *Server) device(c fiber.Ctx) (domains.Device, error) {
 	id := c.Get("X-Device-Id")
+	if query := c.Query("device_id"); id != "" && query != "" && id != query {
+		return domains.Device{}, domains.E("DEVICE_SELECTOR_CONFLICT", "device selectors must identify the same connection", 400)
+	}
 	if id == "" {
 		id = c.Query("device_id")
 	}
 	return s.bindDevice(c, id)
 }
 func (s *Server) bindDevice(c fiber.Ctx, id string) (domains.Device, error) {
+	if id == "" {
+		return domains.Device{}, domains.E("DEVICE_ID_REQUIRED", "select a device explicitly", 400)
+	}
+	for _, selector := range []string{c.Get("X-Device-Id"), c.Query("device_id")} {
+		if selector != "" && selector != id {
+			return domains.Device{}, domains.E("DEVICE_SELECTOR_CONFLICT", "device selectors must identify the same connection", 400)
+		}
+	}
+	conflict := false
+	c.Request().Header.VisitAll(func(key, value []byte) {
+		if strings.EqualFold(string(key), "X-Device-Id") && string(value) != id {
+			conflict = true
+		}
+	})
+	c.Request().URI().QueryArgs().VisitAll(func(key, value []byte) {
+		if string(key) == "device_id" && string(value) != id {
+			conflict = true
+		}
+	})
+	if conflict {
+		return domains.Device{}, domains.E("DEVICE_SELECTOR_CONFLICT", "device selectors must identify the same connection", 400)
+	}
 	d, err := s.service.ResolveDevice(c.Context(), id)
 	if err != nil {
 		return domains.Device{}, err
 	}
 	instance := c.Get("X-Device-Instance")
-	if instance == "" && c.Locals("gobale.browser") == true {
-		return domains.Device{}, domains.E("DEVICE_INSTANCE_REQUIRED", "refresh the device list before continuing", 400)
+	if instance == "" {
+		return domains.Device{}, domains.E("DEVICE_INSTANCE_REQUIRED", "supply the selected device instance_id", 400)
 	}
-	if instance != "" && instance != d.InstanceToken() {
+	c.Request().Header.VisitAll(func(key, value []byte) {
+		if strings.EqualFold(string(key), "X-Device-Instance") && string(value) != instance {
+			conflict = true
+		}
+	})
+	if conflict || instance != d.InstanceToken() {
 		return domains.Device{}, domains.E("DEVICE_INSTANCE_CHANGED", "the selected device has been replaced; refresh the device list", 409)
 	}
 	ctx, err := s.service.BindDevice(c.Context(), d)
@@ -318,35 +348,19 @@ func (s *Server) devices(c fiber.Ctx) error {
 	return result(c, v, e)
 }
 func (s *Server) createDevice(c fiber.Ctx) error {
-	var req struct {
-		ID     string                 `json:"device_id"`
-		URL    *string                `json:"webhook_url"`
-		Secret *string                `json:"webhook_secret"`
-		Events *[]string              `json:"webhook_events"`
-		Filter *domains.WebhookFilter `json:"webhook_filter"`
-	}
+	var req domains.ProvisionDeviceRequest
 	if e := decode(c, &req); e != nil {
 		return e
 	}
-	v, e := s.service.CreateDevice(c.Context(), req.ID)
+	v, replay, e := s.service.ProvisionDevice(c.Context(), req, c.Get("Idempotency-Key"))
 	if e != nil {
 		return e
 	}
-	// Configuration and rollback belong to the connection just created, even if
-	// another request deletes/recreates its alias before this handler completes.
-	ctx, e := s.service.BindDevice(c.Context(), v)
-	if e != nil {
-		return e
+	status := 201
+	if replay {
+		status = 200
 	}
-	c.SetContext(ctx)
-	if req.URL != nil || req.Secret != nil || req.Events != nil || req.Filter != nil {
-		v.Webhook, e = s.service.PatchWebhook(c.Context(), v.ID, domains.WebhookPatch{URL: req.URL, Secret: req.Secret, Events: req.Events, Filter: req.Filter})
-		if e != nil {
-			_ = s.service.DeleteDevice(c.Context(), v.ID)
-			return e
-		}
-	}
-	return c.Status(201).JSON(utils.ResponseData{Code: "SUCCESS", Message: "Device created", Results: v})
+	return c.Status(status).JSON(utils.ResponseData{Code: "SUCCESS", Message: "Device provisioned", Results: v})
 }
 func (s *Server) login(c fiber.Ctx) error {
 	var req struct {
@@ -402,6 +416,10 @@ func (s *Server) send(kind string) fiber.Handler {
 		if e != nil {
 			return e
 		}
+		key, e := requiredIdempotency(c)
+		if e != nil {
+			return e
+		}
 		var req domains.SendRequest
 		if e = decode(c, &req); e != nil {
 			return e
@@ -412,15 +430,25 @@ func (s *Server) send(kind string) fiber.Handler {
 		}
 		req.RequestID = ""
 		if req.IsScheduled() {
-			v, e := s.service.CreateScheduleIdempotent(c.Context(), d.ID, req, c.Get("Idempotency-Key"))
+			v, e := s.service.CreateScheduleIdempotent(c.Context(), d.ID, req, key)
 			return result(c, v, e)
 		}
-		op, e := s.service.Send(c.Context(), d.ID, req, c.Get("Idempotency-Key"))
+		op, e := s.service.Send(c.Context(), d.ID, req, key)
 		if e != nil {
 			return e
 		}
 		return s.awaitOperation(c, d.ID, op)
 	}
+}
+func requiredIdempotency(c fiber.Ctx) (string, error) {
+	key := c.Get("Idempotency-Key")
+	if strings.TrimSpace(key) == "" {
+		return "", domains.E("IDEMPOTENCY_KEY_REQUIRED", "supply a stable Idempotency-Key before submitting work", 400)
+	}
+	if len(key) > 256 {
+		return "", domains.E("INVALID_IDEMPOTENCY_KEY", "idempotency key exceeds 256 bytes", 400)
+	}
+	return key, nil
 }
 func (s *Server) awaitOperation(c fiber.Ctx, deviceID string, op domains.Operation) error {
 	ctx, cancel := context.WithTimeout(c.Context(), s.opts.SendWait)
@@ -485,12 +513,16 @@ func (s *Server) schedule(c fiber.Ctx) error {
 	if e != nil {
 		return e
 	}
+	key, e := requiredIdempotency(c)
+	if e != nil {
+		return e
+	}
 	var req domains.SendRequest
 	if e = decode(c, &req); e != nil {
 		return e
 	}
 	req.RequestID = ""
-	v, e := s.service.CreateScheduleIdempotent(c.Context(), d.ID, req, c.Get("Idempotency-Key"))
+	v, e := s.service.CreateScheduleIdempotent(c.Context(), d.ID, req, key)
 	return result(c, v, e)
 }
 func (s *Server) getSchedule(c fiber.Ctx) error {

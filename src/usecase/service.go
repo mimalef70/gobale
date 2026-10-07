@@ -21,16 +21,17 @@ import (
 // Options controls bounded background work. The gateway must remain behind an
 // authenticated service boundary; organization/operator authorization belongs to the consuming application.
 type Options struct {
-	GlobalWebhooks      []storage.WebhookTarget
-	GlobalWebhookEvents []string
-	MergeGlobal         bool
-	QueueLimit          int
-	PollInterval        time.Duration
-	WebhookClient       *http.Client
-	WebhookWorkers      int
-	SendWorkers         int
-	SendTimeout         time.Duration
-	ReconnectWorkers    int
+	GlobalWebhooks       []storage.WebhookTarget
+	GlobalWebhookEvents  []string
+	MergeGlobal          bool
+	QueueLimit           int
+	ConnectionQueueLimit int
+	PollInterval         time.Duration
+	WebhookClient        *http.Client
+	WebhookWorkers       int
+	SendWorkers          int
+	SendTimeout          time.Duration
+	ReconnectWorkers     int
 }
 
 type clientEntry struct {
@@ -66,6 +67,9 @@ type Service struct {
 func New(store *storage.Store, options Options, factory domains.ClientFactory) *Service {
 	if options.QueueLimit <= 0 {
 		options.QueueLimit = 1000
+	}
+	if options.ConnectionQueueLimit <= 0 {
+		options.ConnectionQueueLimit = 100
 	}
 	if options.PollInterval <= 0 {
 		options.PollInterval = 500 * time.Millisecond

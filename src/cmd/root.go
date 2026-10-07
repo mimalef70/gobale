@@ -60,7 +60,8 @@ func NewCommand() *cobra.Command {
 	flags.Int("reconnect-workers", 4, "Maximum concurrent reconnects (1-4)")
 	flags.Int("media-workers", 4, "Maximum concurrent media transfers")
 	flags.Int("queue-limit", 1000, "Maximum queued, in-flight and unknown sends across accounts")
-	bindings := map[string]string{"ui-enabled": "APP_UI_ENABLED", "ui-public-origin": "APP_UI_PUBLIC_ORIGIN", "host": "APP_HOST", "port": "APP_PORT", "basic-auth": "APP_BASIC_AUTH", "base-path": "APP_BASE_PATH", "database": "APP_DATABASE", "media-root": "APP_MEDIA_ROOT", "master-key": "APP_MASTER_KEY", "master-key-file": "APP_MASTER_KEY_FILE", "grpc-endpoint": "BALE_GRPC_ENDPOINT", "ws-endpoint": "BALE_WS_ENDPOINT", "bale-app-id": "BALE_APP_ID", "bale-api-key": "BALE_API_KEY", "bale-api-version": "BALE_API_VERSION", "webhook": "BALE_WEBHOOK", "webhook-secret": "BALE_WEBHOOK_SECRET", "webhook-device-merge-global": "BALE_WEBHOOK_DEVICE_MERGE_GLOBAL", "max-media-bytes": "APP_MAX_MEDIA_BYTES", "send-workers": "APP_SEND_WORKERS", "webhook-workers": "APP_WEBHOOK_WORKERS", "reconnect-workers": "APP_RECONNECT_WORKERS", "media-workers": "APP_MEDIA_WORKERS", "queue-limit": "APP_QUEUE_LIMIT"}
+	flags.Int("connection-queue-limit", 100, "Maximum queued, in-flight and unknown sends per connection")
+	bindings := map[string]string{"ui-enabled": "APP_UI_ENABLED", "ui-public-origin": "APP_UI_PUBLIC_ORIGIN", "host": "APP_HOST", "port": "APP_PORT", "basic-auth": "APP_BASIC_AUTH", "base-path": "APP_BASE_PATH", "database": "APP_DATABASE", "media-root": "APP_MEDIA_ROOT", "master-key": "APP_MASTER_KEY", "master-key-file": "APP_MASTER_KEY_FILE", "grpc-endpoint": "BALE_GRPC_ENDPOINT", "ws-endpoint": "BALE_WS_ENDPOINT", "bale-app-id": "BALE_APP_ID", "bale-api-key": "BALE_API_KEY", "bale-api-version": "BALE_API_VERSION", "webhook": "BALE_WEBHOOK", "webhook-secret": "BALE_WEBHOOK_SECRET", "webhook-device-merge-global": "BALE_WEBHOOK_DEVICE_MERGE_GLOBAL", "max-media-bytes": "APP_MAX_MEDIA_BYTES", "send-workers": "APP_SEND_WORKERS", "webhook-workers": "APP_WEBHOOK_WORKERS", "reconnect-workers": "APP_RECONNECT_WORKERS", "media-workers": "APP_MEDIA_WORKERS", "queue-limit": "APP_QUEUE_LIMIT", "connection-queue-limit": "APP_CONNECTION_QUEUE_LIMIT"}
 	for flag, env := range bindings {
 		_ = v.BindPFlag(flag, flags.Lookup(flag))
 		_ = v.BindEnv(flag, env)
@@ -177,7 +178,7 @@ func run(parent context.Context, cfg config.Settings) error {
 			}})
 	}
 
-	service := usecase.New(st, usecase.Options{GlobalWebhooks: targets, MergeGlobal: cfg.WebhookMergeGlobal, SendTimeout: 2 * time.Minute, SendWorkers: cfg.SendWorkers, WebhookWorkers: cfg.WebhookWorkers, ReconnectWorkers: cfg.ReconnectWorkers, QueueLimit: cfg.QueueLimit}, factory)
+	service := usecase.New(st, usecase.Options{GlobalWebhooks: targets, MergeGlobal: cfg.WebhookMergeGlobal, SendTimeout: 2 * time.Minute, SendWorkers: cfg.SendWorkers, WebhookWorkers: cfg.WebhookWorkers, ReconnectWorkers: cfg.ReconnectWorkers, QueueLimit: cfg.QueueLimit, ConnectionQueueLimit: cfg.ConnectionQueueLimit}, factory)
 	if e = service.Start(ctx); e != nil {
 		return e
 	}

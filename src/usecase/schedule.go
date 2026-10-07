@@ -120,22 +120,50 @@ func (s *Service) ScheduleAction(ctx context.Context, id, scheduleID, action str
 }
 func (s *Service) scheduleLoop() {
 	defer s.wg.Done()
+	var cursor scheduleCursor
 	for s.ctx.Err() == nil {
-		jobs, err := s.store.DueSchedules(s.ctx, time.Now().UTC(), 100)
+		var err error
+		cursor, err = s.materializeDueSchedules(time.Now().UTC(), cursor)
 		s.workerError(err)
-		if err == nil {
-			for _, job := range jobs {
-				if s.ctx.Err() != nil {
-					return
-				}
-				s.materializeSchedule(job)
-			}
-		}
 		if !s.wait() {
 			return
 		}
 	}
 }
+
+type scheduleCursor struct {
+	nextAt time.Time
+	id     string
+}
+
+// One poll attempts at most 100 occurrences. Progress is independent of queue
+// admission, and a wrap performs at most one additional bounded read. This is
+// transient scheduler state: restarting safely starts again from the oldest row.
+func (s *Service) materializeDueSchedules(at time.Time, cursor scheduleCursor) (scheduleCursor, error) {
+	const batchSize = 100
+	jobs, err := s.store.DueSchedules(s.ctx, at, batchSize, cursor.nextAt, cursor.id)
+	if err != nil {
+		return cursor, err
+	}
+	if len(jobs) == 0 && cursor.id != "" {
+		jobs, err = s.store.DueSchedules(s.ctx, at, batchSize, time.Time{}, "")
+		if err != nil {
+			return cursor, err
+		}
+	}
+	for _, job := range jobs {
+		if err := s.ctx.Err(); err != nil {
+			return cursor, err
+		}
+		s.materializeSchedule(job)
+		cursor = scheduleCursor{nextAt: job.NextAt, id: job.ID}
+	}
+	if len(jobs) < batchSize {
+		cursor = scheduleCursor{}
+	}
+	return cursor, nil
+}
+
 func (s *Service) materializeSchedule(job domains.Schedule) {
 	// Match creation-time parsing, including schedules already persisted with
 	// surrounding whitespace. Keep the stored request unchanged: its original
@@ -169,7 +197,7 @@ func (s *Service) materializeSchedule(job domains.Schedule) {
 	}
 	// Storage atomically enqueues an occurrence with an authoritative occurrence record and
 	// advances this schedule. A restart between these actions cannot duplicate it.
-	_, err = s.store.MaterializeSchedule(s.ctx, job.ConnectionID, job.ID, job.NextAt, next, s.options.QueueLimit)
+	_, err = s.store.MaterializeSchedule(s.ctx, job.ConnectionID, job.ID, job.NextAt, next, s.admissionLimits())
 	s.workerError(err)
 }
 func eventTypeFromBody(body json.RawMessage) string {

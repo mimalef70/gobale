@@ -35,6 +35,7 @@ func scopedEventID(conn string, e domains.Event) string {
 	if source == "" {
 		e.SessionID = ""
 		e.AccountID = ""
+		e.InstanceID = ""
 		e.Checkpoint = ""
 		b, _ := json.Marshal(e)
 		source = string(b)
@@ -87,6 +88,7 @@ func (s *Store) appendEvent(ctx context.Context, conn string, event domains.Even
 	event.ID = scopedEventID(conn, event)
 	event.AccountID = d.AccountID
 	event.SessionID = d.ID
+	event.InstanceID = d.InstanceToken()
 	if event.Time.IsZero() {
 		event.Time = stamp(now())
 	}

@@ -52,6 +52,7 @@ func TestAvatarHTTPAuthScopeBinaryAndSlotRelease(t *testing.T) {
 			r.SetBasicAuth("test", "password")
 		}
 		r.Header.Set("X-Device-Id", tc.device)
+		scopeTestRequest(t, srv, r)
 		res, err := srv.App.Test(r)
 		require.NoError(t, err)
 		body, err := io.ReadAll(res.Body)

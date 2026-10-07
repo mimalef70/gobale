@@ -203,7 +203,7 @@ func TestOptionalCapacity(t *testing.T) {
 	}
 	var clientsMu sync.Mutex
 	clients := make(map[string]*capacityClient, cfg.accounts)
-	svc := usecase.New(st, usecase.Options{MergeGlobal: true, SendWorkers: 4, WebhookWorkers: 8, ReconnectWorkers: 4, QueueLimit: 1000, PollInterval: 500 * time.Millisecond, GlobalWebhooks: []storage.WebhookTarget{{URL: sink.URL + "/fast", Secret: "synthetic-capacity-secret"}}}, func(d domains.Device) domains.Client {
+	svc := usecase.New(st, usecase.Options{MergeGlobal: true, SendWorkers: 4, WebhookWorkers: 8, ReconnectWorkers: 4, QueueLimit: capacityQueueLimit, ConnectionQueueLimit: capacityConnectionQueueLimit, PollInterval: 500 * time.Millisecond, GlobalWebhooks: []storage.WebhookTarget{{URL: sink.URL + "/fast", Secret: "synthetic-capacity-secret"}}}, func(d domains.Device) domains.Client {
 		c := &capacityClient{account: d.AccountID}
 		c.sendFn = func(r domains.SendRequest) (domains.SendResult, error) {
 			_, e := receiver.Exec(`INSERT INTO sends(rid,account) VALUES(?,?)`, r.RequestID, d.AccountID)
@@ -267,10 +267,15 @@ func TestOptionalCapacity(t *testing.T) {
 	counters := make([]capacityCounter, 5)
 	queues := make([]chan job, 16)
 	var workers sync.WaitGroup
+	instances := make(map[string]string, len(devices))
+	for _, d := range devices {
+		instances[d.ID] = d.InstanceToken()
+	}
 	request := func(method, path, alias, key string, body []byte, contentType string) (int, []byte, error) {
 		req := httptest.NewRequestWithContext(runCtx, method, path, bytes.NewReader(body))
 		req.SetBasicAuth("capacity", "synthetic")
 		req.Header.Set("X-Device-Id", alias)
+		req.Header.Set("X-Device-Instance", instances[alias])
 		req.Header.Set("Content-Type", contentType)
 		req.Header.Set("Idempotency-Key", key)
 		response, e := srv.App.Test(req, fiber.TestConfig{Timeout: 50 * time.Second})
@@ -544,7 +549,7 @@ func TestOptionalCapacity(t *testing.T) {
 	if sampledBaseline && fdSupported && finalFD-initialFD > max(10, initialFD/20) {
 		t.Error("file descriptor drift target exceeded")
 	}
-	report := map[string]any{"fd_measurement_supported": fdSupported, "measurement_scope": "synthetic provider, real REST/storage/webhook; process includes bounded harness", "accounts": cfg.accounts, "seed": cfg.seed, "duration_seconds": cfg.duration.Seconds(), "warmup_seconds": cfg.warmup.Seconds(), "elapsed_seconds": time.Since(start).Seconds(), "drain_seconds": time.Since(drainStart).Seconds(), "event_rate": cfg.events, "send_rate": cfg.sends, "workers": map[string]int{"send": 4, "webhook": 8, "reconnect": 4, "media": 4}, "poll_ms": 500, "offered": capacityCounts(counters, "offered"), "admitted": capacityCounts(counters, "accepted"), "rejected": capacityCounts(counters, "rejected"), "missed": capacityCounts(counters, "missed"), "completed_events": receiptCount, "completed_sends": sendCount, "duplicate_deliveries": duplicates.Load(), "p95_persistence_ms": admissionLatency.percentile(.95), "p99_persistence_ms": admissionLatency.percentile(.99), "p95_healthy_webhook_ms": fastLatency.percentile(.95), "p99_healthy_webhook_ms": fastLatency.percentile(.99), "max_rss_bytes": maxRSS, "disk_bytes": maxDisk, "measured_disk_growth_bytes": max(0, maxDisk-diskAtWarm), "initial_heap_bytes": baseline.HeapAlloc, "final_heap_bytes": final.HeapAlloc, "initial_goroutines": initialGoroutines, "final_goroutines": finalGoroutines, "initial_fd": initialFD, "final_fd": finalFD, "passed": !t.Failed()}
+	report := map[string]any{"fd_measurement_supported": fdSupported, "measurement_scope": "synthetic provider, real REST/storage/webhook; process includes bounded harness", "accounts": cfg.accounts, "seed": cfg.seed, "duration_seconds": cfg.duration.Seconds(), "warmup_seconds": cfg.warmup.Seconds(), "elapsed_seconds": time.Since(start).Seconds(), "drain_seconds": time.Since(drainStart).Seconds(), "event_rate": cfg.events, "send_rate": cfg.sends, "workers": map[string]int{"send": 4, "webhook": 8, "reconnect": 4, "media": 4}, "poll_ms": 500, "queue_limit": capacityQueueLimit, "connection_queue_limit": capacityConnectionQueueLimit, "offered": capacityCounts(counters, "offered"), "admitted": capacityCounts(counters, "accepted"), "rejected": capacityCounts(counters, "rejected"), "missed": capacityCounts(counters, "missed"), "completed_events": receiptCount, "completed_sends": sendCount, "duplicate_deliveries": duplicates.Load(), "p95_persistence_ms": admissionLatency.percentile(.95), "p99_persistence_ms": admissionLatency.percentile(.99), "p95_healthy_webhook_ms": fastLatency.percentile(.95), "p99_healthy_webhook_ms": fastLatency.percentile(.99), "max_rss_bytes": maxRSS, "disk_bytes": maxDisk, "measured_disk_growth_bytes": max(0, maxDisk-diskAtWarm), "initial_heap_bytes": baseline.HeapAlloc, "final_heap_bytes": final.HeapAlloc, "initial_goroutines": initialGoroutines, "final_goroutines": finalGoroutines, "initial_fd": initialFD, "final_fd": finalFD, "passed": !t.Failed()}
 	if e := firstError.Load(); e != nil {
 		report["first_synthetic_error"] = *e
 	}
@@ -642,6 +647,12 @@ func (h *capacityHistogram) percentile(f float64) float64 {
 	}
 	return 1e9
 }
+
+// Fixed production admission profile, recorded in every mixed result and runner manifest.
+const (
+	capacityQueueLimit           = 1000
+	capacityConnectionQueueLimit = 100
+)
 
 type capacityConfig struct {
 	accounts, events, sends, seed   int

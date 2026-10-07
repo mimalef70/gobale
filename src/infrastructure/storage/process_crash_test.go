@@ -175,7 +175,7 @@ func TestProcessCrashChild(t *testing.T) {
 	request := domains.SendRequest{Peer: domains.Peer{Type: "user", ID: "77"}, Kind: "text", Text: "synthetic crash payload"}
 	switch phase {
 	case "enqueue", "claim", "provider_observed":
-		op, _, e := st.Enqueue(ctx, d.ConnectionID, request, "synthetic-key", 1000)
+		op, _, e := st.Enqueue(ctx, d.ConnectionID, request, "synthetic-key", AdmissionLimits{Global: 1000})
 		if e != nil {
 			t.Fatal(e)
 		}
@@ -206,7 +206,7 @@ func TestProcessCrashChild(t *testing.T) {
 		if e != nil {
 			t.Fatal(e)
 		}
-		if _, e = st.MaterializeSchedule(ctx, d.ConnectionID, s.ID, when, nil, 1000); e != nil {
+		if _, e = st.MaterializeSchedule(ctx, d.ConnectionID, s.ID, when, nil, AdmissionLimits{Global: 1000}); e != nil {
 			t.Fatal(e)
 		}
 	case "schedule_transactions":
@@ -216,7 +216,7 @@ func TestProcessCrashChild(t *testing.T) {
 			if e != nil {
 				t.Fatal(e)
 			}
-			if _, e = st.MaterializeSchedule(ctx, d.ConnectionID, s.ID, when, nil, 100000); e != nil {
+			if _, e = st.MaterializeSchedule(ctx, d.ConnectionID, s.ID, when, nil, AdmissionLimits{Global: 100000, Connection: 100000}); e != nil {
 				t.Fatal(e)
 			}
 			if i == 0 {

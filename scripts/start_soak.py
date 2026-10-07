@@ -12,6 +12,8 @@ import shutil
 import subprocess
 
 GIB = 1024**3
+QUEUE_LIMIT = 1000
+CONNECTION_QUEUE_LIMIT = 100
 
 
 def docker(*args):
@@ -63,10 +65,10 @@ def validate_evidence(evidence, expected, duration, disk_budget):
     result = evidence.get("result") or {}
     if not isinstance(result, dict) or evidence.get("status") != "passed" or result.get("passed") is not True or evidence.get("harness") != "mixed":
         raise ValueError("disk evidence must be a passed run")
-    for key in ("binary_sha256", "source_sha256", "image_id", "architecture", "seed", "event_rate", "send_rate", "synthetic_accounts"):
+    for key in ("binary_sha256", "source_sha256", "image_id", "architecture", "seed", "event_rate", "send_rate", "synthetic_accounts", "queue_limit", "connection_queue_limit"):
         if evidence.get(key) != expected.get(key):
             raise ValueError("disk evidence differs in " + key)
-    for report_key, record_key in (("accounts", "synthetic_accounts"), ("event_rate", "event_rate"), ("send_rate", "send_rate"), ("seed", "seed")):
+    for report_key, record_key in (("accounts", "synthetic_accounts"), ("event_rate", "event_rate"), ("send_rate", "send_rate"), ("seed", "seed"), ("queue_limit", "queue_limit"), ("connection_queue_limit", "connection_queue_limit")):
         if result.get(report_key) != expected.get(record_key):
             raise ValueError("disk evidence workload mismatch")
     required = required_disk_bytes(result, duration)
@@ -82,7 +84,8 @@ def valid_result(record, state, result):
     if not str(result.get("measurement_scope", "")).startswith("synthetic provider,"):
         return False
     expected = {"accounts": record["synthetic_accounts"], "event_rate": record["event_rate"], "send_rate": record["send_rate"], "seed": record["seed"],
-                "duration_seconds": seconds(record["duration"]), "warmup_seconds": seconds(record["warmup"])}
+                "duration_seconds": seconds(record["duration"]), "warmup_seconds": seconds(record["warmup"]),
+                "queue_limit": record.get("queue_limit"), "connection_queue_limit": record.get("connection_queue_limit")}
     return all(type(result.get(key)) in (int, float) and result[key] == value for key, value in expected.items())
 
 
@@ -109,7 +112,7 @@ def blocked_run(root, args, reason, evidence=None):
 def collect(record_path):
     record_path = Path(record_path)
     record = json.loads(record_path.read_text())
-    if record.get("status") == "blocked_insufficient_space":
+    if record.get("status") in ("blocked_insufficient_space", "interrupted_source_revision", "interrupted_resource_profile"):
         return record
     try:
         inspected = json.loads(docker("inspect", record["container"]))[0]
@@ -217,6 +220,8 @@ def main():
     binary_digest = file_hash(binary)
     expected = {"source_sha256": fingerprint, "binary_sha256": binary_digest, "image_id": info["Id"], "architecture": arch,
                 "synthetic_accounts": args.accounts, "event_rate": args.rate, "send_rate": args.send_rate, "seed": args.seed}
+    if not args.native:
+        expected.update(queue_limit=QUEUE_LIMIT, connection_queue_limit=CONNECTION_QUEUE_LIMIT)
     if not args.native and duration >= 24 * 3600:
         try:
             validate_evidence(json.loads(args.disk_evidence.read_text()), expected, duration, disk_budget)
@@ -259,6 +264,8 @@ def main():
               "binary_sha256": binary_digest, "source_sha256": fingerprint, "preflight": reports[0],
               "cpus": 4, "memory_bytes": 8 * 1024**3, "max_test_disk_bytes": disk_budget, "network": "none", "synthetic_accounts": args.accounts,
               "event_rate": args.rate, "send_rate": args.send_rate, "seed": args.seed, "command": ["docker", *command], "status": "running"}
+    if not args.native:
+        record.update(queue_limit=QUEUE_LIMIT, connection_queue_limit=CONNECTION_QUEUE_LIMIT)
     record_path = out / "run.json"
     save_record(record_path, record)
     print(json.dumps({"name": args.name, "record": str(record_path), "status": "running"}), flush=True)

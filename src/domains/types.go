@@ -116,6 +116,7 @@ type Event struct {
 	Type       string          `json:"event"`
 	AccountID  string          `json:"device_id"`
 	SessionID  string          `json:"session_id"`
+	InstanceID string          `json:"instance_id,omitempty"`
 	Peer       Peer            `json:"peer"`
 	MessageID  string          `json:"message_id,omitempty"`
 	SenderID   string          `json:"sender_id,omitempty"`

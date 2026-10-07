@@ -25,6 +25,7 @@ func TestScheduledSendIdempotencySharedAcrossRESTEntryPoints(t *testing.T) {
 		r.Header.Set("X-Device-Id", "one")
 		r.Header.Set("Content-Type", "application/json")
 		r.Header.Set("Idempotency-Key", "same-scheduled-send")
+		scopeTestRequest(t, s, r)
 		res, err := s.App.Test(r)
 		require.NoError(t, err)
 		require.Equal(t, 200, res.StatusCode)

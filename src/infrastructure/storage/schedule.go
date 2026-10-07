@@ -162,14 +162,26 @@ func (s *Store) SetScheduleState(ctx context.Context, conn, id, state string) er
 	}
 	return nil
 }
-func (s *Store) DueSchedules(ctx context.Context, at time.Time, limit int) ([]domains.Schedule, error) {
+
+// DueSchedules pages internal scheduler work by its stable due-time/id order.
+// Empty afterID starts from the beginning. The caller rotates across pages even
+// when admission fails, so a blocked prefix cannot hide another connection.
+func (s *Store) DueSchedules(ctx context.Context, at time.Time, limit int, afterNextAt time.Time, afterID string) ([]domains.Schedule, error) {
 	if limit <= 0 {
 		limit = 50
 	}
 	if limit > 500 {
 		limit = 500
 	}
-	rows, e := s.db.QueryContext(ctx, `SELECT `+scheduleColumns+` FROM schedules s JOIN devices d ON d.connection_id=s.connection_id WHERE s.state='active' AND s.next_at<=? AND d.deleted_at IS NULL ORDER BY s.next_at,s.id LIMIT ?`, at.UnixMilli(), limit)
+	query := `SELECT ` + scheduleColumns + ` FROM schedules s JOIN devices d ON d.connection_id=s.connection_id WHERE s.state='active' AND s.next_at<=? AND d.deleted_at IS NULL`
+	args := []any{at.UnixMilli()}
+	if afterID != "" {
+		query += ` AND (s.next_at>? OR (s.next_at=? AND s.id>?))`
+		args = append(args, afterNextAt.UnixMilli(), afterNextAt.UnixMilli(), afterID)
+	}
+	query += ` ORDER BY s.next_at,s.id LIMIT ?`
+	args = append(args, limit)
+	rows, e := s.db.QueryContext(ctx, query, args...)
 	if e != nil {
 		return nil, e
 	}
@@ -188,7 +200,7 @@ func (s *Store) DueSchedules(ctx context.Context, at time.Time, limit int) ([]do
 // MaterializeSchedule atomically consumes the exact due occurrence, enqueues its
 // send and advances the schedule. Passing nil next completes a one-shot or final
 // recurrence. The runtime computes the next time with the shared calendar rules.
-func (s *Store) materializeSchedule(ctx context.Context, conn, id string, expected time.Time, next *time.Time, limit int) (domains.Operation, error) {
+func (s *Store) materializeSchedule(ctx context.Context, conn, id string, expected time.Time, next *time.Time, limits AdmissionLimits) (domains.Operation, error) {
 	tx, e := s.beginTx(ctx)
 	if e != nil {
 		return domains.Operation{}, e
@@ -207,7 +219,7 @@ func (s *Store) materializeSchedule(ctx context.Context, conn, id string, expect
 	request := v.Request
 	request.ScheduleOptions = send.ScheduleOptions{}
 	request.RequestID = ""
-	op, _, e := s.enqueueTx(ctx, tx, conn, request, "", limit)
+	op, _, e := s.enqueueTx(ctx, tx, conn, request, "", limits)
 	if e != nil {
 		return op, e
 	}
