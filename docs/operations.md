@@ -1,8 +1,77 @@
 # Operating GoBale
 
-For installation and configuration, use the [README](../readme.md). Endpoint
-contracts are in [OpenAPI](openapi.yaml); delivery behavior is in
+This guide describes GoBale 2.0.0. Its mandatory account-instance guards and
+idempotency keys change the 1.x machine API; coordinate consumer updates and
+back up storage before upgrading. See [Backup, restore and upgrades](#backup-restore-and-upgrades).
+Use the documentation at the same tag as your installed artifact. The hosted API
+reference is deployed from `main` and can become newer than a published release.
+
+For installation, use the [README](../readme.md#how-to-use). Endpoint contracts are
+in [OpenAPI](openapi.yaml); delivery behavior is in
 [Webhook payloads](webhook-payload.md).
+
+## Configuration reference
+
+Precedence is **CLI flags → environment variables → `.env` in the working
+directory → defaults**. `gobale init` generates `.env` and `master.key` with private
+permissions and refuses to overwrite existing files. Relative database, media and
+key paths resolve from the process's working directory. Keep credentials out of
+command-line arguments, logs and public issues.
+
+| Variable | Flag | Default | Purpose / bounds |
+| --- | --- | --- | --- |
+| `APP_HOST` | `--host` | `127.0.0.1` | Native listener address |
+| `APP_PORT` | `--port` | `3000` | Port, 1–65535 |
+| `APP_BASE_PATH` | `--base-path` | empty | Prefix every route, including health and metrics |
+| `APP_UI_ENABLED` | `--ui-enabled` | `true` | Serve the embedded administrative panel |
+| `APP_UI_PUBLIC_ORIGIN` | `--ui-public-origin` | empty | Exact external HTTPS origin, e.g. `https://gateway.example.com`; no trailing slash or path |
+| `APP_BASIC_AUTH` | `--basic-auth` | empty; required | One administrative `username:password`, both parts nonempty |
+| `APP_DATABASE` | `--database` | `storages/gobale.db` | SQLite path |
+| `APP_MEDIA_ROOT` | `--media-root` | `storages/media` | Private media directory |
+| `APP_MASTER_KEY_FILE` | `--master-key-file` | empty | File with a base64-encoded 32-byte encryption key |
+| `APP_MASTER_KEY` | `--master-key` | empty; required without key file | Base64-encoded 32-byte encryption key |
+| `BALE_APP_ID` | `--bale-app-id` | `0` | Verified client application ID; login requires 1–2147483647 |
+| `BALE_API_KEY` | `--bale-api-key` | empty | Matching client application key; required for login |
+| `BALE_API_VERSION` | `--bale-api-version` | `173855` | Reviewed web-client API version |
+| `BALE_GRPC_ENDPOINT` | `--grpc-endpoint` | `https://next-ws.bale.ai` | gRPC-Web endpoint |
+| `BALE_WS_ENDPOINT` | `--ws-endpoint` | `wss://next-ws.bale.ai/ws/` | WebSocket endpoint |
+| `BALE_WEBHOOK` | `--webhook` | empty | Comma-separated global fallback HTTP(S) URLs |
+| `BALE_WEBHOOK_SECRET` | `--webhook-secret` | empty | Required HMAC secret when global URLs are set |
+| `BALE_WEBHOOK_DEVICE_MERGE_GLOBAL` | `--webhook-device-merge-global` | `false` | Deliver to globals alongside a device override |
+| `APP_SEND_WORKERS` | `--send-workers` | `4` | 1–64 globally; one active send per connection |
+| `APP_WEBHOOK_WORKERS` | `--webhook-workers` | `8` | 1–64 delivery workers |
+| `APP_RECONNECT_WORKERS` | `--reconnect-workers` | `4` | 1–4 concurrent reconnects |
+| `APP_MEDIA_WORKERS` | `--media-workers` | `4` | 1–64 shared media transfer slots |
+| `APP_QUEUE_LIMIT` | `--queue-limit` | `1000` | 1–100000 queued, sending and unknown operations globally |
+| `APP_CONNECTION_QUEUE_LIMIT` | `--connection-queue-limit` | `100` | 1–100000 queued, sending and unknown operations per immutable connection; enforced alongside the global limit |
+| `APP_MAX_MEDIA_BYTES` | `--max-media-bytes` | `67108864` (64 MiB) | Per-file bytes, 1–1073741824 |
+
+`init` sets `APP_MASTER_KEY_FILE=master.key`. A configured key file takes
+precedence over `APP_MASTER_KEY`, even when the latter comes from a higher-priority
+configuration source. The file must have private permissions (`chmod 600`). Keep
+this key separately backed up: a newly generated key cannot recover existing
+sessions. Sessions and stored secrets are encrypted; message bodies and ordinary
+media are not application-encrypted. Protect the data directory and backups.
+
+`gobale init --bale-web-client` explicitly opts in to the public application
+identity shipped by the reviewed Bale web client. It does not copy a browser
+session or authenticate an account. Omit the flag to configure another verified
+identity locally. Changing API-version or endpoint values does not establish
+protocol compatibility.
+
+`HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` apply to provider/webhook transports;
+they have no GoBale CLI flags. Media fetched from a caller-supplied URL uses direct,
+destination-checked requests. Worker values are configurable bounds, not measured
+Bale account capacity.
+
+The table lists native defaults. The Docker image listens on `0.0.0.0:3000` and
+uses `/app/storages/gobale.db` and `/app/storages/media`. Compose keeps that internal
+port fixed; `APP_PORT` selects the published localhost port. It passes the master
+key value and fixes the container storage paths, with `APP_MASTER_KEY_FILE` empty.
+Host values of `APP_DATABASE`, `APP_MEDIA_ROOT` and `APP_MASTER_KEY_FILE` are not
+forwarded. `GOBALE_IMAGE` selects the Compose image, not a GoBale setting; explicitly
+use `gobale:local` for a development build. Compose's default image is
+`ghcr.io/mimalef70/gobale:v2.0.0`; `mimalef70/gobale:v2.0.0` selects Docker Hub.
 
 ## Deployment and access
 
@@ -27,8 +96,8 @@ connection, alongside the global `APP_QUEUE_LIMIT` of 1000. Both include queued,
 sending and unknown work. Full admission returns 429 `CONNECTION_QUEUE_FULL` or
 `QUEUE_FULL`; no new operation is accepted. Identical idempotent retries can still
 read existing work. Scheduled occurrences blocked by admission remain due and
-unconsumed. These are storage bounds, not customer billing or authorization:
-consumers still enforce their own connection, request and upload budgets.
+unconsumed. These bound outstanding work. Consumers still enforce their own
+connection, request and upload budgets and manage retained storage separately.
 
 Sessions and stored secrets are encrypted with the deployment key. Ordinary
 messages, webhook bodies and media are **not application-encrypted**. Protect the
@@ -48,6 +117,52 @@ Administrator-configured webhooks may reach internal services. `/media/fetch`
 instead rejects private/reserved destinations and redirects, and does not use
 the configured HTTP proxies. These are intentionally different network policies.
 
+### Docker without Compose
+
+Run these commands from a dedicated configuration directory in a POSIX shell on
+Linux or macOS. They use the v2.0.0 image and a dedicated named volume; host Go and
+Node installations are not needed. Skip initialization if the directory already
+has `.env` and `master.key`.
+
+```sh
+mkdir -p gobale-data
+cd gobale-data
+export GOBALE_IMAGE=ghcr.io/mimalef70/gobale:v2.0.0
+docker pull "$GOBALE_IMAGE"
+docker run --rm --user "$(id -u):$(id -g)" \
+  --volume "$PWD:/config" --workdir /config \
+  "$GOBALE_IMAGE" init --bale-web-client
+
+export APP_MASTER_KEY="$(cat master.key)"
+docker volume create gobale-data
+docker run --detach --name gobale --restart unless-stopped \
+  --publish 127.0.0.1:3000:3000 --env-file .env \
+  --env APP_HOST=0.0.0.0 --env APP_PORT=3000 \
+  --env APP_MASTER_KEY --env APP_MASTER_KEY_FILE= \
+  --env APP_DATABASE=/app/storages/gobale.db \
+  --env APP_MEDIA_ROOT=/app/storages/media \
+  --volume gobale-data:/app/storages \
+  --read-only --tmpfs /tmp:size=67108864,mode=1777 \
+  --security-opt no-new-privileges:true --cap-drop ALL \
+  --log-driver json-file --log-opt max-size=10m --log-opt max-file=5 \
+  --stop-timeout 30 --add-host host.docker.internal:host-gateway \
+  "$GOBALE_IMAGE"
+```
+
+Open `http://localhost:3000/ui/` (include `APP_BASE_PATH` if set) and use the
+administrative credentials generated in `.env` to connect a Bale account. The
+standalone command fixes the host port at 3000; change only the first port number
+in `--publish` to choose another. Unlike Compose, `--env-file` does not interpolate
+shell expressions or automatically forward host proxy variables. Put any required
+proxy values in that private file or pass them explicitly with `--env`.
+
+The standalone volume `gobale-data` is separate from Compose's project-prefixed
+volume by default. Replacing the image does not import native or Compose sessions.
+Do not run native, standalone Docker and Compose services against the same data
+or published port. Use the [backup and upgrade procedure](#backup-restore-and-upgrades)
+before reusing an existing volume. To apply changed environment values, stop and
+recreate only the service container while preserving its volume and master key.
+
 ## Administrative panel
 
 `APP_UI_ENABLED=true` (default) serves the embedded panel at `/ui/`, including
@@ -55,7 +170,8 @@ the configured HTTP proxies. These are intentionally different network policies.
 are never downloaded at runtime. Missing, stale or corrupt assets fail startup
 before database ownership or account startup. Rebuild the complete artifact, or
 explicitly disable the UI for a Go-only/API-only deployment. UI metadata requires
-no database migration; other changes in this release may still migrate storage.
+no database migration; upgrading to a newer source revision may still migrate
+storage.
 
 Local browser access accepts only `localhost`/loopback Host values. For remote
 access set `APP_UI_PUBLIC_ORIGIN=https://gateway.example.com` (no trailing slash
@@ -124,7 +240,8 @@ For a consistent cold backup:
 
 1. Stop GoBale cleanly and confirm its process/container has exited.
 2. Copy the complete storage directory or named volume, including the media tree.
-3. Preserve the matching key and record the binary version and configuration.
+3. Preserve the matching key and record the configuration, binary version and
+   source revision or immutable image digest.
 4. Restore into an empty data directory with that key and start exactly one owner.
 5. Check authenticated readiness, device status and required media access.
 
@@ -142,6 +259,28 @@ Migrations run at startup; take a backup before upgrading. Foreign databases and
 wrong master keys are rejected. Roll back with a compatible database snapshot,
 not an arbitrary older binary against a newer schema. Check release notes for
 protocol and storage changes before replacing the running version.
+
+GoBale 2.0.0 upgrades storage from schema 5 used by v1.0.0 to schema 7, applying
+schema 6 on the way. The storage schema number is independent of the application
+version. Stop the old process, back up its complete storage and key, deploy 2.0.0
+with the same key, and update consumers before resuming requests. Do not run a
+1.x binary against the migrated database; rollback requires the pre-upgrade
+snapshot and the matching old binary/configuration.
+
+The 2.0 HTTP upgrade requires these consumer changes:
+
+- Select every account explicitly and retain its `instance_id`; send
+  `X-Device-Instance` on account-scoped reads and writes. Never automatically
+  rebind a stale alias after a 409 response.
+- Persist stable `Idempotency-Key` values for device creation, immediate sends and
+  schedule creation. Device provisioning has its own global key namespace;
+  sends and schedules share a namespace within each immutable connection.
+- Bind newly stored webhook events using the signed `instance_id`, `session_id`
+  and provider `device_id`. Previously stored bodies remain unchanged; choose an
+  explicit handling policy for old events that lack the instance field.
+
+Use the version, source revision and immutable image digest to identify the
+build actually deployed. v1.0.0 does not provide this newer HTTP contract.
 
 Schema 7 adds the device provisioning journal. Connection, initial encrypted
 webhook configuration and provisioning key commit together. Replays retain the
@@ -224,7 +363,6 @@ Current protocol and operational limitations and verified scope are summarized i
 [README](../readme.md). Worker limits, synthetic benchmarks and two-account tests
 must not be interpreted as proven live deployment capacity.
 
-
 ### Metrics and request limits
 
 `/metrics` reads cached queue/disk/media snapshots. The background sampler runs
@@ -301,21 +439,37 @@ burst, ten read/search requests/s and one 1 MiB upload every ten seconds.
 Production worker counts and the 500 ms poll interval are retained.
 
 ```sh
+# Build the separate local runtime image first; host Go 1.26.6 compiles the tests.
+docker build --file docker/golang.Dockerfile --tag gobale:dev .
 # Uses only synthetic identities and isolated Docker volumes, no Bale network.
 python3 scripts/start_soak.py --duration 10m --warmup 0s --accounts 300 --wait
-# Full frozen-binary sequence: smoke, 50/150/300 comparison, 1h, then 24h.
+# Native client fixture in the same Linux 4 CPU / 8 GiB environment.
+python3 scripts/start_soak.py --native --duration 1s --warmup 0s --accounts 300 --wait
+# Full sequence: native fixture, mixed smoke, 50/150/300 comparison, 1h, then 24h.
 python3 scripts/run_capacity.py
 # Collect a detached run's final verdict; running never means passed.
 python3 scripts/start_soak.py --collect artifacts/soak/RUN/run.json
-# Optional native transport fixture; uses no live accounts.
-(cd src && GOBALE_NATIVE_CAPACITY=1 GOBALE_SOAK_ACCOUNTS=300 go test ./internal/balemeow -run '^TestOptionalNativeCapacity$' -count=1 -v)
 ```
 
-The Docker workload uses the shipped pure-Go SQLite build and records commit,
-source fingerprint, binary checksum, image ID, resource bounds, seed, rates and
-final verdict. Source changes invalidate reuse of its frozen binary. A 24-hour
-run requires a passed one-hour disk-growth measurement with 50% headroom; lack of
-space fails the gate rather than deleting retained work. Reports distinguish
+The image is an isolated runtime base; the runner compiles and mounts a separate
+Linux test binary using the same pure-Go SQLite variant shipped in containers.
+It records commit, source fingerprint, binary checksum, image ID, resource bounds,
+seed, rates, global/per-connection queue limits and final verdict. All mixed
+stages reuse one frozen binary; the native fixture has its own binary. Source
+changes invalidate reuse.
+
+Docker must provide at least 4 CPU and 8 GiB. `--max-disk-gib` defaults to 16 for
+the standalone runner and the sequence's short/one-hour stages. Preflight requires
+that budget plus 2 GiB free on both the host and the Docker volume filesystem;
+set a smaller explicit budget only when appropriate for the test duration. The
+24-hour stage derives its budget from a passed one-hour disk-growth measurement,
+with 50% growth headroom plus 2 GiB, and still requires the free-space reserve.
+Insufficient preflight space records `blocked_insufficient_space`; it is neither
+a completed capacity test nor a capacity failure. The tools do not delete retained
+work to make room. `run_capacity.py --resume PATH/acceptance.json` resumes a
+disk-blocked sequence only with matching frozen source, binary and image evidence.
+
+Reports distinguish
 scheduled load, actual offered/admitted/rejected work, generator misses and
 completed work. Output stays in ignored `artifacts/soak/`. A launch or an
 unfinished run is not acceptance evidence. Actual live checks require separately

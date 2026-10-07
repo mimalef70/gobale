@@ -4,8 +4,11 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"github.com/mimalef70/gobale/src/config"
+	"github.com/mimalef70/gobale/src/domains"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/term"
@@ -29,7 +32,7 @@ func loginCommandWithSecretReader(v *viper.Viper, secretReader func(string) (str
 		}
 		id, _ := cmd.Flags().GetString("device")
 		phone, _ := cmd.Flags().GetString("phone")
-		if id == "" || strings.ContainsAny(id, "/?#") {
+		if (domains.ProvisionDeviceRequest{DeviceID: id}).Validate() != nil {
 			return fmt.Errorf("--device must be a device alias")
 		}
 		if phone == "" {
@@ -49,48 +52,98 @@ func loginCommandWithSecretReader(v *viper.Viper, secretReader func(string) (str
 			return fmt.Errorf("login helper requires a loopback APP_HOST; use HTTPS REST for a remote server")
 		}
 		client := http.Client{Transport: &http.Transport{Proxy: nil}, Timeout: 45 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-		call := func(path string, body any) (map[string]any, error) {
-			b, e := json.Marshal(body)
-			if e != nil {
-				return nil, e
+		defer client.CloseIdleConnections()
+		call := func(method, path string, body any, key, instance string) (loginAPIResponse, error) {
+			var out loginAPIResponse
+			var reader io.Reader
+			if body != nil {
+				b, err := json.Marshal(body)
+				if err != nil {
+					return out, err
+				}
+				reader = bytes.NewReader(b)
 			}
-			r, e := http.NewRequestWithContext(cmd.Context(), "POST", base+path, bytes.NewReader(b))
-			if e != nil {
-				return nil, e
+			r, err := http.NewRequestWithContext(cmd.Context(), method, base+path, reader)
+			if err != nil {
+				return out, err
 			}
 			parts := strings.SplitN(cfg.BasicAuth, ":", 2)
 			r.SetBasicAuth(parts[0], parts[1])
-			r.Header.Set("Content-Type", "application/json")
-			res, e := client.Do(r)
-			if e != nil {
-				return nil, fmt.Errorf("local API unavailable")
+			if body != nil {
+				r.Header.Set("Content-Type", "application/json")
+			}
+			if key != "" {
+				r.Header.Set("Idempotency-Key", key)
+			}
+			if instance != "" {
+				r.Header.Set("X-Device-Instance", instance)
+			}
+			res, err := client.Do(r)
+			if err != nil {
+				return out, errLoginAPIUnavailable
 			}
 			defer res.Body.Close()
-			raw, e := io.ReadAll(io.LimitReader(res.Body, 1<<20))
-			if e != nil {
-				return nil, e
+			raw, err := io.ReadAll(io.LimitReader(res.Body, 1<<20))
+			if err != nil {
+				return out, errLoginAPIUnavailable
 			}
-			var out map[string]any
-			if e = json.Unmarshal(raw, &out); e != nil {
-				return nil, e
+			if err = json.Unmarshal(raw, &out); err != nil {
+				return out, fmt.Errorf("invalid local API response")
 			}
-			if res.StatusCode >= 400 {
-				return out, fmt.Errorf("%v: %v", out["code"], out["message"])
+			if res.StatusCode < 200 || res.StatusCode >= 300 {
+				return out, fmt.Errorf("%s: %s", out.Code, out.Message)
 			}
 			return out, nil
 		}
-		// A pre-existing alias is expected on repeat login; all other errors surface.
-		if out, e := call("/devices", map[string]any{"device_id": id}); e != nil {
-			if out == nil || (out["code"] != "DEVICE_EXISTS" && out["code"] != "CONFLICT") {
-				return e
-			}
-		}
-		out, e := call("/devices/"+id+"/login", map[string]any{"phone": phone})
+		// Select an existing alias once. Never refresh this selection during the
+		// authentication flow: a replacement must fail its immutable instance guard.
+		out, e := call(http.MethodGet, "/devices", nil, "", "")
 		if e != nil {
 			return e
 		}
-		results, _ := out["results"].(map[string]any)
-		challenge, _ := results["challenge_id"].(string)
+		var devices []domains.Device
+		if json.Unmarshal(out.Results, &devices) != nil || devices == nil {
+			return fmt.Errorf("invalid device list from local API")
+		}
+		var selected domains.Device
+		for _, device := range devices {
+			if device.ID == id {
+				selected = device
+				break
+			}
+		}
+		if selected.ID == "" {
+			key, err := uuid.NewRandom()
+			if err != nil {
+				return err
+			}
+			request := domains.ProvisionDeviceRequest{DeviceID: id}
+			out, e = call(http.MethodPost, "/devices", request, key.String(), "")
+			if errors.Is(e, errLoginAPIUnavailable) && cmd.Context().Err() == nil {
+				// Only provisioning can be retried safely after a lost response.
+				// Keep its key and body; login/code/password are never replayed here.
+				out, e = call(http.MethodPost, "/devices", request, key.String(), "")
+			}
+			if e != nil {
+				return e
+			}
+			if json.Unmarshal(out.Results, &selected) != nil || selected.ID != id {
+				return fmt.Errorf("invalid provisioned device from local API")
+			}
+		}
+		if selected.InstanceID == "" {
+			return fmt.Errorf("device response lacked instance_id")
+		}
+		authCall := func(path string, body any) (loginAPIResponse, error) {
+			return call(http.MethodPost, "/devices/"+id+path, body, "", selected.InstanceID)
+		}
+		out, e = authCall("/login", map[string]any{"phone": phone})
+		if e != nil {
+			return e
+		}
+		var response domains.Challenge
+		_ = json.Unmarshal(out.Results, &response)
+		challenge := response.ID
 		if challenge == "" {
 			return fmt.Errorf("login response lacked challenge_id")
 		}
@@ -99,23 +152,17 @@ func loginCommandWithSecretReader(v *viper.Viper, secretReader func(string) (str
 			return e
 		}
 		code = strings.TrimSpace(code)
-		out, e = call("/devices/"+id+"/login/code", map[string]any{"challenge_id": challenge, "code": code})
+		out, e = authCall("/login/code", map[string]any{"challenge_id": challenge, "code": code})
 		code = ""
-		needPassword := false
-		if out != nil {
-			if out["code"] == "PASSWORD_REQUIRED" {
-				needPassword = true
-			}
-			if r, ok := out["results"].(map[string]any); ok && r["auth"] == "awaiting_password" {
-				needPassword = true
-			}
-		}
+		var status domains.ConnectionStatus
+		_ = json.Unmarshal(out.Results, &status)
+		needPassword := out.Code == "PASSWORD_REQUIRED" || status.Auth == "awaiting_password"
 		if needPassword {
 			password, pe := secretReader("Two-step password: ")
 			if pe != nil {
 				return pe
 			}
-			_, e = call("/devices/"+id+"/login/password", map[string]any{"challenge_id": challenge, "password": password})
+			_, e = authCall("/login/password", map[string]any{"challenge_id": challenge, "password": password})
 			password = ""
 		}
 		if e != nil {
@@ -128,6 +175,15 @@ func loginCommandWithSecretReader(v *viper.Viper, secretReader func(string) (str
 	c.Flags().String("phone", "", "Phone number (omit to prompt)")
 	return c
 }
+
+type loginAPIResponse struct {
+	Code    string          `json:"code"`
+	Message string          `json:"message"`
+	Results json.RawMessage `json:"results"`
+}
+
+var errLoginAPIUnavailable = errors.New("local API unavailable")
+
 func readSecret(prompt string) (string, error) {
 	return readTerminalSecret(prompt, int(os.Stdin.Fd()), term.IsTerminal, term.ReadPassword)
 }

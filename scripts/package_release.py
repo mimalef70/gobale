@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 PLATFORMS = {"linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64"}
 TOP_LEVEL = (
     "readme.md", "LICENCE.txt", "CHANGELOG.md",
-    "SECURITY.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SUPPORT.md",
+    "SECURITY.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SUPPORT.md", "AGENTS.md",
     "docker-compose.yml",
 )
 
@@ -38,6 +38,7 @@ def approved_files():
     paths.extend(ROOT / name for name in (
         "docs/openapi.yaml", "docs/operations.md", "docs/webhook-payload.md",
         "docs/consumer-integration.md",
+        "ui/README.md", "src/internal/balemeow/testdata/coverage/capabilities.json",
     ))
     for directory in ("assets",):
         paths.extend(sorted(p for p in (ROOT / directory).rglob("*")

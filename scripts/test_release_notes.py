@@ -1,6 +1,9 @@
 """Release notes must come only from the selected reviewed changelog section."""
 import unittest
 import os
+import hashlib
+import json
+import posixpath
 from pathlib import Path
 import re
 import tempfile
@@ -8,6 +11,7 @@ import textwrap
 from unittest.mock import patch
 
 from release_notes import extract_release_notes, release_metadata
+from release_registry import RegistryError, check_absent, check_published
 
 
 class ReleaseNotesTest(unittest.TestCase):
@@ -66,6 +70,7 @@ class PublicationWorkflowTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             environment = {"RELEASE_TAG": tag, "IMAGE_DIGEST": "sha256:" + "b" * 64,
                            "IMAGE": "ghcr.io/example/gobale", "GITHUB_REPOSITORY": "example/gobale",
+                           "DOCKERHUB_IMAGE": "docker.io/mimalef70/gobale",
                            "RUNNER_TEMP": temporary, "EXPECTED_SHA": "a" * 40}
             with patch.dict(os.environ, environment), \
                  patch("pathlib.Path.glob", return_value=[Path(f"dist/archive-{index}.tar.gz") for index in range(4)]), \
@@ -76,6 +81,7 @@ class PublicationWorkflowTest(unittest.TestCase):
                 except AssertionError:
                     run.assert_not_called()
                     raise
+                self.notes = (Path(temporary) / 'gobale-release-notes.md').read_text()
                 return [call.args[0] for call in run.call_args_list]
 
     def test_stable_publisher_marks_release_not_prerelease(self):
@@ -89,6 +95,9 @@ class PublicationWorkflowTest(unittest.TestCase):
         self.assertIn("--draft", commands[0])
         self.assertIn("--draft=false", commands[-1])
         self.assertFalse(any("--clobber" in command for command in commands))
+        for image in ("ghcr.io/example/gobale", "docker.io/mimalef70/gobale"):
+            self.assertIn(image + ":v1.0.0", self.notes)
+            self.assertIn(image + "@sha256:" + "b" * 64, self.notes)
 
     def test_candidate_publisher_cannot_become_latest(self):
         commands = self.run_publisher("v1.0.0-rc.1")
@@ -99,6 +108,134 @@ class PublicationWorkflowTest(unittest.TestCase):
     def test_tag_move_aborts_before_creating_release(self):
         with self.assertRaisesRegex(AssertionError, "Version tag moved"):
             self.run_publisher("v1.0.0", remote_sha="c" * 40)
+
+    def test_one_build_publishes_both_registries_after_read_only_preflight(self):
+        import yaml
+        source = (Path(__file__).resolve().parents[1] / ".github/workflows/release.yml").read_text()
+        jobs = yaml.safe_load(source)["jobs"]
+        prepare = jobs["prepare"]["steps"]
+        absence = next(index for index, step in enumerate(prepare)
+                       if "release_registry.py absent" in step.get("run", ""))
+        package = next(index for index, step in enumerate(prepare)
+                       if "package_release.py" in step.get("run", ""))
+        self.assertLess(absence, package)
+        self.assertIn("DOCKERHUB_TOKEN", prepare[0]["env"])
+        steps = jobs["image"]["steps"]
+        builds = [(index, step) for index, step in enumerate(steps)
+                  if step.get("uses", "").startswith("docker/build-push-action@")]
+        self.assertEqual(len(builds), 1)
+        build_index, build = builds[0]
+        options = build["with"]
+        self.assertEqual(options["platforms"], "linux/amd64,linux/arm64")
+        self.assertEqual(options["provenance"], "mode=max")
+        self.assertTrue(options["push"])
+        self.assertTrue(options["sbom"])
+        self.assertEqual(options["tags"].strip().splitlines(), [
+            "${{ needs.prepare.outputs.image }}:${{ inputs.tag }}",
+            "${{ needs.prepare.outputs.dockerhub_image }}:${{ inputs.tag }}"])
+        self.assertIn("release_registry.py absent", steps[build_index - 1]["run"])
+        self.assertIn("release_registry.py published", steps[build_index + 1]["run"])
+        logins = [step for step in steps if step.get("uses", "").startswith("docker/login-action@")]
+        self.assertEqual({step["with"]["registry"] for step in logins}, {"ghcr.io", "docker.io"})
+        for step in logins:
+            self.assertEqual(step["uses"], "docker/login-action@dbcb813823bdd20940b903addbd779551569679f")
+
+
+class RegistryPublicationTest(unittest.TestCase):
+    def setUp(self):
+        self.environment = {"GITHUB_REPOSITORY": "example/gobale", "GITHUB_ACTOR": "fixture",
+                            "GH_TOKEN": "github-secret", "DOCKERHUB_USERNAME": "fixture",
+                            "DOCKERHUB_TOKEN": "docker-secret"}
+        self.token = (200, {}, b'{"token":"synthetic-registry-token"}')
+        self.absent = (404, {}, b'{"errors":[{"code":"MANIFEST_UNKNOWN"}]}')
+
+    def test_absence_requires_authenticated_explicit_missing_manifest_on_both(self):
+        with patch("release_registry.request", side_effect=[self.token, self.absent] * 2) as request:
+            check_absent("v2.0.0", self.environment)
+        calls = request.call_args_list
+        self.assertEqual(len(calls), 4)
+        self.assertTrue(calls[0].args[0].startswith("https://ghcr.io/token?"))
+        self.assertEqual(calls[1].args[0], "https://ghcr.io/v2/example/gobale/manifests/v2.0.0")
+        self.assertTrue(calls[2].args[0].startswith("https://auth.docker.io/token?"))
+        self.assertEqual(calls[3].args[0], "https://registry-1.docker.io/v2/mimalef70/gobale/manifests/v2.0.0")
+        for call in calls:
+            self.assertNotIn("secret", call.args[0])
+
+    def test_missing_credentials_fail_before_any_registry_request(self):
+        for key in self.environment:
+            with self.subTest(key=key), patch("release_registry.request") as request:
+                with self.assertRaisesRegex(RegistryError, "required"):
+                    check_absent("v2.0.0", dict(self.environment, **{key: ""}))
+                request.assert_not_called()
+
+    def test_existing_version_in_either_registry_blocks_retry(self):
+        for responses in ([self.token, (200, {}, b"existing")],
+                          [self.token, self.absent, self.token, (200, {}, b"existing")]):
+            with self.subTest(registry=len(responses)), patch("release_registry.request", side_effect=responses):
+                with self.assertRaisesRegex(RegistryError, "already exists"):
+                    check_absent("v2.0.0", self.environment)
+
+    def test_network_auth_and_ambiguous_missing_responses_never_count_as_absent(self):
+        failures = [(status, {}, b'{"errors":[{"code":"MANIFEST_UNKNOWN"}]}')
+                    for status in (301, 401, 403, 429, 500)]
+        failures += [(404, {}, b"untrusted registry response"),
+                     (404, {}, b'{"errors":[{"code":"UNAUTHORIZED"}]}'),
+                     (404, {}, b'{"errors":[]}')]
+        for failure in failures:
+            with self.subTest(failure=failure), patch("release_registry.request", side_effect=[self.token, failure]):
+                with self.assertRaisesRegex(RegistryError, "unverified"):
+                    check_absent("v2.0.0", self.environment)
+        with patch("release_registry.request", side_effect=RegistryError("Registry request failed")):
+            with self.assertRaisesRegex(RegistryError, "request failed"):
+                check_absent("v2.0.0", self.environment)
+
+    def test_bad_authentication_never_exposes_the_response_or_secret(self):
+        for response in ((401, {}, b"docker-secret"), (302, {}, b"github-secret"),
+                         (200, {}, b'{"token":""}'), (200, {}, b"invalid")):
+            with self.subTest(response=response), patch("release_registry.request", return_value=response):
+                with self.assertRaises(RegistryError) as raised:
+                    check_absent("v2.0.0", self.environment)
+                self.assertNotIn("secret", str(raised.exception))
+
+    def test_both_published_indexes_must_match_one_digest_and_both_architectures(self):
+        raw = json.dumps({"manifests": [{"platform": {"os": "linux", "architecture": arch}}
+                                         for arch in ("amd64", "arm64")]}).encode()
+        digest = "sha256:" + hashlib.sha256(raw).hexdigest()
+        manifest = (200, {"Docker-Content-Digest": digest}, raw)
+        with patch("release_registry.request", side_effect=[self.token, manifest] * 2):
+            check_published("v2.0.0", digest, self.environment)
+        with patch("release_registry.request", side_effect=[self.token, manifest, self.token, (200, {}, raw + b" ")]):
+            with self.assertRaisesRegex(RegistryError, "digest"):
+                check_published("v2.0.0", digest, self.environment)
+        with patch("release_registry.request", side_effect=[self.token, (200, {"Docker-Content-Digest": "sha256:" + "a" * 64}, raw)]):
+            with self.assertRaisesRegex(RegistryError, "digest"):
+                check_published("v2.0.0", digest, self.environment)
+
+    def test_single_platform_manifest_cannot_be_published_as_multiarch(self):
+        raw = b'{"manifests":[{"platform":{"os":"linux","architecture":"amd64"}}]}'
+        digest = "sha256:" + hashlib.sha256(raw).hexdigest()
+        with patch("release_registry.request", side_effect=[self.token, (200, {}, raw)]):
+            with self.assertRaisesRegex(RegistryError, "both supported"):
+                check_published("v2.0.0", digest, self.environment)
+
+
+class ReleasePackageDocumentationTest(unittest.TestCase):
+    def test_all_shipped_markdown_file_links_have_shipped_targets(self):
+        from package_release import ROOT, approved_files
+        files = approved_files()
+        names = {path.relative_to(ROOT).as_posix() for path in files}
+        self.assertTrue({"AGENTS.md", "ui/README.md",
+                         "src/internal/balemeow/testdata/coverage/capabilities.json"} <= names)
+        for path in files:
+            if path.suffix != ".md":
+                continue
+            name = path.relative_to(ROOT).as_posix()
+            for target in re.findall(r"\]\(([^\s)]+)\)", path.read_text()):
+                if target.startswith(("https:", "http:", "mailto:", "#")):
+                    continue
+                destination = posixpath.normpath(posixpath.join(posixpath.dirname(name), target.split("#")[0]))
+                with self.subTest(source=name, target=target):
+                    self.assertIn(destination, names)
 
 
 if __name__ == "__main__":

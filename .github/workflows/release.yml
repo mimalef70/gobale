@@ -26,19 +26,27 @@ jobs:
     name: Verify tag and package binaries
     runs-on: ubuntu-24.04
     timeout-minutes: 25
+    permissions:
+      contents: read
+      actions: read
+      packages: read
     outputs:
       sha: ${{ steps.identity.outputs.sha }}
       version: ${{ steps.identity.outputs.version }}
       image: ${{ steps.identity.outputs.image }}
+      dockerhub_image: ${{ steps.identity.outputs.dockerhub_image }}
     steps:
-      - name: Require an explicit SemVer release tag
+      - name: Require an explicit SemVer release tag and publishing credentials
         env:
           RELEASE_TAG: ${{ inputs.tag }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           python3 - <<'PY'
           import os, re
           tag = os.environ['RELEASE_TAG']
           assert re.fullmatch(r'v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(?:-(alpha|beta|rc)\.[1-9][0-9]*)?', tag), 'Use an explicit vMAJOR.MINOR.PATCH tag, optionally followed by -alpha.N, -beta.N or -rc.N'
+          assert os.environ['DOCKERHUB_USERNAME'].strip() and os.environ['DOCKERHUB_TOKEN'].strip(), 'Configure DOCKERHUB_USERNAME and DOCKERHUB_TOKEN secrets before publication'
           PY
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -70,8 +78,15 @@ jobs:
           status = re.findall(r'^HTTP/\S+\s+(\d+)', existing.stdout, re.MULTILINE)
           assert existing.returncode != 0 and status and status[-1] == '404', 'Release already exists or its absence could not be verified; inspect before retrying'
           with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
-              out.write('sha=' + sha + '\nversion=' + tag[1:] + '\nimage=ghcr.io/' + os.environ['GITHUB_REPOSITORY'].lower() + '\n')
+              out.write('sha=' + sha + '\nversion=' + tag[1:] + '\nimage=ghcr.io/' + os.environ['GITHUB_REPOSITORY'].lower() + '\ndockerhub_image=docker.io/mimalef70/gobale\n')
           PY
+      - name: Verify both registry version tags are absent before packaging
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: python3 scripts/release_registry.py absent --tag "$RELEASE_TAG"
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: ${{ env.GO_VERSION }}
@@ -104,7 +119,7 @@ jobs:
           retention-days: 7
 
   image:
-    name: Publish versioned container image
+    name: Publish the same versioned image to both registries
     needs: prepare
     runs-on: ubuntu-24.04
     timeout-minutes: 30
@@ -124,7 +139,19 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
-      - name: Publish both architectures with provenance and SBOM
+      - uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Recheck both version tags immediately before publication
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: python3 scripts/release_registry.py absent --tag "$RELEASE_TAG"
+      - name: Build once and publish both architectures with provenance and SBOM
         id: build
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
@@ -132,7 +159,9 @@ jobs:
           file: docker/golang.Dockerfile
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ needs.prepare.outputs.image }}:${{ inputs.tag }}
+          tags: |
+            ${{ needs.prepare.outputs.image }}:${{ inputs.tag }}
+            ${{ needs.prepare.outputs.dockerhub_image }}:${{ inputs.tag }}
           provenance: mode=max
           sbom: true
           labels: |
@@ -141,6 +170,14 @@ jobs:
             org.opencontainers.image.revision=${{ needs.prepare.outputs.sha }}
             org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
             org.opencontainers.image.licenses=MIT
+      - name: Verify both registry indexes match the built digest
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          IMAGE_DIGEST: ${{ steps.build.outputs.digest }}
+          GH_TOKEN: ${{ github.token }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: python3 scripts/release_registry.py published --tag "$RELEASE_TAG" --digest "$IMAGE_DIGEST"
 
   release:
     name: Publish verified assets and release notes
@@ -166,6 +203,7 @@ jobs:
           GH_REPO: ${{ github.repository }}
           RELEASE_TAG: ${{ inputs.tag }}
           IMAGE: ${{ needs.prepare.outputs.image }}
+          DOCKERHUB_IMAGE: ${{ needs.prepare.outputs.dockerhub_image }}
           IMAGE_DIGEST: ${{ needs.image.outputs.digest }}
           EXPECTED_SHA: ${{ needs.prepare.outputs.sha }}
         run: |
@@ -180,7 +218,9 @@ jobs:
           digest = os.environ['IMAGE_DIGEST']
           assert re.fullmatch(r'sha256:[a-f0-9]{64}', digest), 'Image publication did not return a valid digest'
           notes = subprocess.check_output(['python3', 'scripts/release_notes.py', '--version', tag], text=True)
-          body = notes + '\n\nContainer image: `' + os.environ['IMAGE'] + ':' + tag + '`\n\nImmutable image digest: `' + os.environ['IMAGE'] + '@' + digest + '`\n'
+          body = notes + '\n\nContainer images (same multi-platform build):\n'
+          for image in (os.environ['IMAGE'], os.environ['DOCKERHUB_IMAGE']):
+              body += '\n- `' + image + ':' + tag + '` — immutable reference: `' + image + '@' + digest + '`\n'
           notes_file = pathlib.Path(os.environ['RUNNER_TEMP']) / 'gobale-release-notes.md'
           notes_file.write_text(body)
           archives = sorted(str(p) for p in pathlib.Path('dist').glob('*.tar.gz'))

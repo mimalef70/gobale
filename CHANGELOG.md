@@ -1,32 +1,76 @@
 # Changelog
 
-## Unreleased
+## 2.0.0 — 2026-10-07
 
-- Require explicit account selection and immutable instance headers on machine
-  and browser APIs. REST sends, schedules and device provisioning require stable
-  idempotency keys; update consumers with this contract change.
-- Atomically provision devices and initial webhooks with a schema-7 journal;
-  repeated requests preserve the original connection through restart/deletion.
-- Add immutable connection identity to new event/webhook bodies and per-connection
-  queue admission (default 100), with independent global limits and safe schedule
-  deferral. Previously persisted delivery bodies keep their exact retry identity.
-- Document backend channel ownership and provider-specific integration contracts; GoBale
-  remains independent of consumer user/organization models.
-- Add filtered operation/schedule/event queries, authoritative schedule executions,
-  scheduled forwarding and explicit mentions in text/media captions. Mention and
-  scheduled-forward provider interoperability remain live-unverified.
-- Add per-device peer/sender/direction webhook filters and bilingual panel controls;
-  preserve queued delivery targets and stable retry/replay identity.
-- Schema 6 preserves durable outbox order and records new schedule occurrences
-  atomically. Existing unrecorded occurrence history is marked incomplete.
+GoBale 2.0 introduces a breaking machine-API contract for safe multi-account
+integrations, together with durable provisioning, richer local queries and
+operational improvements. Update consumers with the gateway and back up the
+complete storage volume and encryption key before upgrading from 1.x.
+
+### Breaking API and storage upgrade
+
+- Require an explicit account selector and `X-Device-Instance` on every
+  account-scoped machine or browser request. Missing selectors/guards fail with
+  400; reused aliases with an old instance fail with 409. Do not automatically
+  refresh the instance and repeat a stale write.
+- Require stable `Idempotency-Key` values for `POST /devices`, immediate sends and
+  schedule creation. Device provisioning keys are global to the gateway database;
+  sends and schedules share a separate namespace within each immutable connection.
+  Changed content under a key fails with 409.
+- Atomically provision the connection, encrypted initial webhook configuration
+  and key binding in schema 7. Response-loss/restart retries return the original
+  connection; a retired key cannot attach to a newly reused alias.
+- Add `instance_id` to newly stored event/webhook bodies. Receivers should bind
+  it together with `session_id` and the provider `device_id`. Previously persisted
+  bodies retain their exact bytes and retry/replay identity, including the absence
+  of this field; consumers need an explicit policy for that historical backlog.
+- Migrate v1.0.0 storage from schema 5 through schema 6 to schema 7. Preserve
+  sessions, checkpoints, events and durable work. Schema 6 persists outbox order
+  and records new schedule occurrences atomically; old unrecorded occurrence
+  history is marked incomplete. The schema number is independent of the app
+  version. Rollback requires the pre-upgrade database/media snapshot, matching
+  key and old binary; do not open migrated storage with a 1.x binary.
+
+### Features and reliability
+
+- Add filtered operation, schedule and local event queries, authoritative
+  schedule executions, scheduled forwarding and explicit mentions in text/media
+  captions. Each schedule occurrence and its operation commit together.
+- Add per-device peer/sender/direction webhook filters and English/Persian panel
+  controls while preserving queued delivery targets and stable retry/replay identity.
+- Bound outstanding work per connection (default 100) and globally (default 1000).
+  Admission includes queued, sending and unknown operations; blocked schedule
+  occurrences remain due without consuming an execution.
+- Update the CLI login helper for keyed provisioning and immutable account guards.
+  Retain the selected connection through response loss and alias replacement;
+  retries of provisioning reuse their key while authentication is not blindly retried.
 - Add cached bounded operational metrics, request deadlines, safe panic responses
-  and Docker log rotation. Keep SQLite WAL/FULL and one process owner.
+  and Docker log rotation. Keep SQLite WAL/FULL durability and one process owner.
 - Clean only provably owned temporary uploads after failures/restarts; retain
   registered uploads and history without TTL. Avoid redundant voice spool copies.
-- Add real process-crash, disk-full and read-only failure tests plus reproducible
-  mixed/native synthetic capacity harnesses. A 300-account or 24-hour production
-  capacity claim requires completed acceptance evidence; no new live claim or
-  automatic backup facility is included.
+- Add process-crash, disk-full and read-only failure tests, real REST CLI login
+  regression tests and reproducible mixed/native synthetic capacity harnesses.
+- Reorganize installation, API examples, upgrade guidance and consumer integration
+  documentation. Consumer applications retain ownership of their users and
+  permissions; GoBale remains independent of their data models.
+- Build one Linux amd64/arm64 container index for GHCR and Docker Hub, with
+  provenance/SBOM metadata. Release automation checks that both registry tags
+  are unused before publication and verifies their matching digest afterward.
+
+### Verified scope and remaining limits
+
+- This release preserves the dated native evidence from two authorized Bale
+  accounts recorded on 2026-10-06; it does not establish new provider compatibility
+  from route counts or offline tests. Mentions and scheduled forwarding remain
+  live-unverified. Ordinary-user keyboard-template sends remain rejected in live tests.
+- Long-gap recovery, exhaustive history export, long-duration Linux capacity
+  and deployment retention acceptance remain gates. A 300-client synthetic
+  fixture does not establish 300 real accounts or completed 24-hour stability;
+  incomplete runs do not establish production capacity.
+- Account-security/report/story writes and Mini App credential interoperability
+  retain their documented live-verification limits. No financial mutation support,
+  active-active deployment, automatic historical retention or complete backup
+  facility is claimed. See the native capability inventory and AGENTS.md.
 
 ## 1.0.0 — 2026-10-06
 

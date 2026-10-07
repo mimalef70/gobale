@@ -6,121 +6,139 @@
 [![Release](https://img.shields.io/github/v/release/mimalef70/gobale?include_prereleases&label=release)](https://github.com/mimalef70/gobale/releases)
 [![License: MIT](https://img.shields.io/badge/license-MIT-0b7285.svg)](LICENCE.txt)
 
-**Connect Bale accounts to your application through REST and webhooks.**
+**Connect your Bale accounts to any application through REST APIs and signed webhooks.**
 
-GoBale is a self-hosted, multi-account gateway written in Go. Connect an account
-with its phone number and login code, receive signed webhook events, and send
-replies from your own inbox, support system or workflow.
+GoBale is a self-hosted gateway written in Go. Run one service, connect independent
+Bale accounts with phone/code login, and use your own application to send messages
+and receive events. Sessions, message history, media and delivery queues stay on
+your server. The administrative panel is included in the binary.
 
 Sponsored by **[MuChat](https://mu.chat)**. GoBale is independent open-source
-software available to everyone and works with any application through its public API.
+software, available to everyone under the MIT license.
 
-[Releases](https://github.com/mimalef70/gobale/releases) ·
-[Container images](https://github.com/users/mimalef70/packages/container/package/gobale) ·
+[Download binaries](https://github.com/mimalef70/gobale/releases) ·
+[GHCR](https://github.com/users/mimalef70/packages/container/package/gobale) ·
+[Docker Hub](https://hub.docker.com/r/mimalef70/gobale) ·
 [API reference](https://mimalef70.github.io/gobale/) ·
-[OpenAPI](docs/openapi.yaml) · [Webhooks](docs/webhook-payload.md) ·
-[Operations](docs/operations.md)
+[OpenAPI](docs/openapi.yaml)
+
+## Contents
+
+- [Features](#features)
+- [Release status](#release-status)
+- [How to use](#how-to-use)
+- [Configuration](#configuration)
+- [Connect your application](#connect-your-application)
+- [Important behavior](#important-behavior)
+- [Documentation and support](#documentation-and-support)
+- [Development](#development)
 
 ## Features
 
-- Multiple accounts with separate sessions, media, history and persistent queues.
-- Phone/code login, encrypted session storage and reconnect after restart.
-- Text, images, files, audio, video and native Ogg Opus voice notes.
-- Contacts, contact avatars, conversations and paginated message history.
-- Group administration, permissions, replies, edits, reactions, polls and stickers.
-- Per-device webhooks with HMAC signatures, event filters, retry and explicit replay.
-- Durable sends with idempotency keys and inspectable pending or unknown outcomes.
-- One-time and recurring message schedules that survive restarts.
-- Authenticated REST, a CLI, health/readiness probes and Prometheus metrics.
-- Embedded English/Persian administrative panel for accounts, login and webhooks.
-- One binary or container, SQLite storage, and no browser, Node.js or Redis runtime.
+- **Multiple accounts:** separate login sessions, peers, files and durable work for each connection.
+- **Messaging:** text, images, files, audio, video and native Ogg Opus voice notes; replies, edits, forwards and reactions.
+- **Scheduling:** one-time or daily, weekly and monthly sends, with pause/resume/cancel and per-execution results.
+- **Signed webhooks:** per-account destinations, event/peer/sender filters, delivery history, retries and explicit replay.
+- **Local queries:** search stored message events and inspect pending, completed or uncertain sends.
+- **Account tools:** contacts, avatars, conversations, groups, polls and other documented provider operations.
+- **Administrative panel:** English/Persian, account login, connection/recovery status and webhook management.
+- **Operations:** encrypted sessions, restart recovery, bounded workers, health checks and Prometheus metrics.
+- **Simple runtime:** one Go binary and SQLite; no browser, Node.js, Redis or PostgreSQL runtime dependency.
+
+Your backend owns users, permissions and conversations. GoBale manages the Bale
+connections and delivery work. A user in your application can own several
+connections; save that ownership mapping in your application's database.
+
+```mermaid
+flowchart LR
+    Application[Your backend] -->|REST requests| GoBale
+    GoBale -->|Signed webhook events| Application
+    GoBale <-->|Native account protocol| Bale
+```
+
+The panel is for gateway administrators. It manages accounts and webhooks; it is
+not a customer login page or a chat inbox.
 
 ## Release status
 
-GoBale **1.0** uses Bale's user-account protocol. It is not an official
-Bale API or SDK; provider protocol changes can require an update. Core messaging,
-media, native voice, contact avatars and selected group operations have been
-checked with **two authorized accounts**. Advanced capabilities have differing
-levels of verification; the API table lists routes, not successful live tests.
+**The installation commands and API examples below target GoBale 2.0.0.**
+The online API reference follows `main` and can advance beyond a release; use the
+documentation and OpenAPI shipped with your installed version. Historical 1.x
+behavior remains documented in the
+[v1.0.0 README](https://github.com/mimalef70/gobale/blob/v1.0.0/readme.md).
 
-Ordinary-user keyboard-template sends were rejected in live testing. There is
-no automatic transcoding, financial-transfer API or active-active deployment.
-No claim of 50 real accounts or completed 24-hour production validation is made.
-Use a test account and recipients you control before deploying an integration.
+**2.0 is a breaking API upgrade.** Account-scoped requests require explicit
+selection and `X-Device-Instance`; device creation, sends and schedule creation
+require `Idempotency-Key`. The release also adds local search, webhook filters,
+occurrence tracking and per-connection queue limits, and migrates storage to
+schema 7. Update consumers with the gateway, and follow the
+[upgrade procedure](docs/operations.md#backup-restore-and-upgrades) before
+replacing an existing deployment. See the [2.0.0 changes](CHANGELOG.md#200--2026-10-07).
 
-The **v1.0.0** release bundles the administrative panel in every binary and Docker
-image. Version 1.0 identifies the gateway release; the capability inventory and
-limits above still define the verified scope of the unofficial Bale integration.
-
-## Requirements
-
-- **Binary:** a supported Linux or macOS system; release archives cover amd64 and arm64.
-- **Container:** Docker, with Compose v2 for the checked-in deployment file.
-- **Source build:** Go 1.26.6, Node 24.12+ / npm and Python 3.11+; a C compiler for default SQLite, or `purego` without one.
-- Persistent disk for SQLite/media, a stable encryption key, and network access to Bale.
-- Access to the account owner's phone/code and any two-step password during login.
-
-Run exactly one GoBale process per database and media directory. Administrative
-credentials can access every device; your application must enforce its own
-operator and organization permissions. Use TLS for remote API access.
-
-## Configuration
-
-Precedence is **CLI flags → environment variables → `.env` in the working
-directory → defaults**. `gobale init` generates `.env` and `master.key` with private
-permissions and refuses to overwrite existing files. Keep credentials out of
-command-line arguments, logs and public issues.
-
-| Variable | Flag | Default | Purpose / bounds |
-| --- | --- | --- | --- |
-| `APP_HOST` | `--host` | `127.0.0.1` | Native listener address |
-| `APP_PORT` | `--port` | `3000` | Port, 1–65535 |
-| `APP_BASE_PATH` | `--base-path` | empty | Prefix every route, including health and metrics |
-| `APP_UI_ENABLED` | `--ui-enabled` | `true` | Serve the embedded administrative panel |
-| `APP_UI_PUBLIC_ORIGIN` | `--ui-public-origin` | empty | Exact external HTTPS origin, e.g. `https://gateway.example.com` |
-| `APP_BASIC_AUTH` | `--basic-auth` | required | One administrative `username:password` |
-| `APP_DATABASE` | `--database` | `storages/gobale.db` | SQLite path |
-| `APP_MEDIA_ROOT` | `--media-root` | `storages/media` | Private media directory |
-| `APP_MASTER_KEY_FILE` | `--master-key-file` | empty | File with a base64 32-byte encryption key |
-| `APP_MASTER_KEY` | `--master-key` | required without key file | Base64 32-byte encryption key |
-| `BALE_APP_ID` | `--bale-app-id` | `0` | Verified client application ID |
-| `BALE_API_KEY` | `--bale-api-key` | empty | Matching client application key |
-| `BALE_API_VERSION` | `--bale-api-version` | `173855` | Reviewed web-client API version |
-| `BALE_GRPC_ENDPOINT` | `--grpc-endpoint` | `https://next-ws.bale.ai` | gRPC-Web endpoint |
-| `BALE_WS_ENDPOINT` | `--ws-endpoint` | `wss://next-ws.bale.ai/ws/` | WebSocket endpoint |
-| `BALE_WEBHOOK` | `--webhook` | empty | Comma-separated global fallback URLs |
-| `BALE_WEBHOOK_SECRET` | `--webhook-secret` | empty | Required HMAC secret when global URLs are set |
-| `BALE_WEBHOOK_DEVICE_MERGE_GLOBAL` | `--webhook-device-merge-global` | `false` | Deliver to globals alongside a device override |
-| `APP_SEND_WORKERS` | `--send-workers` | `4` | 1–64 globally; one active send per connection |
-| `APP_WEBHOOK_WORKERS` | `--webhook-workers` | `8` | 1–64 delivery workers |
-| `APP_RECONNECT_WORKERS` | `--reconnect-workers` | `4` | 1–4 concurrent reconnects |
-| `APP_MEDIA_WORKERS` | `--media-workers` | `4` | 1–64 shared media transfer slots |
-| `APP_QUEUE_LIMIT` | `--queue-limit` | `1000` | 1–100000 queued, sending and unknown operations |
-| `APP_CONNECTION_QUEUE_LIMIT` | `--connection-queue-limit` | `100` | 1–100000 queued, sending and unknown operations per immutable connection; independent of the global limit |
-| `APP_MAX_MEDIA_BYTES` | `--max-media-bytes` | `67108864` | Per-file bytes, 1–1073741824 |
-
-`init` sets `APP_MASTER_KEY_FILE=master.key`. The file takes precedence when both
-key settings exist, and must have private permissions (`chmod 600`). Keep this
-key separately backed up: a newly generated key cannot recover existing sessions.
-Sessions and stored secrets are encrypted; message bodies and ordinary media are
-not application-encrypted. Protect the data directory and backups accordingly.
-
-`--bale-web-client` explicitly opts in to the public application identity shipped
-by the reviewed Bale web client. It does not copy a browser session or authenticate
-an account. Omit the flag to configure another verified identity locally. Changing
-API-version or endpoint values does not establish protocol compatibility.
-
-`HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` apply to provider/webhook transports.
-Media fetched from a caller-supplied URL uses direct, destination-checked requests.
-Worker values are configurable bounds, not measured Bale account capacity.
+GoBale uses Bale's user-account protocol and is **not an official Bale API or SDK**.
+Core login, messaging, media, voice and selected group operations have been tested
+with two authorized accounts. Verification varies by operation; see the
+[capability inventory](src/internal/balemeow/testdata/coverage/capabilities.json).
+Mentions and scheduled forwarding have offline coverage but still need live
+provider validation. Ordinary-user keyboard-template sends failed in live tests.
+A 300-client simulation is not proof of 300 real accounts or 24-hour stability.
 
 ## How to use
 
+Choose one installation method. You need access to the account owner's phone/code
+and any two-step password. The default listener is `http://127.0.0.1:3000`.
+
+### Docker Compose
+
+Requires Docker with Compose v2 and Git. No host Go or Node installation is needed.
+Check out the matching release configuration and pull the v2.0.0 image:
+
+```sh
+git clone --branch v2.0.0 --depth 1 https://github.com/mimalef70/gobale.git
+cd gobale
+export GOBALE_IMAGE='ghcr.io/mimalef70/gobale:v2.0.0'
+docker pull "$GOBALE_IMAGE"
+
+docker run --rm --user "$(id -u):$(id -g)" \
+  --volume "$PWD:/config" --workdir /config \
+  "$GOBALE_IMAGE" init --bale-web-client
+
+export APP_MASTER_KEY="$(cat master.key)"
+docker compose up -d --no-build
+```
+
+Run these commands in a POSIX shell on Linux or macOS. `init` creates a private
+`.env` and `master.key` and refuses to overwrite them; skip initialization when
+reusing an existing installation. Keep the key safe: replacing it cannot recover
+old encrypted sessions.
+
+Open **http://127.0.0.1:3000/ui/** and sign in with the generated `APP_BASIC_AUTH`
+username/password from your local `.env`. Add a connection such as `support`,
+then enter the Bale phone number, code and password if requested. Adding another
+connection follows the same steps.
+
+```sh
+docker compose ps
+docker compose logs --tail=100 gobale
+```
+
+Compose stores SQLite and media in a named volume at `/app/storages` and publishes
+only on localhost. It does not import a host `storages/` directory. Keep the volume
+when recreating the container; `docker compose down -v` deletes it. Read
+[Operations](docs/operations.md) before changing images or exposing the service.
+
+Both `ghcr.io/mimalef70/gobale:v2.0.0` and `mimalef70/gobale:v2.0.0` select this
+release. To use Docker Hub, set `GOBALE_IMAGE='mimalef70/gobale:v2.0.0'` before
+pulling and starting it. `GOBALE_IMAGE` is a Compose setting. Release tags are
+fixed; a source push does not republish them. For standalone Docker, see
+[Docker without Compose](docs/operations.md#docker-without-compose).
+
 ### Native binary
 
-Download an archive from [Releases](https://github.com/mimalef70/gobale/releases),
-verify its published checksum, unpack it and put `gobale` on your `PATH`. Run from
-a directory where configuration and storage should live:
+Download the v2.0.0 archive for your operating system and architecture from
+[Releases](https://github.com/mimalef70/gobale/releases/tag/v2.0.0), verify its checksum,
+and put `gobale` on your `PATH`. Linux and macOS archives cover amd64 and arm64.
+Use the documentation included in that archive for its API contract.
 
 ```sh
 mkdir gobale-data
@@ -129,513 +147,280 @@ gobale init --bale-web-client
 gobale rest
 ```
 
-The default address is `http://127.0.0.1:3000`. Keep this process running. From a
-second terminal in the same directory, connect an account:
+Keep the service running and open **http://127.0.0.1:3000/ui/**. If you prefer an
+interactive terminal, run this from a second terminal in the same directory:
 
 ```sh
 gobale login --device support
 ```
 
-The helper creates the device if needed, then prompts for the phone, login code
-and optional two-step password. Codes/passwords are not echoed. Password whitespace
-is preserved exactly; only the login code is trimmed. It requires an
-interactive terminal and a loopback listener. Encrypted sessions survive normal
-restarts; provider revocation can require login again.
-
-### Embedded administrative panel
-
-The panel is available at **http://127.0.0.1:3000/ui/** (or
-`<APP_BASE_PATH>/ui/`). Use v1.0.0 or build this revision; UI files are part of the binary and are never
-downloaded at runtime. Sign in with the username and password in
-`APP_BASIC_AUTH`. Add a local connection, then enter its Bale phone, code and any
-requested two-step password. Refresh resumes a valid login challenge; requesting
-another code always requires a click and respects the provider cooldown.
-
-The panel shows authentication, network and recovery separately. A connected socket
-with a recovery gap is not a synchronized account. Webhook settings show inherited
-and explicit destinations without exposing secrets. Delivery details display plain
-JSON; retry keeps the original destination/order, while replay selects current rules.
-
-Panel sign-out only ends the browser session. Bale logout removes that account's
-local session and cancels unsent work. Deleting a connection also removes its local
-alias; retained audit/history data is **not** erased. Destructive dialogs identify
-the selected connection and Bale account. This is an administrative tool, not a
-chat inbox or operator permissions system. The [API reference](https://mimalef70.github.io/gobale/)
-remains the separate read-only reference.
-
-Language and theme are the only persistent browser preferences. Admin sessions
-expire after 30 minutes without requests or eight hours total, and server restart
-requires panel sign-in again. For remote access, configure an explicit HTTPS
-origin and TLS ingress as described in [Operations](docs/operations.md#administrative-panel).
+The login helper creates or selects the connection and prompts for the phone,
+code and any password. It connects to the running loopback REST service; it does
+not start a second database owner. Sessions normally survive service restarts;
+provider revocation can require a new login.
 
 ### Build from source
 
+Requires Go **1.26.6**, Node **24.12+**, Python **3.11+**, Make and a C compiler:
+
 ```sh
-git clone https://github.com/mimalef70/gobale.git
+git clone --branch v2.0.0 --depth 1 https://github.com/mimalef70/gobale.git
 cd gobale
 make build
 ./bin/gobale init --bale-web-client
 ./bin/gobale rest
 ```
 
-Use `./bin/gobale` wherever these examples say `gobale`. Without a C compiler,
-run `make ui-build` then `(cd src && CGO_ENABLED=0 go build -tags purego -trimpath -o ../bin/gobale .)`.
-Node is only needed to build the embedded assets. A manual Go build without valid
-assets refuses UI-enabled startup before opening storage. Set `APP_UI_ENABLED=false`
-for an intentional API-only build.
-
-### Docker Compose
-
-This setup needs Docker alone, not a host Go installation. In a POSIX shell on
-Linux or macOS, clone the repository and initialize private configuration:
+Use `./bin/gobale` in place of `gobale` in the native instructions. The tag keeps
+the source, documentation and artifact version aligned; use `main` separately
+for development. Node builds the embedded panel; it is not needed to run the result. Without a C compiler, run
+`make ui-build` followed by:
 
 ```sh
-git clone https://github.com/mimalef70/gobale.git
-cd gobale
-export GOBALE_IMAGE='ghcr.io/mimalef70/gobale:v1.0.0'
-
-docker run --rm --user "$(id -u):$(id -g)" \
-  --volume "$PWD:/config" --workdir /config \
-  "$GOBALE_IMAGE" init --bale-web-client
-
-export APP_MASTER_KEY="$(cat master.key)"
-docker compose up -d --no-build
-docker compose exec gobale /app/gobale login --device support
+(cd src && CGO_ENABLED=0 go build -tags purego -trimpath -o ../bin/gobale .)
 ```
 
-The initializer writes files as your host user. Skip it if this directory is
-already initialized. `GOBALE_IMAGE` selects the image and is a Compose setting,
-not an API option.
+A manual Go build without matching UI assets refuses UI-enabled startup. For an
+intentional API-only build, set `APP_UI_ENABLED=false`.
 
-The same versioned, multi-platform image is also published on
-[Docker Hub](https://hub.docker.com/r/mimalef70/gobale). To use that registry,
-set `GOBALE_IMAGE='mimalef70/gobale:v1.0.0'` before running the commands above.
-The embedded UI and runtime are identical to the GHCR image.
+## Configuration
 
-To build this revision with its embedded panel, use a separate local image tag:
+Settings load in this order: **CLI flags → environment variables → local `.env`
+→ defaults**. Start with `gobale init --bale-web-client`, then edit the generated
+configuration. The flag selects the reviewed public Bale web-client application
+identity; it does not authenticate an account or reuse a browser session.
 
-```sh
-GOBALE_IMAGE=gobale:local docker compose up -d --build
-```
+| Setting | Default | When to change it |
+| --- | --- | --- |
+| `APP_BASIC_AUTH` | Generated by `init` | Set your gateway administrator credential. It grants access to every connection. |
+| `APP_PORT` | `3000` | Change the native listener or Compose host port. |
+| `APP_BASE_PATH` | Empty | Serve all routes below a prefix such as `/bale`. |
+| `APP_UI_ENABLED` | `true` | Disable the embedded administrative panel. |
+| `APP_UI_PUBLIC_ORIGIN` | Empty | Set the exact HTTPS origin for remote panel access. |
+| `APP_MAX_MEDIA_BYTES` | `67108864` (64 MiB) | Set the maximum size of an uploaded/downloaded file. |
+| `APP_QUEUE_LIMIT` | `1000` | Bound queued, sending and unknown operations across the gateway. |
+| `APP_CONNECTION_QUEUE_LIMIT` | `100` | Bound those operations within one connection. |
+| `BALE_WEBHOOK` / `BALE_WEBHOOK_SECRET` | Empty | Configure global fallback webhook destinations and their signing secret. |
 
-This uses the same configured volume; follow the backup/upgrade procedure in
-[Operations](docs/operations.md#backup-restore-and-upgrades) before replacing an
-existing deployment. It does not publish the image.
+See the [full configuration reference](docs/operations.md#configuration-reference)
+for flags, key files, provider endpoints, proxy behavior and worker limits.
 
-Compose publishes only localhost. `APP_PORT` selects the host port; inside the
-container GoBale listens on `0.0.0.0:3000`. SQLite/media live in a persistent named
-volume under `/app/storages`; host `storages/` sessions are not imported. Host
-`APP_DATABASE`, `APP_MEDIA_ROOT` and `APP_MASTER_KEY_FILE` are not forwarded.
-The container gets `APP_MASTER_KEY` and its own storage paths. Environment changes
-require container recreation, not just restart.
+Use exactly **one process per database and media directory**. SQLite uses WAL/FULL
+durability; this deployment does not support active-active replicas. Sessions and
+stored secrets are encrypted, while event bodies and ordinary media are not
+application-encrypted. Protect the storage volume, `.env`, encryption key and backups.
 
-### Docker without Compose
-
-After creating `.env` and `master.key` with the initializer above, the equivalent
-standalone deployment can run instead of Compose:
-
-```sh
-export APP_MASTER_KEY="$(cat master.key)"
-docker volume create gobale-data
-docker run --detach --name gobale --restart unless-stopped \
-  --publish 127.0.0.1:3000:3000 --env-file .env \
-  --env APP_HOST=0.0.0.0 --env APP_PORT=3000 \
-  --env APP_MASTER_KEY --env APP_MASTER_KEY_FILE= \
-  --env APP_DATABASE=/app/storages/gobale.db \
-  --env APP_MEDIA_ROOT=/app/storages/media \
-  --volume gobale-data:/app/storages \
-  --read-only --tmpfs /tmp:size=67108864,mode=1777 \
-  --security-opt no-new-privileges:true --cap-drop ALL \
-  --add-host host.docker.internal:host-gateway \
-  ghcr.io/mimalef70/gobale:v1.0.0
-
-docker exec -it gobale /app/gobale login --device support
-```
-
-Do not run native, standalone Docker and Compose services against the same data
-or published port. Container `127.0.0.1` is the container itself; use an appropriate
-service name or `host.docker.internal` to reach a receiver on the host.
+For remote access, configure TLS and `APP_UI_PUBLIC_ORIGIN`; follow the
+[panel deployment guide](docs/operations.md#administrative-panel). Do not expose
+administrative credentials to your application's end-user browser. Container
+configuration changes require recreation, not merely `docker restart`.
 
 ## Connect your application
 
-Load the generated local settings for the following `curl` examples. Include
-`APP_BASE_PATH` in the URL if configured; source builds use `./bin/gobale`.
+These examples target **GoBale 2.0** and use `curl` plus `jq`. First connect
+an account named `support` through the panel or CLI. Run the following in the
+initialized directory; load only your own trusted `.env`:
 
 ```sh
 set -a
 . ./.env
 set +a
-GOBALE_URL='http://127.0.0.1:3000'
+GOBALE_URL="http://127.0.0.1:${APP_PORT:-3000}${APP_BASE_PATH:-}"
 GOBALE_DEVICE='support'
 GOBALE_INSTANCE=$(curl --silent --show-error --fail-with-body --user "$APP_BASIC_AUTH" \
   "$GOBALE_URL/devices" | jq -er --arg id "$GOBALE_DEVICE" \
   '.results[] | select(.id == $id) | .instance_id')
+
 gobale_api() {
   curl --silent --show-error --fail-with-body --user "$APP_BASIC_AUTH" \
-    -H "X-Device-Id: $GOBALE_DEVICE" -H "X-Device-Instance: $GOBALE_INSTANCE" "$@"
+    -H "X-Device-Id: $GOBALE_DEVICE" \
+    -H "X-Device-Instance: $GOBALE_INSTANCE" "$@"
 }
 
-curl --fail-with-body "$GOBALE_URL/health"
-gobale_api "$GOBALE_URL/ready"
-gobale_api "$GOBALE_URL/devices/support/status"
+gobale_api "$GOBALE_URL/devices/$GOBALE_DEVICE/status"
 ```
 
-Only `/health` is public. Readiness checks storage, not every account. Inspect
-both transport and recovery: a connected socket alone does not mean the inbox is
-fully recovered. Initial connection establishes a current baseline; it does not
-automatically import the entire old inbox.
+A connection alias such as `support` is your local name. Its `instance_id`
+identifies that specific connection lifetime. Store both in your backend's
+channel record; deleting and recreating the alias produces a different instance.
+Fetch the instance during setup, not automatically after a stale-reference error.
 
-Select devices explicitly with the route's device ID, `X-Device-Id`, or `device_id`
-query, even with one registered device. Multiple selectors must agree. Every
-account-scoped read and mutation also requires `X-Device-Instance` from creation
-or the device list. Missing instance is 400; a replaced instance is 409. Consumers
-must keep this identity in their channel record, not refresh it automatically
-when an old request fails. An invalid selector never falls back. Data belongs to an immutable connection: reusing a
-deleted alias does not inherit its old jobs, history or media. Every request stays
-bound to its originally selected connection, including while its body is read;
-deleting that connection never redirects the request to a replacement account.
+Every account-scoped request must select the account and include its saved
+`X-Device-Instance`. Path, header and query selectors must agree. A missing selector
+or instance returns 400; an instance that has been replaced returns 409. This
+prevents an old request from acting on a different account after alias reuse.
 
-For application-managed login, use `POST /devices` with a persisted
-`Idempotency-Key` and the initial webhook configuration. Connection, configuration
-and key commit atomically: 201 creates, 200 replays the same connection, and a
-changed request or retired connection returns 409. Then use `/devices/{device_id}/login`
-with `phone`, `/devices/{device_id}/login/code` with `challenge_id` and `code`, and
-`/devices/{device_id}/login/password` with the challenge and password if requested.
-Keep codes in request bodies. A
-device already bound to one account cannot be used for a different account.
-All REST sends and schedule creation also require a stable `Idempotency-Key`.
-See the [consumer integration contract](docs/consumer-integration.md) for channel
-ownership, webhook acceptance and the differences from a GOWA integration.
+### Send a message and inspect its result
 
-### Messages and history
-
-Use account-visible identifiers from contacts or conversations. Provider IDs are
-JSON **strings**; message IDs may be signed int64 values, so preserve their sign.
+Find a recipient in the selected account's contacts or conversations:
 
 ```sh
 gobale_api "$GOBALE_URL/user/my/contacts"
 gobale_api "$GOBALE_URL/chats?source=remote&limit=20"
-gobale_api "$GOBALE_URL/chat/user:REPLACE_WITH_USER_ID/history?limit=20"
 
 gobale_api -H 'Content-Type: application/json' \
   -H 'Idempotency-Key: support-message-0001' \
-  --data '{"peer":{"type":"user","id":"REPLACE_WITH_USER_ID"},"message":"Hello from our support team"}' \
+  --data '{"peer":{"type":"user","id":"REPLACE_WITH_USER_ID"},"message":"Hello from GoBale"}' \
   "$GOBALE_URL/send/message"
 
 gobale_api "$GOBALE_URL/send/operations/REPLACE_WITH_SEND_ID"
+gobale_api "$GOBALE_URL/send/operations?state=unknown&limit=20"
 ```
 
-Save a key once per logical send and reuse it with the identical payload when
-retrying; changed content under the same key returns `409`. A `200` confirms
-provider acceptance, not delivery/read. After about 40 seconds a pending request
-can return `202` with `results.send_id`. Inspect the operation with the same
-device. Never create another send/key merely because its state is `unknown`.
+Keep all provider IDs as **strings**, including signed message/file IDs. The
+response uses a `code`, `message`, `results` envelope. Save `results.send_id` to
+inspect the durable operation later.
 
-Remote history uses millisecond date cursors, not offsets. Preserve original
-message dates with their IDs for reads and forwards. Local `/messages` returns
-stored events, including edits/deletions, rather than a projected transcript.
-For forward/backward history, continue with `results.next_date` and deduplicate
-message IDs at timestamp boundaries. If a full page cannot advance the cursor,
-it omits `next_date` and reports `incomplete: true` with
-`pagination_stop_reason: "non_advancing_cursor"`. Keep that page and stop automatic
-pagination; adjusting its date yourself could skip messages. Exhaustive history
-export remains unproven. Around mode returns bounds, not a continuation cursor.
-Phone lookup can fail due to discoverability; it never silently imports contacts.
+Choose one idempotency key per logical send, persist it before submitting, and
+reuse it with exactly the same content if the response is lost. Changed content
+under that key returns 409. Keys are scoped to the connection; immediate sends
+and schedules share the same namespace.
 
-### Media, voice and avatars
+| Outcome | Meaning and next step |
+| --- | --- |
+| `200`, `succeeded` | Bale accepted the operation. This is not a recipient delivery/read receipt. |
+| `202`, `queued` or `sending` | Work is durably accepted and still pending. Poll the same operation. |
+| `202`, `unknown` | The provider result is uncertain. Do not create a new key to resend it. |
+| `429`, queue full | Admission was rejected. Slow down and retry the same logical request/key later. |
+| Error with `results.send_id` | Preserve the operation ID and inspect its recorded failure. |
 
-Upload a raw body to the selected device; use the returned `results.id` to send:
+The synchronous send wait is up to 40 seconds. A request ending or timing out
+after durable acceptance does not cancel the work.
+
+### Upload and send media
+
+Upload a file as a raw body, then use its returned `results.id`:
 
 ```sh
-gobale_api -H 'Content-Type: audio/ogg' -H 'X-Filename: reply.ogg' \
-  --data-binary @reply.ogg "$GOBALE_URL/media"
-gobale_api -H 'Content-Type: application/json' \
-  -H 'Idempotency-Key: support-voice-0001' \
-  --data '{"peer":{"type":"user","id":"REPLACE_WITH_USER_ID"},"media_id":"REPLACE_WITH_MEDIA_ID"}' \
-  "$GOBALE_URL/send/voice"
+gobale_api -H 'Content-Type: image/jpeg' -H 'X-Filename: photo.jpg' \
+  --data-binary @photo.jpg "$GOBALE_URL/media"
 
+gobale_api -H 'Content-Type: application/json' \
+  -H 'Idempotency-Key: support-photo-0001' \
+  --data '{"peer":{"type":"user","id":"REPLACE_WITH_USER_ID"},"media_id":"REPLACE_WITH_MEDIA_ID","message":"A photo from GoBale"}' \
+  "$GOBALE_URL/send/image"
+```
+
+Use `/send/file`, `/send/audio`, `/send/video` or `/send/voice` for the corresponding
+media type. Use `message` for a media caption. **Voice notes require a complete
+mono/stereo Ogg Opus stream**; duration
+comes from the file, and GoBale does not transcode MP3, WAV or WebM. Uploaded media
+belong to one connection and cannot be reused by another.
+
+Download received attachments through the authenticated API when the event says
+`download_supported: true`:
+
+```sh
 gobale_api --output received-file \
   "$GOBALE_URL/message/REPLACE_WITH_MESSAGE_ID/download?peer=user:REPLACE_WITH_USER_ID"
 gobale_api --output avatar-image \
   "$GOBALE_URL/user/avatar?peer=user:REPLACE_WITH_USER_ID&size=small"
 ```
 
-`/send/audio` sends audio/music; `/send/voice` sends a native voice note. Native
-voice requires a complete mono/stereo Ogg Opus stream, with duration derived from
-the bytes in milliseconds. MP3, WAV and WebM need conversion before upload.
-Uploading stores a file; format validation and provider acceptance happen during
-send. There is no automatic transcoding or waveform generation.
+Check the HTTP result and content type before displaying downloaded bytes. Provider
+file URLs and access hashes stay private; forward neither credentials nor cookies
+to a URL found inside a message.
 
-Avatars return JPEG/PNG/GIF bytes on success, and JSON errors otherwise. Check the
-HTTP result and content type before display. `small` is the default; `large` can
-fall back to another available rendition. `AVATAR_NOT_FOUND` covers absent/private
-photos. Downloads are capped at 8 MiB, the configured media limit, 8192 pixels per
-side and 16,777,216 total pixels; GIF validation covers its first frame. Provider
-file hashes and signed URLs stay internal. Media IDs never cross device scope.
-
-### Scheduled messages
+### Schedule a message
 
 ```sh
 gobale_api -H 'Content-Type: application/json' \
-  -H 'Idempotency-Key: demo-001' \
+  -H 'Idempotency-Key: support-schedule-0001' \
   --data '{"peer":{"type":"user","id":"REPLACE_WITH_USER_ID"},"kind":"text","message":"Scheduled follow-up","scheduled_at":"2030-01-15T08:00:00+03:30","timezone":"Asia/Tehran","recurrence":"daily","occurrence_limit":3}' \
   "$GOBALE_URL/send/schedules"
+
+gobale_api "$GOBALE_URL/send/schedules?state=active&limit=20"
+gobale_api "$GOBALE_URL/send/schedules/REPLACE_WITH_SCHEDULE_ID/occurrences"
 ```
 
-Use a future RFC3339 timestamp and IANA timezone. Recurrence supports `none`,
-`daily`, `weekly` and `monthly`; `once` is also accepted as an alias for `none`.
-Omitted or empty recurrence means one occurrence. Surrounding timestamp whitespace
-is ignored for execution, including already-stored schedules; original request
-values remain unchanged for idempotency. Pause/resume/cancel by the schedule `id`.
-Media schedules use the appropriate `kind` and local `media_id`. A schedule
-occurrence and its outbox entry commit together. Cancelling a schedule stops
-future occurrences, not work already accepted by Bale.
+Choose a future RFC3339 timestamp and an IANA timezone. Recurrence supports `none`,
+`daily`, `weekly` and `monthly`; `once` is an alias for `none`. Each occurrence is
+recorded together with its send operation. A `completed` schedule has no future
+occurrences; read each occurrence's operation to learn its send outcome.
+Pause/cancel stops future occurrences, not already-created send operations.
 
-### Webhooks
+### Receive signed webhooks
 
 ```sh
 gobale_api -X PATCH -H 'Content-Type: application/json' \
   --data '{"webhook_url":"https://your-app.example/bale/events","webhook_secret":"REPLACE_WITH_A_RANDOM_SECRET","webhook_events":["message","message.edited","message.deleted"]}' \
-  "$GOBALE_URL/devices/support/webhook"
+  "$GOBALE_URL/devices/$GOBALE_DEVICE/webhook"
+
 gobale_api "$GOBALE_URL/deliveries?limit=20"
 ```
 
-Verify `X-Hub-Signature-256` over the exact raw request body and durably deduplicate
-`event_id` before acknowledging. Delivery is **at least once**. In an event,
-`session_id` is the local device alias and `device_id` is the Bale account ID.
+Verify `X-Hub-Signature-256` over the exact raw body. Match the signed connection
+and account identity to your saved binding, commit the event to a durable inbox,
+and deduplicate retries before returning 2xx. Delivery is **at least once**.
 
-A device webhook overrides global `BALE_WEBHOOK`; an empty URL restores fallback.
-`BALE_WEBHOOK_DEVICE_MERGE_GLOBAL=true` includes both. Empty event filters accept
-all events; secrets are write-only. URL changes pause pending old deliveries;
-explicit replay chooses current destinations. See [Webhook payloads](docs/webhook-payload.md)
-for event examples, signatures and retry handling.
+| Event field | Identifies |
+| --- | --- |
+| `event_id` | The event; stable across retry/replay. |
+| `session_id` | Your local connection alias. |
+| `instance_id` | The immutable connection lifetime on newly stored events. |
+| `device_id` | The Bale account ID, not the local alias. |
 
-## Mini App signing helpers
+A per-account URL overrides global destinations; an empty URL restores fallback.
+`BALE_WEBHOOK_DEVICE_MERGE_GLOBAL=true` enables both. URL changes pause pending
+work for the previous URL; explicit replay selects current destinations.
+[Webhook documentation](docs/webhook-payload.md) covers filters, identity checks,
+signatures, ordering and the tested receiver example.
 
-The standalone Go package `src/pkg/miniapp` accepts at most 63 fields for `Sign`;
-the generated `hash` brings the verified query limit to 64 fields. Both paths
-reject Unicode control characters, duplicate or ambiguous names and malformed
-encoding, while preserving legitimate field whitespace and Unicode. Always use
-`Verify` with expiry checks; locally signing data does not prove provider login.
-
-## Current API
-
-The complete request/response contract is [docs/openapi.yaml](docs/openapi.yaml).
-Use the [read-only API explorer](https://mimalef70.github.io/gobale/) to browse
-schemas; do not enter deployment credentials into a public documentation site.
-The table below lists the public API and browser-session endpoints, grouped
-by their OpenAPI tags. It is an endpoint inventory, not a live-verification score.
-The panel uses a finite set of management aliases under `/ui/api/`; these require
-the browser session and are not a second general-purpose API. Existing integrations
-should continue using the Basic-authenticated paths listed below.
-Typed provider mutations require `Idempotency-Key`; provider permissions still
-apply. Unsupported operations return an explicit error rather than simulated success.
-
-| Group | Operation | Method | URL |
-| --- | --- | --- | --- |
-| Service | List typed operation contracts | `GET` | `/app/capabilities` |
-| Service | Get service version and capabilities | `GET` | `/app/info` |
-| Service | Check service liveness | `GET` | `/health` |
-| Service | Get Prometheus metrics | `GET` | `/metrics` |
-| Service | Run a typed operation | `POST` | `/operations/{operation}` |
-| Service | Check storage readiness | `GET` | `/ready` |
-| Service | Sign in to the administrative panel | `POST` | `/ui/auth/session` |
-| Service | Restore the administrative panel session | `GET` | `/ui/auth/session` |
-| Service | Sign out of the administrative panel | `DELETE` | `/ui/auth/session` |
-| Devices and login | List devices | `GET` | `/app/devices` |
-| Devices and login | Get account connection status | `GET` | `/app/status` |
-| Devices and login | List devices | `GET` | `/devices` |
-| Devices and login | Create a device | `POST` | `/devices` |
-| Devices and login | Read local status and delivery counts for all devices | `GET` | `/devices/overview` |
-| Devices and login | Delete a device | `DELETE` | `/devices/{device_id}` |
-| Devices and login | Get a device | `GET` | `/devices/{device_id}` |
-| Devices and login | Read the current login challenge metadata | `GET` | `/devices/{device_id}/login` |
-| Devices and login | Start phone login | `POST` | `/devices/{device_id}/login` |
-| Devices and login | Submit a login code | `POST` | `/devices/{device_id}/login/code` |
-| Devices and login | Submit a two-step password | `POST` | `/devices/{device_id}/login/password` |
-| Devices and login | Log out a device | `POST` | `/devices/{device_id}/logout` |
-| Devices and login | Reconnect a device | `POST` | `/devices/{device_id}/reconnect` |
-| Devices and login | Get device connection status | `GET` | `/devices/{device_id}/status` |
-| Account | Change the account bio | `POST` | `/user/about` |
-| Account | Change the account avatar | `POST` | `/user/avatar` |
-| Account | Block a user | `POST` | `/user/block` |
-| Account | List blocked users | `GET` | `/user/blocked` |
-| Account | Get the connected account profile | `GET` | `/user/info` |
-| Account | Change the account display name | `POST` | `/user/name` |
-| Account | Get privacy rules | `GET` | `/user/privacy` |
-| Account | Update a privacy rule | `POST` | `/user/privacy` |
-| Account | Get privacy status | `GET` | `/user/privacy/status` |
-| Account | Change the account display name | `POST` | `/user/pushname` |
-| Account | List account sessions | `GET` | `/user/sessions` |
-| Account | Terminate an account session | `POST` | `/user/sessions/terminate` |
-| Account | Terminate other account sessions | `POST` | `/user/sessions/terminate-others` |
-| Account | Get account settings | `GET` | `/user/settings` |
-| Account | Update an account setting | `POST` | `/user/settings` |
-| Account | Unblock a user | `POST` | `/user/unblock` |
-| Account | Change the account username | `POST` | `/user/username` |
-| Account | Check username availability | `GET` | `/user/username/check` |
-| Contacts | Download a contact avatar | `GET` | `/user/avatar` |
-| Contacts | Resolve a phone number to a user | `GET` | `/user/check` |
-| Contacts | Add a contact | `POST` | `/user/contacts/add` |
-| Contacts | Import phone contacts | `POST` | `/user/contacts/import` |
-| Contacts | Remove a contact | `POST` | `/user/contacts/remove` |
-| Contacts | Rename a contact | `POST` | `/user/contacts/rename` |
-| Contacts | Reset imported contacts | `POST` | `/user/contacts/reset` |
-| Contacts | List contacts | `GET` | `/user/my/contacts` |
-| Contacts | Get user profiles | `GET` | `/user/profiles` |
-| Contacts | Search contacts | `GET` | `/user/search` |
-| Conversations | Clear conversation history | `POST` | `/chat/clear` |
-| Conversations | Delete a conversation | `POST` | `/chat/delete` |
-| Conversations | Load conversation history from Bale | `GET` | `/chat/{chat_jid}/history` |
-| Conversations | List stored conversation events | `GET` | `/chat/{chat_jid}/messages` |
-| Conversations | List conversations | `GET` | `/chats` |
-| Send messages | Send an audio file | `POST` | `/send/audio` |
-| Send messages | Send a contact card | `POST` | `/send/contact` |
-| Send messages | Send a file | `POST` | `/send/file` |
-| Send messages | Send an image | `POST` | `/send/image` |
-| Send messages | Send a location | `POST` | `/send/location` |
-| Send messages | Send a text message | `POST` | `/send/message` |
-| Send messages | Create and send a poll | `POST` | `/send/poll` |
-| Send messages | Send a sticker | `POST` | `/send/sticker` |
-| Send messages | Send a keyboard template (experimental) | `POST` | `/send/template` |
-| Send messages | Send a video | `POST` | `/send/video` |
-| Send messages | Send a native voice note | `POST` | `/send/voice` |
-| Send operations | Get a send operation | `GET` | `/send/operations/{send_id}` |
-| Media | Upload media to a device | `POST` | `/media` |
-| Media | Fetch media from a public URL | `POST` | `/media/fetch` |
-| Media | Download a local media file | `GET` | `/media/{media_id}` |
-| Media | Download a message attachment | `GET` | `/message/{message_id}/download` |
-| Schedules | List message schedules | `GET` | `/send/schedules` |
-| Schedules | Create a message schedule | `POST` | `/send/schedules` |
-| Schedules | Get a message schedule | `GET` | `/send/schedules/{schedule_id}` |
-| Schedules | Cancel a message schedule | `POST` | `/send/schedules/{schedule_id}/cancel` |
-| Schedules | Pause a message schedule | `POST` | `/send/schedules/{schedule_id}/pause` |
-| Schedules | Resume a message schedule | `POST` | `/send/schedules/{schedule_id}/resume` |
-| Webhooks | List webhook deliveries | `GET` | `/deliveries` |
-| Webhooks | Get a webhook delivery | `GET` | `/deliveries/{delivery_id}` |
-| Webhooks | Replay an event to current destinations | `POST` | `/deliveries/{delivery_id}/replay` |
-| Webhooks | Retry a failed webhook delivery | `POST` | `/deliveries/{delivery_id}/retry` |
-| Webhooks | Get device webhook settings | `GET` | `/devices/{device_id}/webhook` |
-| Webhooks | Update device webhook settings | `PATCH` | `/devices/{device_id}/webhook` |
-| Message actions | Pin a message | `POST` | `/message/pin` |
-| Message actions | List pinned messages | `GET` | `/message/pins` |
-| Message actions | Remove a message reaction | `POST` | `/message/reaction/remove` |
-| Message actions | Set a message reaction | `POST` | `/message/reaction/set` |
-| Message actions | List users for a reaction | `GET` | `/message/reaction/users` |
-| Message actions | Get message reactions | `GET` | `/message/reactions` |
-| Message actions | Acknowledge received messages | `POST` | `/message/received` |
-| Message actions | Unpin a message | `POST` | `/message/unpin` |
-| Message actions | Unpin all conversation messages | `POST` | `/message/unpin-all` |
-| Message actions | Upvote a message | `POST` | `/message/upvote` |
-| Message actions | Remove a message upvote | `POST` | `/message/upvote/remove` |
-| Message actions | List message upvoters | `GET` | `/message/upvoters` |
-| Message actions | Get message view counts | `GET` | `/message/views` |
-| Message actions | Increment message view counts | `POST` | `/message/views/increment` |
-| Message actions | Delete a message | `POST` | `/message/{message_id}/delete` |
-| Message actions | Forward a message | `POST` | `/message/{message_id}/forward` |
-| Message actions | Set a message reaction | `POST` | `/message/{message_id}/reaction` |
-| Message actions | Mark messages read through a timestamp | `POST` | `/message/{message_id}/read` |
-| Message actions | Revoke a message (not supported) | `POST` | `/message/{message_id}/revoke` |
-| Message actions | Edit a text message | `POST` | `/message/{message_id}/update` |
-| Groups | Create a group | `POST` | `/group` |
-| Groups | List group administrators | `GET` | `/group/admins` |
-| Groups | List banned group members | `GET` | `/group/banned` |
-| Groups | Get default group permissions | `GET` | `/group/default-permissions` |
-| Groups | Update default group permissions | `POST` | `/group/default-permissions` |
-| Groups | Change history visibility for new members | `POST` | `/group/history-visibility` |
-| Groups | Get group details | `GET` | `/group/info` |
-| Groups | Get a group invite link | `GET` | `/group/invite-link` |
-| Groups | Revoke a group invite link | `POST` | `/group/invite-link/revoke` |
-| Groups | Join a public group | `POST` | `/group/join-public` |
-| Groups | Join a group by invitation | `POST` | `/group/join-with-link` |
-| Groups | Leave a group | `POST` | `/group/leave` |
-| Groups | Change group member visibility | `POST` | `/group/member-visibility` |
-| Groups | Change a group name | `POST` | `/group/name` |
-| Groups | Transfer group ownership | `POST` | `/group/owner` |
-| Groups | List group members | `GET` | `/group/participants` |
-| Groups | Invite users to a group | `POST` | `/group/participants` |
-| Groups | Demote a group administrator | `POST` | `/group/participants/demote` |
-| Groups | Promote a group member | `POST` | `/group/participants/promote` |
-| Groups | Remove a group member | `POST` | `/group/participants/remove` |
-| Groups | Unban a group member | `POST` | `/group/participants/unban` |
-| Groups | Get member permissions | `GET` | `/group/permissions` |
-| Groups | Update member permissions | `POST` | `/group/permissions` |
-| Groups | Change a group photo | `POST` | `/group/photo` |
-| Groups | Remove a group photo | `POST` | `/group/photo/remove` |
-| Groups | Pin a group message | `POST` | `/group/pin` |
-| Groups | List pinned group messages | `GET` | `/group/pins` |
-| Groups | Preview a group invitation | `GET` | `/group/preview` |
-| Groups | Update group restrictions | `POST` | `/group/restriction` |
-| Groups | Change a group description | `POST` | `/group/topic` |
-| Groups | Unpin a group message | `POST` | `/group/unpin` |
-| Groups | Unpin all group messages | `POST` | `/group/unpin-all` |
-| Groups | Change a group username | `POST` | `/group/username` |
-| Groups | List joined groups | `GET` | `/user/my/groups` |
-| Channels | Create a channel | `POST` | `/channel` |
-| Channels | List channels | `GET` | `/channels` |
-| Presence | Get contact presence | `GET` | `/presence/contacts` |
-| Presence | Get group presence | `GET` | `/presence/group` |
-| Presence | Get the group online count | `GET` | `/presence/group/count` |
-| Presence | Set account online presence | `POST` | `/presence/online` |
-| Presence | Stop a typing or activity signal | `POST` | `/presence/stop` |
-| Presence | Send a typing or activity signal | `POST` | `/presence/typing` |
-| Presence | Get user presence | `GET` | `/presence/users` |
-| Presence | Send a typing or activity signal | `POST` | `/send/chat-presence` |
-| Presence | Set account online presence | `POST` | `/send/presence` |
-| Folders | List conversation folders | `GET` | `/folders` |
-| Folders | Create a conversation folder | `POST` | `/folders` |
-| Folders | Delete a conversation folder | `POST` | `/folders/delete` |
-| Folders | Update a conversation folder | `POST` | `/folders/edit` |
-| Polls | Close a poll | `POST` | `/poll/close` |
-| Polls | Get detailed poll results | `GET` | `/poll/full-results` |
-| Polls | Get poll results | `GET` | `/poll/results` |
-| Polls | Submit or retract a poll vote | `POST` | `/poll/vote` |
-| Stickers | Get a sticker collection | `GET` | `/sticker/collection` |
-| Stickers | Add a sticker collection | `POST` | `/sticker/collection/add` |
-| Stickers | Remove a sticker collection | `POST` | `/sticker/collection/remove` |
-| Stickers | List sticker collections | `GET` | `/sticker/collections` |
-| Stories | Get a story | `GET` | `/story` |
-| Stories | Publish a text or image story | `POST` | `/story/add` |
-| Stories | Delete a story | `POST` | `/story/delete` |
-| Stories | List the available story feed | `GET` | `/story/list` |
-| Stories | React to a story | `POST` | `/story/react` |
-| Stories | List story viewers | `GET` | `/story/viewers` |
-| Reports | Dismiss a report prompt | `POST` | `/report/dismiss` |
-| Reports | Report messages | `POST` | `/report/messages` |
-| Reports | Report a user or group | `POST` | `/report/peer` |
-| Reports | Report stories | `POST` | `/report/story` |
-| Mini Apps | Invoke a Mini App method | `POST` | `/miniapp/custom` |
-| Mini Apps | Send Mini App data | `POST` | `/miniapp/data` |
-| Mini Apps | Get Mini App authentication data | `GET` | `/miniapp/hash` |
-| Mini Apps | Get a Mini App menu | `GET` | `/miniapp/menu` |
-| Mini Apps | Get a signed Mini App launch URL | `GET` | `/miniapp/url` |
-| Bot callbacks | Send a bot button callback | `POST` | `/bot/callback` |
-| Link previews | Get a link preview | `GET` | `/link/summary` |
-| Wallet information | Get legacy wallet balance information | `GET` | `/wallet/kifpools` |
-| Wallet information | List wallet balances | `GET` | `/wallet/list` |
-
-## Operations and development
-
-Run a single process per data directory. Stop it cleanly before a cold backup,
-copy the database and required media, and preserve the encryption key separately.
-Do not run an original and restored copy against the same account simultaneously.
-There is no automatic history/media TTL; deleting a device does not erase its
-audit history. Monitor disk space, recovery gaps, unknown sends and failed deliveries.
-See [Operations](docs/operations.md) for deployment, backup/restore and retention.
-
-Normal tests use fake providers and temporary databases; they do not contact Bale.
-Run checks from the Go module directory:
+### Search local events
 
 ```sh
-cd src
-go test ./...
-go test -race ./...
-go test -tags purego ./...
-go vet ./...
+gobale_api --get --data-urlencode 'search=follow-up' \
+  --data-urlencode 'peer=user:REPLACE_WITH_USER_ID' \
+  --data-urlencode 'limit=20' "$GOBALE_URL/events"
 ```
 
-Development architecture, invariants, protocol evidence and acceptance work are
-maintained in [AGENTS.md](https://github.com/mimalef70/gobale/blob/main/AGENTS.md).
+Local queries search events already stored by GoBale. Edits and deletions remain
+separate events; results are not a reconstructed final conversation. Search is a
+literal Unicode substring: `%` and `_` are ordinary characters. It does not ask
+Bale to import the full historical inbox. For provider history use
+`GET /chat/{peer}/history` and follow the documented cursor/stop conditions.
+
+For application-managed account creation and login, start with `POST /devices`
+using a persisted `Idempotency-Key`, save its returned `id` and `instance_id`,
+and follow the phone/code/password challenge. Initial webhook configuration can
+be committed with the connection in that same request. The
+[consumer integration guide](docs/consumer-integration.md) covers this full flow,
+permissions, error handling and durable submissions.
+
+## Important behavior
+
+- **Connection is not synchronization.** Authentication, transport and recovery are separate states. Inspect gaps; initial login does not import the complete old inbox.
+- **An uncertain send stays uncertain.** `unknown` work is never blindly resent. Text similarity or an unverified own-message event is not proof of success.
+- **Logout is not data erasure.** Logout/deletion cancels unsent work and removes local sessions; ambiguous operations and audit history remain. Panel sign-out only ends the browser session.
+- **History and registered media have no automatic expiry.** Only provably owned unused temporary uploads are cleaned. Monitor disk space and make manual backups.
+- **Health and readiness differ.** `/health` is public liveness; authenticated `/ready` checks storage. Neither proves every account is synchronized. `/metrics` is authenticated.
+- **Capacity must be measured.** Worker/queue limits bound resources. Synthetic tests do not guarantee a particular number of live Bale accounts, provider availability or throughput.
+
+## Documentation and support
+
+| Guide | What it covers |
+| --- | --- |
+| [API reference](https://mimalef70.github.io/gobale/) / [OpenAPI YAML](docs/openapi.yaml) | Complete routes, request/response schemas and errors. The hosted reference follows `main`; use the matching release contract. The explorer does not send authenticated requests. |
+| [Consumer integration](docs/consumer-integration.md) | Account ownership, provisioning, login, immutable selection and durable inbox/outbox handling. |
+| [Webhook payloads](docs/webhook-payload.md) | Event examples, filtering, signatures, retry/replay and receiver setup. |
+| [Operations](docs/operations.md) | Full configuration, TLS, Docker, storage, backups, metrics and capacity testing. |
+| [Changelog](CHANGELOG.md) | Published releases and unreleased changes. |
+| [Capability inventory](src/internal/balemeow/testdata/coverage/capabilities.json) | Recorded offline/live evidence and unresolved limitations. |
+| [Support](SUPPORT.md) / [Security](SECURITY.md) | Questions, bug reports and private vulnerability reporting. |
+
+Keep credentials, phone numbers, OTPs, sessions, databases and private messages out
+of public issues. A route's existence is not a claim of live provider compatibility.
+Use accounts and recipients you control when validating an integration.
+
+## Development
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for toolchain and Python environment setup.
+From the repository root, run `make check`, `make race`, `make fuzz` and `make vuln`;
+UI changes also need `make ui-check` and `make ui-e2e`. Normal tests use fake
+providers and temporary databases, not customer accounts.
+
+The standalone Go package `src/pkg/miniapp` provides bounded signing and verification
+helpers. Always verify expiry; local signing proves token possession, not provider
+login. Protocol and architecture invariants are recorded in [AGENTS.md](AGENTS.md).
+
 GoBale is distributed under the [MIT license](LICENCE.txt).
-Keep account credentials, OTPs, sessions, databases and private message
-content out of public issues and commits.

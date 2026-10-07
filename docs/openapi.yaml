@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: GoBale REST API
-  version: 1.0.0
+  version: 2.0.0
   description: Native Go, multi-account Bale gateway. See the README release status and per-operation verification
     for tested provider coverage; the release version does not imply every native operation has been verified. Administrative
     auth grants access to every device; tenant ownership belongs in the consuming application.
@@ -3750,8 +3750,8 @@ paths:
                     type: string
                 webhook_filter:
                   $ref: '#/components/schemas/WebhookFilter'
-                  description: Omit to preserve, {} to clear; null is rejected. Changes affect new events and explicit
-                    replay only.
+                  description: Omit to preserve, {} to clear; null is rejected. A supplied object replaces the entire
+                    filter. Changes affect new events and explicit replay only.
       tags:
       - Devices and login
   /devices/{device_id}/login:
@@ -52736,8 +52736,8 @@ paths:
                     type: string
                 webhook_filter:
                   $ref: '#/components/schemas/WebhookFilter'
-                  description: Omit to preserve, {} to clear; null is rejected. Changes affect new events and explicit
-                    replay only.
+                  description: Omit to preserve, {} to clear; null is rejected. A supplied object replaces the entire
+                    filter. Changes affect new events and explicit replay only.
       tags:
       - Browser administration
   /ui/api/devices/overview:
@@ -55962,7 +55962,8 @@ components:
         message:
           type: string
           maxLength: 65536
-          description: UTF-8 text; runtime limit is 65536 bytes. Required and nonempty for text sends.
+          description: Text body or media caption, supplied through this message field. UTF-8 runtime limit is 65536
+            bytes. Required and nonempty for text sends.
         mentions:
           type: array
           maxItems: 100
@@ -55970,8 +55971,8 @@ components:
           items:
             type: string
             pattern: ^[1-9][0-9]*$
-          description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message or caption;
-            part of the idempotency payload.
+          description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty message field
+            (text body or media caption); part of the idempotency payload.
         reply_message_id:
           type: string
           pattern: ^-?[0-9]+$
@@ -56045,7 +56046,8 @@ components:
         message:
           type: string
           maxLength: 65536
-          description: UTF-8 text; runtime limit is 65536 bytes. Required and nonempty for text sends.
+          description: Text body or media caption, supplied through this message field. UTF-8 runtime limit is 65536
+            bytes. Required and nonempty for text sends.
         mentions:
           type: array
           maxItems: 100
@@ -56053,8 +56055,8 @@ components:
           items:
             type: string
             pattern: ^[1-9][0-9]*$
-          description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message or caption;
-            part of the idempotency payload.
+          description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty message field
+            (text body or media caption); part of the idempotency payload.
         reply_message_id:
           type: string
           pattern: ^-?[0-9]+$
@@ -56558,8 +56560,8 @@ components:
             type: string
         webhook_filter:
           $ref: '#/components/schemas/WebhookFilter'
-          description: Omit to preserve, {} to clear; null is rejected. Changes affect new events and explicit replay
-            only.
+          description: Omit to preserve, {} to clear; null is rejected. A supplied object replaces the entire filter.
+            Changes affect new events and explicit replay only.
     Login:
       type: object
       required:
@@ -56688,9 +56690,10 @@ components:
             - incoming
             - outgoing
             - unknown
-      description: OR within each list, AND across fields; exclusions win. Missing metadata fails include constraints.
-        IDs must be canonical positive uint32 strings. Empty lists impose no constraint. Device destination only;
-        existing queued deliveries are unchanged.
+      description: OR within each list, AND across fields; exclusions win. Missing peer/sender metadata cannot satisfy
+        corresponding include lists. Missing or invalid direction provenance is unknown and matches only an explicit
+        unknown direction include. IDs must be canonical positive uint32 strings. Empty lists impose no constraint.
+        Device destination only; existing queued deliveries are unchanged.
       additionalProperties: false
     WebhookConfig:
       type: object
@@ -56970,7 +56973,8 @@ components:
         message:
           type: string
           maxLength: 65536
-          description: UTF-8 text; runtime limit is 65536 bytes. Required and nonempty for text sends.
+          description: Text body or media caption, supplied through this message field. UTF-8 runtime limit is 65536
+            bytes. Required and nonempty for text sends.
         mentions:
           type: array
           maxItems: 100
@@ -56978,8 +56982,8 @@ components:
           items:
             type: string
             pattern: ^[1-9][0-9]*$
-          description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message or caption;
-            part of the idempotency payload.
+          description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty message field
+            (text body or media caption); part of the idempotency payload.
         reply_message_id:
           type: string
           pattern: ^-?[0-9]+$

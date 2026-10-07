@@ -21,8 +21,8 @@ problem and prepare a fix before public details are released.
 Security fixes target the latest published release. Older releases and
 prereleases do not receive separate maintenance branches. See
 [releases](https://github.com/mimalef70/gobale/releases) for current versions and
-release-specific limitations. Version 1.0 does not imply a security audit or a
-long-term support commitment.
+release-specific limitations. A stable version does not imply a security audit
+or a long-term support commitment.
 
 ## Deployment boundaries
 
