@@ -150,7 +150,7 @@ func decodeEvents(account string, data []byte) ([]domains.Event, error) {
 		}
 		body := decoratedPayload(msg.Message, msg.QuotedMessage, msg.Previous, msg.Thread, msg.GroupedId, msg.AuthorSign)
 		sender, direction := eventActor(account, int64(msg.SenderId))
-		event := domains.Event{Type: "message", AccountID: account, Peer: peer, MessageID: strconv.FormatInt(msg.Rid, 10), SenderID: sender, Direction: direction, Time: time.UnixMilli(msg.Date).UTC(), Payload: body, Media: providerMedia(msg.Message)}
+		event := domains.Event{Type: "message", AccountID: account, Peer: peer, MessageID: strconv.FormatInt(msg.Rid, 10), SenderID: sender, Direction: direction, Time: time.UnixMilli(msg.Date).UTC(), Payload: body, Media: messageMedia(msg.Message, msg.QuotedMessage)}
 		event.ID = eventHash(account + "|message|" + messageIdentityPeer(peer) + "|" + event.MessageID)
 		events = append(events, event)
 	}
@@ -196,6 +196,9 @@ func decodeEvents(account string, data []byte) ([]domains.Event, error) {
 		// may contain new credential fields). Their fingerprint is stable for replay.
 		id := eventHash(account + "|unsupported|" + string(data))
 		events = append(events, domains.Event{ID: id, Type: "protocol.unsupported_update", AccountID: account, Direction: "unknown", Time: time.Now().UTC(), Payload: json.RawMessage(`{"supported":false}`)})
+	}
+	for i := range events {
+		projectEventMessage(&events[i])
 	}
 	return events, nil
 }

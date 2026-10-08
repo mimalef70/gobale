@@ -146,6 +146,21 @@ func (c *Client) recoverRoutes(ctx context.Context, conn *connection) error {
 		if decode(data, response) != nil || len(response.Routes) > len(states) || len(response.Users)+len(response.Groups) > maxRoutes {
 			return updateFault("RECOVERY_RESPONSE_INVALID")
 		}
+		// References accompanying this page must be available before its events
+		// are enriched and durably accepted. Validate all refs before caching any.
+		for _, refs := range [][]*wire.PeerRef{response.Users, response.Groups} {
+			for _, ref := range refs {
+				if ref == nil || ref.Id == 0 {
+					return updateFault("RECOVERY_RESPONSE_INVALID")
+				}
+			}
+		}
+		for _, ref := range response.Users {
+			c.rememberRef("user", ref)
+		}
+		for _, ref := range response.Groups {
+			c.rememberRef("group", ref)
+		}
 		seen := map[string]bool{}
 		for _, diff := range response.Routes {
 			if diff.State == nil || diff.State.Group == nil {
@@ -208,18 +223,6 @@ func (c *Client) recoverRoutes(ctx context.Context, conn *connection) error {
 		}
 		if len(seen) != len(requested) {
 			return updateFault("RECOVERY_RESPONSE_INVALID")
-		}
-		for _, r := range response.Users {
-			if r.Id == 0 {
-				return updateFault("RECOVERY_RESPONSE_INVALID")
-			}
-			c.rememberRef("user", r)
-		}
-		for _, r := range response.Groups {
-			if r.Id == 0 {
-				return updateFault("RECOVERY_RESPONSE_INVALID")
-			}
-			c.rememberRef("group", r)
 		}
 	}
 	if len(pending) > 0 {

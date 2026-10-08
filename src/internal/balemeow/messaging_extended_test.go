@@ -153,11 +153,11 @@ func TestExtendedPinnedMessagesPreserveForwardMetadata(t *testing.T) {
 				Kind  string `json:"kind"`
 				Quote struct {
 					MessageID string `json:"message_id"`
-				} `json:"quoted_message"`
+				} `json:"forwarded_from"`
 			} `json:"payload"`
 		} `json:"messages"`
 	}
-	if err := json.Unmarshal(out, &body); err != nil || len(body.Messages) != 1 || body.Messages[0].Payload.Kind != "forward" || body.Messages[0].Payload.Quote.MessageID != "-9007199254740993" {
+	if err := json.Unmarshal(out, &body); err != nil || len(body.Messages) != 1 || body.Messages[0].Payload.Kind != "text" || body.Messages[0].Payload.Quote.MessageID != "-9007199254740993" {
 		t.Fatalf("forward metadata lost: %s (%v)", out, err)
 	}
 }

@@ -123,6 +123,7 @@ type Event struct {
 	Direction  string          `json:"direction,omitempty"`
 	Time       time.Time       `json:"timestamp"`
 	Payload    json.RawMessage `json:"payload"`
+	Message    *Message        `json:"message,omitempty"`
 	Checkpoint string          `json:"-"`
 	Media      *ProviderMedia  `json:"-"`
 }

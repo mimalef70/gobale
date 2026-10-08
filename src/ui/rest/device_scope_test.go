@@ -95,6 +95,7 @@ func TestHTTPAccountSelectionSurvivesAliasReuse(t *testing.T) {
 		{"login-password", "POST", "/devices/shared/login/password", `{"challenge_id":"synthetic","password":"synthetic"}`, false},
 		{"webhook", "PATCH", "/devices/shared/webhook", `{"webhook_url":"https://example.invalid/events","webhook_secret":"synthetic"}`, false},
 		{"media-upload", "POST", "/media", `synthetic media`, true},
+		{"multipart-send", "POST", "/send/file", "--scope\r\nContent-Disposition: form-data; name=\"request\"\r\n\r\n{\"peer\":{\"type\":\"user\",\"id\":\"42\"}}\r\n--scope\r\nContent-Disposition: form-data; name=\"file\"; filename=\"synthetic.txt\"\r\nContent-Type: text/plain\r\n\r\nsynthetic media\r\n--scope--\r\n", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var identities, calls atomic.Int64
@@ -128,7 +129,11 @@ func TestHTTPAccountSelectionSurvivesAliasReuse(t *testing.T) {
 			if tc.header {
 				header += "X-Device-Id: shared\r\n"
 			}
-			_, err = fmt.Fprintf(conn, "%s %s HTTP/1.1\r\nHost: localhost\r\nAuthorization: Basic dGVzdDpwYXNzd29yZA==\r\n%sContent-Type: application/json\r\nIdempotency-Key: scope-regression\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n", tc.method, tc.path, header)
+			contentType := "application/json"
+			if tc.name == "multipart-send" {
+				contentType = "multipart/form-data; boundary=scope"
+			}
+			_, err = fmt.Fprintf(conn, "%s %s HTTP/1.1\r\nHost: localhost\r\nAuthorization: Basic dGVzdDpwYXNzd29yZA==\r\n%sContent-Type: %s\r\nIdempotency-Key: scope-regression\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n", tc.method, tc.path, header, contentType)
 			require.NoError(t, err)
 			// A chunked body is streamed: the second socket read occurs after the
 			// handler has selected the account, while its body is still pending.
@@ -167,6 +172,9 @@ func TestHTTPAccountSelectionSurvivesAliasReuse(t *testing.T) {
 			current, err := svc.GetDevice(ctx, replacement.ID)
 			require.NoError(t, err)
 			require.Empty(t, current.Webhook.URL)
+			if tc.name == "multipart-send" {
+				assertUploadFiles(t, srv, 0)
+			}
 		})
 	}
 }

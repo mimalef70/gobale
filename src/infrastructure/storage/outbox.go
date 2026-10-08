@@ -62,6 +62,14 @@ func requestID() (string, error) {
 	return strconv.FormatUint(v, 10), nil
 }
 func (s *Store) enqueueTx(ctx context.Context, tx *sql.Tx, conn string, req domains.SendRequest, key string, limits AdmissionLimits) (domains.Operation, bool, error) {
+	hash, err := requestHash(req)
+	if err != nil {
+		return domains.Operation{}, false, err
+	}
+	return s.enqueueHashedTx(ctx, tx, conn, req, key, limits, hash)
+}
+
+func (s *Store) enqueueHashedTx(ctx context.Context, tx *sql.Tx, conn string, req domains.SendRequest, key string, limits AdmissionLimits, hash string) (domains.Operation, bool, error) {
 	var empty domains.Operation
 	if e := activeTx(ctx, tx, conn); e != nil {
 		return empty, false, e
@@ -69,10 +77,7 @@ func (s *Store) enqueueTx(ctx context.Context, tx *sql.Tx, conn string, req doma
 	if len(key) > 256 {
 		return empty, false, domains.E("INVALID_IDEMPOTENCY_KEY", "idempotency key exceeds 256 bytes", 400)
 	}
-	hash, e := requestHash(req)
-	if e != nil {
-		return empty, false, e
-	}
+	var e error
 	if key != "" {
 		var reserved int
 		e := tx.QueryRowContext(ctx, `SELECT 1 FROM schedule_idempotency WHERE connection_id=? AND idempotency_key=?`, conn, key).Scan(&reserved)

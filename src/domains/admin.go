@@ -51,6 +51,17 @@ type LoginState struct {
 	ServerTime time.Time        `json:"server_time"`
 }
 
+// DeviceStatus is a local snapshot for one immutable account connection.
+// Transport/authentication state alone cannot establish inbox synchronization.
+type DeviceStatus struct {
+	ConnectionStatus
+	DeviceID   string           `json:"device_id"`
+	InstanceID string           `json:"instance_id"`
+	AccountID  string           `json:"account_id"`
+	Challenge  *PublicChallenge `json:"challenge"`
+	ServerTime time.Time        `json:"server_time"`
+}
+
 type WebhookRoutingRule struct {
 	Source           string        `json:"source"`
 	URL              string        `json:"url"`

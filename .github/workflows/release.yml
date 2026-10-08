@@ -1,4 +1,5 @@
 name: Prepare and publish release
+run-name: Release ${{ inputs.tag }}
 
 # Publication is deliberately manual. A tag push only runs the read-only CI.
 on:
@@ -70,6 +71,8 @@ jobs:
           sha = subprocess.check_output(['git', 'rev-parse', 'HEAD'], text=True).strip()
           tagged = subprocess.check_output(['git', 'rev-parse', '--verify', 'refs/tags/' + tag + '^{commit}'], text=True).strip()
           assert sha == tagged, 'Checkout does not match the tag'
+          assert os.environ['GITHUB_REF'] == 'refs/heads/main' and os.environ['GITHUB_SHA'] == sha, 'Dispatch the reviewed tag revision from main; workflow and release code must match'
+          subprocess.run(['git', 'merge-base', '--is-ancestor', sha, 'origin/main'], check=True)
           runs = json.loads(subprocess.check_output(['gh', 'run', 'list', '--workflow', 'ci.yml', '--commit', sha, '--event', 'push', '--limit', '1', '--json', 'status,conclusion,headSha'], text=True))
           assert runs and runs[0]['headSha'] == sha and runs[0]['status'] == 'completed' and runs[0]['conclusion'] == 'success', 'Latest push CI for this exact revision must finish successfully before dispatch'
           subprocess.run(['python3', 'scripts/release_notes.py', '--version', tag], check=True, stdout=subprocess.DEVNULL)
@@ -166,6 +169,9 @@ jobs:
             ${{ env.DOCKERHUB_IMAGE }}:${{ inputs.tag }}
           provenance: mode=max
           sbom: true
+          build-args: |
+            VERSION=${{ needs.prepare.outputs.version }}
+            REVISION=${{ needs.prepare.outputs.sha }}
           labels: |
             org.opencontainers.image.title=GoBale
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
@@ -234,3 +240,47 @@ jobs:
           subprocess.run(['gh', 'release', 'upload', tag, *archives, 'dist/SHA256SUMS', 'dist/manifest.json'], check=True)
           subprocess.run(['gh', 'release', 'edit', tag, '--draft=false', *publication_flags], check=True)
           PY
+
+
+  verify-public:
+    name: Public installation (${{ matrix.arch }})
+    needs: [prepare, image, release]
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ needs.prepare.outputs.sha }}
+          persist-credentials: false
+      - name: Verify anonymous assets, exact tag revision and both public registry indexes
+        env:
+          RELEASE_TAG: ${{ inputs.tag }}
+          EXPECTED_SHA: ${{ needs.prepare.outputs.sha }}
+          IMAGE_DIGEST: ${{ needs.image.outputs.digest }}
+        run: python3 scripts/verify_release.py --tag "$RELEASE_TAG" --sha "$EXPECTED_SHA" --digest "$IMAGE_DIGEST" --output "$RUNNER_TEMP/public-release.json"
+      - name: Pull anonymously and verify clean-storage restart on the native architecture
+        env:
+          IMAGE_DIGEST: ${{ needs.image.outputs.digest }}
+          DOCKER_CONFIG: ${{ runner.temp }}/gobale-anonymous-docker
+        run: |
+          mkdir -p "$DOCKER_CONFIG"
+          for image in "$GHCR_IMAGE" "$DOCKERHUB_IMAGE"; do
+            docker pull "$image@$IMAGE_DIGEST"
+            python3 scripts/docker_smoke.py "$image@$IMAGE_DIGEST"
+          done
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: public-verification-${{ matrix.arch }}
+          path: ${{ runner.temp }}/public-release.json
+          if-no-files-found: error
+          retention-days: 30

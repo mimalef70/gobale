@@ -1,5 +1,9 @@
 # Consumer integration contract
 
+The consumer message projection, multipart sends, receipt validity fields,
+combined status and permanent webhook-failure policy below were introduced in
+2.1.0; use a matching gateway build and contract.
+
 This guide describes the GoBale 2.0 API contract. Atomic keyed provisioning,
 mandatory machine-API instance guards, required send/schedule keys and new-event
 `instance_id` were introduced in [2.0.1](../CHANGELOG.md#201--2026-10-07).
@@ -54,10 +58,15 @@ is not a tenant identifier or a replacement for `instance_id`.
 4. Use `POST /devices/{id}/login` with `phone`, then submit `challenge_id` and
    `code` to `POST /devices/{id}/login/code`. Submit `challenge_id` and `password`
    to `POST /devices/{id}/login/password` only when the
-   state is `awaiting_password`. `GET /devices/{id}/login` restores public
-   challenge metadata for an authorized page refresh. Respect expiry and resend
+   state is `awaiting_password`. `GET /devices/{id}/status` returns public
+   challenge metadata together with auth, transport and recovery state. Respect expiry and resend
    cooldown independently; keep OTPs/passwords out of browser storage and logs.
-5. Read the device after login and persist its `account_id`. A bound device cannot
+5. Read `GET /devices/{id}/status` after login and persist its `account_id`.
+   The same response includes `device_id` (alias), `instance_id`, `auth`,
+   `transport`, `recovery`, nullable `challenge` and `server_time`. It is a local
+   snapshot with no provider RPC or implicit reconnect. `account_id` is empty
+   before the first login; logout retains the account binding. Expired challenges
+   are null and the auth state becomes `auth_required`. A bound device cannot
    change accounts. Keep authentication, transport and recovery states separate:
    `connected` does not mean the inbox has recovered every event.
 
@@ -130,7 +139,10 @@ The gateway overwrites provider-supplied identity with its stored connection.
 Require `X-GoBale-Event-Id` to match the body's `event_id`. Deduplicate by
 `(gateway, instance_id, event_id)`, not the delivery ID. Commit the inbox record
 before returning 2xx and process business effects from durable work afterward.
-If persistence fails, return a non-2xx response so delivery can retry.
+If persistence fails, return 503 so delivery can retry. HTTP 4xx other than
+408/425/429 is permanent: the delivery fails and later events may proceed.
+Use 422 for a permanently unprocessable event, or durably quarantine and return
+2xx. Fix authentication/binding failures before explicitly retrying or replaying.
 If an event arrives before the post-login account binding is committed, defer
 acceptance until that trusted binding is available instead of learning it from
 the incoming event.
@@ -167,8 +179,8 @@ before repeating them. See [retry and replay](webhook-payload.md#retries-changes
 | --- | --- |
 | Authentication | Native phone/OTP flow, optional password challenge, immutable device instance. |
 | Peer identity | Structured `peer: {type,id}` with decimal string IDs. Do not infer phone numbers from peer IDs. |
-| Message events | Envelope `direction` (`incoming`, `outgoing`, or `unknown`) and normalized `payload.kind`, `message`, `caption`, etc. Missing provenance stays unknown. |
-| Receipts | `message.received`, `message.read`, and `message.read_by_me` describe peer/date ranges. Preserve the range; do not fabricate per-message receipt proofs. |
+| Message events | `message` contains display-ready `body`, sender name, identity, reply/edit/forward and media fields; `payload` retains reviewed structured content. Unknown sender/direction remains explicit. |
+| Receipts | `range_status` marks positive ordered bounds as `valid`, zero/missing bounds as `unknown`, and reversed bounds as `invalid`. This is structural validation, not per-message proof; `message_ids_supported` is false. |
 | Send outcomes | Durable operation ID/state, persisted request ID, and eventual provider result; 202 is not completed delivery. |
 | Downloads | Authenticated, connection-scoped binary download through GoBale; no provider URL/hash credentials in public JSON. |
 | Formatting and limits | Validate the selected Bale operation's documented formatting, size and editing contract. |
@@ -187,6 +199,40 @@ credentials to redirects or provider-supplied URLs. Inspect content before stori
 or serving it. Voice sends require validated Ogg Opus through `/send/voice`;
 caller-declared duration or a media-type flag is insufficient. Avatars use the
 separate authenticated `/user/avatar` route.
+
+## Send a file in one request
+
+`POST /send/file`, `/send/image`, `/send/video`, `/send/audio` and `/send/voice`
+also accept `multipart/form-data`: exactly one `request` JSON field and one
+`file` part with its filename and actual MIME type. The request field is limited
+to 128 KiB, the filename to 255 bytes and the file to the configured media limit.
+Omitting the file MIME defaults to `application/octet-stream`. Keep the same account and
+instance headers and a persisted `Idempotency-Key`. For example:
+
+```sh
+curl --fail-with-body --user "$APP_BASIC_AUTH" \
+  -H "X-Device-Id: $GOBALE_DEVICE" \
+  -H "X-Device-Instance: $GOBALE_INSTANCE" \
+  -H 'Idempotency-Key: attachment-42' \
+  -F 'request={"peer":{"type":"user","id":"123"},"message":"Attachment"}' \
+  -F 'file=@./picture.webp;type=image/webp' \
+  "$GOBALE_URL/send/image"
+```
+
+Upload registration and outbox acceptance commit together before provider contact.
+An identical retry compares file bytes, filename, MIME and request content and
+returns the same operation, including after restart. Keep all of these stable;
+changed content returns 409. The key namespace is shared with JSON sends and
+schedules. Unused staging files are cleaned after errors and duplicate retries.
+Multipart requests are immediate; upload through `/media` first for scheduled or
+reusable attachments. Poll operation state as for JSON sends.
+
+On `/send/audio`, the optional form field `ptt=true` selects native voice validation;
+`ptt=false` sends ordinary audio. This flag does not convert the file: voice still
+requires complete valid Ogg Opus and gateway-derived duration. `/send/voice`
+selects the same voice path directly. Image sends accept bounded WebP decoding
+alongside JPEG/PNG/GIF, with at most 8192 pixels per side and 16,777,216 pixels
+total; native WebP receipt/rendering remains live-unverified.
 
 ## Verification boundary
 

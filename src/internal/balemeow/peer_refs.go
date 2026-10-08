@@ -17,7 +17,7 @@ func (c *Client) rememberConversationRefs(fullUsers []*wire.User, fullGroups []*
 	allGroups := make([]*wire.PeerRef, 0, len(fullGroups)+len(groups))
 	groupKinds := map[uint32]int32{}
 	for _, user := range fullUsers {
-		if user == nil || user.Id == 0 {
+		if user == nil || user.Id == 0 || len(user.Name) > 4096 || len(user.GetLocalName().GetValue()) > 4096 {
 			return protocolError()
 		}
 		allUsers = append(allUsers, &wire.PeerRef{Id: user.Id, AccessHash: user.AccessHash})
@@ -53,6 +53,9 @@ func (c *Client) rememberConversationRefs(fullUsers []*wire.User, fullGroups []*
 	}
 	for _, r := range users {
 		c.rememberRef("user", r)
+	}
+	for _, user := range fullUsers {
+		c.rememberUserName(user)
 	}
 	for _, r := range groups {
 		if _, err := c.rememberGroupKind(r, groupKinds[r.Id]); err != nil {

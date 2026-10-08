@@ -84,7 +84,9 @@ func TestProviderMediaReferenceEditDeleteAndLateHistory(t *testing.T) {
 	late := documentEvent("late-original-copy", 1000, &original)
 	_, e = s.AppendEvent(ctx, d.ConnectionID, late, nil)
 	require.NoError(t, e)
-	require.NoError(t, s.SaveProviderMedia(ctx, d.ConnectionID, event.Peer, event.MessageID, original))
+	available, e := s.SaveProviderMedia(ctx, d.ConnectionID, event.Peer, event.MessageID, original)
+	require.NoError(t, e)
+	require.False(t, available)
 	got, e = s.GetProviderMedia(ctx, d.ConnectionID, event.Peer, event.MessageID)
 	require.NoError(t, e)
 	require.Equal(t, newer, got)
@@ -94,7 +96,9 @@ func TestProviderMediaReferenceEditDeleteAndLateHistory(t *testing.T) {
 	require.NoError(t, e)
 	_, e = s.GetProviderMedia(ctx, d.ConnectionID, event.Peer, event.MessageID)
 	errorCode(t, e, "NOT_FOUND")
-	require.NoError(t, s.SaveProviderMedia(ctx, d.ConnectionID, event.Peer, event.MessageID, original))
+	available, e = s.SaveProviderMedia(ctx, d.ConnectionID, event.Peer, event.MessageID, original)
+	require.NoError(t, e)
+	require.False(t, available)
 	_, e = s.GetProviderMedia(ctx, d.ConnectionID, event.Peer, event.MessageID)
 	errorCode(t, e, "NOT_FOUND")
 	// A text-only edit removes the former attachment too.
@@ -154,7 +158,9 @@ func TestProviderMediaMigrationAndBackupRestore(t *testing.T) {
 	require.NoError(t, upgraded.db.QueryRow(`SELECT version FROM gobale_meta`).Scan(&version))
 	require.Equal(t, schemaVersion, version)
 	m := privateMedia()
-	require.NoError(t, upgraded.SaveProviderMedia(ctx, d.ConnectionID, domains.Peer{Type: "user", ID: "42"}, "123", m))
+	available, e := upgraded.SaveProviderMedia(ctx, d.ConnectionID, domains.Peer{Type: "user", ID: "42"}, "123", m)
+	require.NoError(t, e)
+	require.True(t, available)
 	backup := filepath.Join(t.TempDir(), "backup.db")
 	require.NoError(t, upgraded.Backup(ctx, backup))
 	restored, e := Open(backup, testKey)
@@ -171,13 +177,16 @@ func TestProviderMediaPreservesNegativeSignedFileID(t *testing.T) {
 	d := device(t, s, "alpha")
 	m := privateMedia()
 	m.FileID = "-8123456789012345678"
-	e := s.SaveProviderMedia(ctx, d.ConnectionID, domains.Peer{Type: "user", ID: "42"}, "123", m)
+	available, e := s.SaveProviderMedia(ctx, d.ConnectionID, domains.Peer{Type: "user", ID: "42"}, "123", m)
 	require.NoError(t, e)
+	require.True(t, available)
 	got, e := s.GetProviderMedia(ctx, d.ConnectionID, domains.Peer{Type: "user", ID: "42"}, "123")
 	require.NoError(t, e)
 	require.Equal(t, m, got)
 	m.FileID = "0"
-	errorCode(t, s.SaveProviderMedia(ctx, d.ConnectionID, domains.Peer{Type: "user", ID: "42"}, "124", m), "INVALID_PROVIDER_MEDIA")
+	available, e = s.SaveProviderMedia(ctx, d.ConnectionID, domains.Peer{Type: "user", ID: "42"}, "124", m)
+	errorCode(t, e, "INVALID_PROVIDER_MEDIA")
+	require.False(t, available)
 }
 
 func TestProviderMediaNegativeMessageIDLookupAndTombstone(t *testing.T) {
@@ -187,7 +196,9 @@ func TestProviderMediaNegativeMessageIDLookupAndTombstone(t *testing.T) {
 	m := privateMedia()
 	peer := domains.Peer{Type: "user", ID: "42"}
 	messageID := "-8123456789012345678"
-	require.NoError(t, s.SaveProviderMedia(ctx, d.ConnectionID, peer, messageID, m))
+	available, err := s.SaveProviderMedia(ctx, d.ConnectionID, peer, messageID, m)
+	require.NoError(t, err)
+	require.True(t, available)
 	got, err := s.GetProviderMedia(ctx, d.ConnectionID, peer, messageID)
 	require.NoError(t, err)
 	require.Equal(t, m, got)
@@ -198,10 +209,14 @@ func TestProviderMediaNegativeMessageIDLookupAndTombstone(t *testing.T) {
 	require.NoError(t, err)
 	_, err = s.GetProviderMedia(ctx, d.ConnectionID, peer, messageID)
 	errorCode(t, err, "NOT_FOUND")
-	require.NoError(t, s.SaveProviderMedia(ctx, d.ConnectionID, peer, messageID, m))
+	available, err = s.SaveProviderMedia(ctx, d.ConnectionID, peer, messageID, m)
+	require.NoError(t, err)
+	require.False(t, available)
 	_, err = s.GetProviderMedia(ctx, d.ConnectionID, peer, messageID)
 	errorCode(t, err, "NOT_FOUND")
 	for _, invalid := range []string{"0", "+123", "-9223372036854775809", "9223372036854775808"} {
-		errorCode(t, s.SaveProviderMedia(ctx, d.ConnectionID, peer, invalid, m), "INVALID_MESSAGE_ID")
+		available, err = s.SaveProviderMedia(ctx, d.ConnectionID, peer, invalid, m)
+		errorCode(t, err, "INVALID_MESSAGE_ID")
+		require.False(t, available)
 	}
 }

@@ -74,15 +74,30 @@ func TestHistoryRegistersPrivateMediaBeforePublishing(t *testing.T) {
 	c := fake.client()
 	connectTest(t, c, acceptingSink)
 	saved := false
-	c.opts.SaveMediaReference = func(ctx context.Context, peer domains.Peer, id string, m domains.ProviderMedia) error {
+	c.opts.SaveMediaReference = func(ctx context.Context, peer domains.Peer, id string, m domains.ProviderMedia) (bool, error) {
 		if peer.ID != "42" || id != "123" || m.FileID != "-123456789012" || m.AccessHash != "987654321" {
 			t.Fatal("bad private ref")
 		}
 		saved = true
-		return nil
+		return true, nil
 	}
 	raw, err := c.Call(context.Background(), "chat.history", json.RawMessage(`{"peer":{"type":"user","id":"42"}}`))
 	if err != nil || !saved || strings.Contains(string(raw), "987654321") || !strings.Contains(string(raw), `"download_supported":true`) {
 		t.Fatalf("%s %v", raw, err)
+	}
+	// A newer edit or deletion can prevent a history reference from becoming
+	// current without being a storage error. Keep the attachment, but do not
+	// advertise that downloading it under this message ID is supported.
+	c.opts.SaveMediaReference = func(context.Context, domains.Peer, string, domains.ProviderMedia) (bool, error) { return false, nil }
+	raw, err = c.Call(context.Background(), "chat.history", json.RawMessage(`{"peer":{"type":"user","id":"42"}}`))
+	if err != nil || strings.Contains(string(raw), `"download_supported":true`) || !strings.Contains(string(raw), `"file_id":"-123456789012"`) || !strings.Contains(string(raw), `"name":"test.txt"`) {
+		t.Fatalf("ignored registration advertised a download or erased attachment metadata: %s %v", raw, err)
+	}
+	c.opts.SaveMediaReference = func(context.Context, domains.Peer, string, domains.ProviderMedia) (bool, error) {
+		return false, domains.E("STORAGE_FAILED", "synthetic failure", 500)
+	}
+	raw, err = c.Call(context.Background(), "chat.history", json.RawMessage(`{"peer":{"type":"user","id":"42"}}`))
+	if err == nil || len(raw) != 0 {
+		t.Fatalf("persistence failure became successful history: %s %v", raw, err)
 	}
 }

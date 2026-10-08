@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: GoBale REST API
-  version: 2.0.1
+  version: 2.1.0
   description: Native Go, multi-account Bale gateway. See the README release status and per-operation verification
     for tested provider coverage; the release version does not imply every native operation has been verified. Administrative
     auth grants access to every device; tenant ownership belongs in the consuming application.
@@ -1728,7 +1728,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectionStatusResponse'
+                $ref: '#/components/schemas/DeviceStatusResponse'
           headers:
             Cache-Control:
               schema:
@@ -4182,7 +4182,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectionStatusResponse'
+                $ref: '#/components/schemas/DeviceStatusResponse'
           headers:
             Cache-Control:
               schema:
@@ -41205,6 +41205,67 @@ paths:
               - required:
                 - media_id
               description: Use media_id from POST /media. Provider format support is capability-gated.
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - request
+              - file
+              properties:
+                request:
+                  type: object
+                  additionalProperties: false
+                  oneOf:
+                  - required:
+                    - peer
+                  - required:
+                    - phone
+                  properties:
+                    peer:
+                      $ref: '#/components/schemas/Peer'
+                    phone:
+                      type: string
+                      minLength: 1
+                      description: Exact phone lookup against provider contact information. Unknown or ambiguous
+                        matches fail; contacts are never imported implicitly.
+                    message:
+                      type: string
+                      maxLength: 65536
+                      description: Text body or media caption, supplied through this message field. UTF-8 runtime
+                        limit is 65536 bytes. Required and nonempty for text sends.
+                    mentions:
+                      type: array
+                      maxItems: 100
+                      uniqueItems: true
+                      items:
+                        type: string
+                        pattern: ^[1-9][0-9]*$
+                      description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty
+                        message field (text body or media caption); part of the idempotency payload.
+                    reply_message_id:
+                      type: string
+                      pattern: ^-?[0-9]+$
+                      description: Existing nonzero signed int64 message ID; preserve its sign.
+                  description: JSON request field, at most 128 KiB. Choose peer or phone under the normal send contract;
+                    no media_id, caller request ID, payload, operation or scheduling fields.
+                file:
+                  type: string
+                  format: binary
+                  description: Exactly one file within the configured media byte limit, filename at most 255 bytes,
+                    with actual Content-Type (omitted defaults to application/octet-stream).
+                ptt:
+                  type: boolean
+                  default: false
+                  description: true selects native voice validation; bytes must already be complete valid Ogg Opus.
+                    No conversion.
+            encoding:
+              request:
+                contentType: application/json
+      description: ' Multipart alternative: request JSON field plus one file part. Immediate sends only; upload
+        separately for scheduling. File registration and outbox request commit together before provider contact.
+        Stable keyed retries bind file SHA256, filename, MIME and canonical request; changed content returns 409.
+        Duplicate staging files are cleaned. Limits and instance guards match other sends.'
       tags:
       - Send messages
   /send/chat-presence:
@@ -42080,6 +42141,62 @@ paths:
               - required:
                 - media_id
               description: Use media_id from POST /media. Provider format support is capability-gated.
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - request
+              - file
+              properties:
+                request:
+                  type: object
+                  additionalProperties: false
+                  oneOf:
+                  - required:
+                    - peer
+                  - required:
+                    - phone
+                  properties:
+                    peer:
+                      $ref: '#/components/schemas/Peer'
+                    phone:
+                      type: string
+                      minLength: 1
+                      description: Exact phone lookup against provider contact information. Unknown or ambiguous
+                        matches fail; contacts are never imported implicitly.
+                    message:
+                      type: string
+                      maxLength: 65536
+                      description: Text body or media caption, supplied through this message field. UTF-8 runtime
+                        limit is 65536 bytes. Required and nonempty for text sends.
+                    mentions:
+                      type: array
+                      maxItems: 100
+                      uniqueItems: true
+                      items:
+                        type: string
+                        pattern: ^[1-9][0-9]*$
+                      description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty
+                        message field (text body or media caption); part of the idempotency payload.
+                    reply_message_id:
+                      type: string
+                      pattern: ^-?[0-9]+$
+                      description: Existing nonzero signed int64 message ID; preserve its sign.
+                  description: JSON request field, at most 128 KiB. Choose peer or phone under the normal send contract;
+                    no media_id, caller request ID, payload, operation or scheduling fields.
+                file:
+                  type: string
+                  format: binary
+                  description: Exactly one file within the configured media byte limit, filename at most 255 bytes,
+                    with actual Content-Type (omitted defaults to application/octet-stream).
+            encoding:
+              request:
+                contentType: application/json
+      description: ' Multipart alternative: request JSON field plus one file part. Immediate sends only; upload
+        separately for scheduling. File registration and outbox request commit together before provider contact.
+        Stable keyed retries bind file SHA256, filename, MIME and canonical request; changed content returns 409.
+        Duplicate staging files are cleaned. Limits and instance guards match other sends.'
       tags:
       - Send messages
   /send/image:
@@ -42361,6 +42478,64 @@ paths:
               - required:
                 - media_id
               description: Use media_id from POST /media. Provider format support is capability-gated.
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - request
+              - file
+              properties:
+                request:
+                  type: object
+                  additionalProperties: false
+                  oneOf:
+                  - required:
+                    - peer
+                  - required:
+                    - phone
+                  properties:
+                    peer:
+                      $ref: '#/components/schemas/Peer'
+                    phone:
+                      type: string
+                      minLength: 1
+                      description: Exact phone lookup against provider contact information. Unknown or ambiguous
+                        matches fail; contacts are never imported implicitly.
+                    message:
+                      type: string
+                      maxLength: 65536
+                      description: Text body or media caption, supplied through this message field. UTF-8 runtime
+                        limit is 65536 bytes. Required and nonempty for text sends.
+                    mentions:
+                      type: array
+                      maxItems: 100
+                      uniqueItems: true
+                      items:
+                        type: string
+                        pattern: ^[1-9][0-9]*$
+                      description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty
+                        message field (text body or media caption); part of the idempotency payload.
+                    reply_message_id:
+                      type: string
+                      pattern: ^-?[0-9]+$
+                      description: Existing nonzero signed int64 message ID; preserve its sign.
+                  description: JSON request field, at most 128 KiB. Choose peer or phone under the normal send contract;
+                    no media_id, caller request ID, payload, operation or scheduling fields.
+                file:
+                  type: string
+                  format: binary
+                  description: Exactly one file within the configured media byte limit, filename at most 255 bytes,
+                    with actual Content-Type (omitted defaults to application/octet-stream).
+            encoding:
+              request:
+                contentType: application/json
+      description: ' Multipart alternative: request JSON field plus one file part. Immediate sends only; upload
+        separately for scheduling. File registration and outbox request commit together before provider contact.
+        Stable keyed retries bind file SHA256, filename, MIME and canonical request; changed content returns 409.
+        Duplicate staging files are cleaned. Limits and instance guards match other sends. Image header decoding
+        accepts JPEG, PNG, GIF and WebP, bounded to 8192 pixels per side and 16,777,216 pixels total. WebP native
+        receipt/rendering remains live-unverified.'
       tags:
       - Send messages
   /send/location:
@@ -45216,6 +45391,62 @@ paths:
               - required:
                 - media_id
               description: Use media_id from POST /media. Provider format support is capability-gated.
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - request
+              - file
+              properties:
+                request:
+                  type: object
+                  additionalProperties: false
+                  oneOf:
+                  - required:
+                    - peer
+                  - required:
+                    - phone
+                  properties:
+                    peer:
+                      $ref: '#/components/schemas/Peer'
+                    phone:
+                      type: string
+                      minLength: 1
+                      description: Exact phone lookup against provider contact information. Unknown or ambiguous
+                        matches fail; contacts are never imported implicitly.
+                    message:
+                      type: string
+                      maxLength: 65536
+                      description: Text body or media caption, supplied through this message field. UTF-8 runtime
+                        limit is 65536 bytes. Required and nonempty for text sends.
+                    mentions:
+                      type: array
+                      maxItems: 100
+                      uniqueItems: true
+                      items:
+                        type: string
+                        pattern: ^[1-9][0-9]*$
+                      description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty
+                        message field (text body or media caption); part of the idempotency payload.
+                    reply_message_id:
+                      type: string
+                      pattern: ^-?[0-9]+$
+                      description: Existing nonzero signed int64 message ID; preserve its sign.
+                  description: JSON request field, at most 128 KiB. Choose peer or phone under the normal send contract;
+                    no media_id, caller request ID, payload, operation or scheduling fields.
+                file:
+                  type: string
+                  format: binary
+                  description: Exactly one file within the configured media byte limit, filename at most 255 bytes,
+                    with actual Content-Type (omitted defaults to application/octet-stream).
+            encoding:
+              request:
+                contentType: application/json
+      description: ' Multipart alternative: request JSON field plus one file part. Immediate sends only; upload
+        separately for scheduling. File registration and outbox request commit together before provider contact.
+        Stable keyed retries bind file SHA256, filename, MIME and canonical request; changed content returns 409.
+        Duplicate staging files are cleaned. Limits and instance guards match other sends.'
       tags:
       - Send messages
   /send/voice:
@@ -45490,7 +45721,10 @@ paths:
       description: 'Sends a native voice note using media_id from POST /media. The upload must be single-stream
         Ogg Opus; GoBale checks its bytes and derives the duration in milliseconds. Optional message caption and
         reply_message_id use the ordinary media contract. No server-side transcoding. Scheduling uses the same durable
-        send path.
+        send path. Multipart alternative: request JSON field plus one file part. Immediate sends only; upload separately
+        for scheduling. File registration and outbox request commit together before provider contact. Stable keyed
+        retries bind file SHA256, filename, MIME and canonical request; changed content returns 409. Duplicate staging
+        files are cleaned. Limits and instance guards match other sends.
 
 
         Accepted Content-Type values are audio/ogg, application/ogg and audio/opus, optionally with codecs=opus.
@@ -45518,6 +45752,58 @@ paths:
                 id: '123456'
               media_id: your-uploaded-media-id
               message: A quick voice update
+          multipart/form-data:
+            schema:
+              type: object
+              additionalProperties: false
+              required:
+              - request
+              - file
+              properties:
+                request:
+                  type: object
+                  additionalProperties: false
+                  oneOf:
+                  - required:
+                    - peer
+                  - required:
+                    - phone
+                  properties:
+                    peer:
+                      $ref: '#/components/schemas/Peer'
+                    phone:
+                      type: string
+                      minLength: 1
+                      description: Exact phone lookup against provider contact information. Unknown or ambiguous
+                        matches fail; contacts are never imported implicitly.
+                    message:
+                      type: string
+                      maxLength: 65536
+                      description: Text body or media caption, supplied through this message field. UTF-8 runtime
+                        limit is 65536 bytes. Required and nonempty for text sends.
+                    mentions:
+                      type: array
+                      maxItems: 100
+                      uniqueItems: true
+                      items:
+                        type: string
+                        pattern: ^[1-9][0-9]*$
+                      description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty
+                        message field (text body or media caption); part of the idempotency payload.
+                    reply_message_id:
+                      type: string
+                      pattern: ^-?[0-9]+$
+                      description: Existing nonzero signed int64 message ID; preserve its sign.
+                  description: JSON request field, at most 128 KiB. Choose peer or phone under the normal send contract;
+                    no media_id, caller request ID, payload, operation or scheduling fields.
+                file:
+                  type: string
+                  format: binary
+                  description: Exactly one file within the configured media byte limit, filename at most 255 bytes,
+                    with actual Content-Type (omitted defaults to application/octet-stream).
+            encoding:
+              request:
+                contentType: application/json
       tags:
       - Send messages
   /sticker/collection/add:
@@ -53452,7 +53738,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ConnectionStatusResponse'
+                $ref: '#/components/schemas/DeviceStatusResponse'
           headers:
             Cache-Control:
               schema:
@@ -56843,6 +57129,35 @@ components:
       - expires_at
       - resend_available_at
       - masked_phone
+    DeviceStatus:
+      allOf:
+      - $ref: '#/components/schemas/ConnectionStatus'
+      - type: object
+        properties:
+          device_id:
+            type: string
+            description: Local device alias, not the Bale account ID.
+          instance_id:
+            type: string
+            pattern: ^[0-9a-f]{64}$
+          account_id:
+            type: string
+            description: Bound Bale account ID, or empty before first authentication. Logout retains the binding.
+          challenge:
+            allOf:
+            - $ref: '#/components/schemas/PublicChallenge'
+            nullable: true
+          server_time:
+            type: string
+            format: date-time
+        required:
+        - device_id
+        - instance_id
+        - account_id
+        - challenge
+        - server_time
+      description: Local snapshot with connection, authentication, recovery and safe challenge metadata. No provider
+        RPC or implicit reconnect. Expired challenges are null and cannot advertise an awaiting auth state.
     LoginState:
       type: object
       properties:
@@ -57247,6 +57562,157 @@ components:
       description: Normalized bounded content. Optional quote, content, keyboard, service actions and poll results
         are described in the [webhook payload guide](https://github.com/mimalef70/gobale/blob/main/docs/webhook-payload.md).
         Access hashes and raw opaque protocol data are never exposed.
+    MessageMedia:
+      type: object
+      properties:
+        type:
+          type: string
+          enum:
+          - file
+          - image
+          - video
+          - audio
+          - voice
+          - animation
+          - sticker
+        file_id:
+          type: string
+        name:
+          type: string
+        mime_type:
+          type: string
+        size:
+          type: integer
+          format: int64
+          minimum: 0
+        download_supported:
+          type: boolean
+      required:
+      - type
+      - file_id
+      - name
+      - mime_type
+      - size
+      - download_supported
+      description: Attachment metadata remains present even when no private download reference exists or a later
+        download fails. Empty strings mean metadata is unavailable. Download support is not a guarantee of future
+        provider availability.
+    MessageOrigin:
+      type: object
+      properties:
+        message_id:
+          type: string
+          pattern: ^-?[0-9]+$
+          description: Nonzero signed int64 encoded as a decimal string. Preserve the sign.
+        sender_id:
+          type: string
+          pattern: ^[0-9]+$
+          description: Positive decimal int64 encoded as a string.
+        peer:
+          $ref: '#/components/schemas/EventPeer'
+        date:
+          type: string
+        author_sign:
+          type: string
+      description: Reviewed original-message provenance. This does not change the forwarding sender or grant attachment
+        access.
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+          pattern: ^-?[0-9]+$
+          description: Nonzero signed int64 encoded as a decimal string. Preserve the sign.
+        chat_id:
+          type: string
+        from:
+          type: string
+        sender_display_name:
+          type: string
+        sender_name_status:
+          type: string
+          enum:
+          - available
+          - unavailable
+        is_from_me:
+          type: boolean
+          nullable: true
+        timestamp:
+          type: string
+          format: date-time
+        body:
+          type: string
+        kind:
+          type: string
+        supported:
+          type: boolean
+        replied_to_id:
+          type: string
+          pattern: ^-?[0-9]+$
+          description: Nonzero signed int64 encoded as a decimal string. Preserve the sign.
+        quoted_body:
+          type: string
+        original_message_id:
+          type: string
+          pattern: ^-?[0-9]+$
+          description: Nonzero signed int64 encoded as a decimal string. Preserve the sign.
+        editor_id:
+          type: string
+          pattern: ^[0-9]+$
+          description: Positive decimal int64 encoded as a string.
+        forwarded_from:
+          $ref: '#/components/schemas/MessageOrigin'
+        media:
+          $ref: '#/components/schemas/MessageMedia'
+      required:
+      - id
+      - chat_id
+      - from
+      - sender_display_name
+      - sender_name_status
+      - is_from_me
+      - timestamp
+      - body
+      - kind
+      - supported
+      description: Consumer-ready projection for message/edit events. IDs retain their real Bale string values;
+        chat_id is scoped by the envelope peer.type and connection. Unknown sender names are empty/unavailable;
+        unknown direction has null is_from_me. Edits keep from/name/direction unknown and expose the verified updater
+        separately as editor_id. Body is plain Unicode text or a display fallback, never HTML. Older persisted events
+        retain their exact bytes and may omit this projection.
+    ReceiptPayload:
+      type: object
+      properties:
+        start_date:
+          type: string
+        date:
+          type: string
+        end_date:
+          type: string
+        unread_count:
+          type: integer
+          format: int64
+          minimum: 0
+        range_status:
+          type: string
+          enum:
+          - valid
+          - unknown
+          - invalid
+        range_valid:
+          type: boolean
+        message_ids_supported:
+          type: boolean
+          enum:
+          - false
+      required:
+      - start_date
+      - range_status
+      - range_valid
+      - message_ids_supported
+      description: 'Structural validity only: positive ordered endpoints are valid, zero/missing endpoints unknown,
+        reversed endpoints invalid. Zero has no established provider interpretation. Even valid bounds are not per-message
+        proof; no invented message IDs or unknown-send reconciliation.'
     Event:
       type: object
       properties:
@@ -57286,11 +57752,13 @@ components:
         timestamp:
           type: string
           format: date-time
+        message:
+          $ref: '#/components/schemas/Message'
         payload:
           type: object
           additionalProperties: true
-          description: Event-specific normalized JSON. Message events use MessagePayload; other event types have
-            their own small metadata objects.
+          description: Event-specific normalized JSON. Message events use MessagePayload; receipt events use ReceiptPayload.
+            Other events have small metadata objects.
       required:
       - event_id
       - event
@@ -57355,8 +57823,10 @@ components:
       - attempts
       - next_attempt_at
       - created_at
-      description: The signing secret is never returned. Retry creates a new delivery ledger at the original queue
-        position; replay appends new deliveries using current routing. Event identity remains stable.
+      description: The signing secret is never returned. HTTP 4xx except 408/425/429 is permanent; other unsuccessful
+        responses and network errors retry up to eight normally completed attempts. Failed deliveries release later
+        queued events and retain replayable history. Retry creates a new delivery ledger at the original queue position;
+        replay appends new deliveries using current routing. Event identity remains stable.
     LocalChat:
       type: object
       properties:
@@ -57436,6 +57906,8 @@ components:
           format: int32
         payload:
           $ref: '#/components/schemas/MessagePayload'
+        message:
+          $ref: '#/components/schemas/Message'
       required:
       - peer
       - message_id
@@ -57444,6 +57916,7 @@ components:
       - direction
       - provider_state
       - payload
+      - message
     HistoryPage:
       type: object
       properties:
@@ -57844,6 +58317,19 @@ components:
           type: string
         results:
           $ref: '#/components/schemas/DeviceList'
+      required:
+      - code
+      - message
+      - results
+    DeviceStatusResponse:
+      type: object
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        results:
+          $ref: '#/components/schemas/DeviceStatus'
       required:
       - code
       - message

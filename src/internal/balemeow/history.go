@@ -10,13 +10,14 @@ import (
 )
 
 type historyMessage struct {
-	Peer      domains.Peer    `json:"peer"`
-	ID        string          `json:"message_id"`
-	SenderID  string          `json:"sender_id"`
-	Date      time.Time       `json:"date"`
-	Direction string          `json:"direction"`
-	State     int32           `json:"provider_state"`
-	Payload   json.RawMessage `json:"payload"`
+	Peer      domains.Peer     `json:"peer"`
+	ID        string           `json:"message_id"`
+	SenderID  string           `json:"sender_id"`
+	Date      time.Time        `json:"date"`
+	Direction string           `json:"direction"`
+	State     int32            `json:"provider_state"`
+	Payload   json.RawMessage  `json:"payload"`
+	Message   *domains.Message `json:"message"`
 }
 
 func pageArgs(limit int, date string) (int32, int64, error) {
@@ -99,8 +100,10 @@ func (c *Client) history(ctx context.Context, raw json.RawMessage) (json.RawMess
 		if validateHistoryItem(m) != nil {
 			return nil, protocolError()
 		}
-		if descriptor := providerMedia(m.Message); descriptor != nil && c.opts.SaveMediaReference != nil {
-			if err := c.opts.SaveMediaReference(ctx, p.Peer, strconv.FormatInt(m.Rid, 10), *descriptor); err != nil {
+		mediaAvailable := false
+		if descriptor := messageMedia(m.Message, m.QuotedMessage); descriptor != nil && c.opts.SaveMediaReference != nil {
+			mediaAvailable, err = c.opts.SaveMediaReference(ctx, p.Peer, strconv.FormatInt(m.Rid, 10), *descriptor)
+			if err != nil {
 				return nil, err
 			}
 		}
@@ -109,7 +112,12 @@ func (c *Client) history(ctx context.Context, raw json.RawMessage) (json.RawMess
 		if sender == self {
 			direction = "outgoing"
 		}
-		out.Messages = append(out.Messages, historyMessage{Peer: p.Peer, ID: strconv.FormatInt(m.Rid, 10), SenderID: sender, Date: time.UnixMilli(m.Date).UTC(), State: m.State, Direction: direction, Payload: decoratedHistoryPayload(m, c.opts.SaveMediaReference != nil)})
+		row := historyMessage{Peer: p.Peer, ID: strconv.FormatInt(m.Rid, 10), SenderID: sender, Date: time.UnixMilli(m.Date).UTC(), State: m.State, Direction: direction, Payload: decoratedHistoryPayload(m, mediaAvailable)}
+		event := domains.Event{Type: "message", Peer: row.Peer, MessageID: row.ID, SenderID: row.SenderID, Direction: row.Direction, Time: row.Date, Payload: row.Payload}
+		projectEventMessage(&event)
+		event.Message.SenderDisplayName, event.Message.SenderNameStatus = c.cachedSenderDisplayName(sender)
+		row.Message = event.Message
+		out.Messages = append(out.Messages, row)
 		if len(out.Messages) == 1 || m.Date < oldest {
 			oldest = m.Date
 		}
@@ -231,7 +239,7 @@ func decoratedHistoryPayload(m *wire.HistoryItem, saved bool) json.RawMessage {
 	if m.HasComment != nil {
 		b["has_comment"] = m.HasComment.Value
 	}
-	if saved && providerMedia(m.Message) != nil {
+	if saved && messageMedia(m.Message, m.QuotedMessage) != nil {
 		markDownloadSupported(b)
 	}
 	out, _ := json.Marshal(b)

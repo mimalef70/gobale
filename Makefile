@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help build test race purego vet fmt fmt-check contracts vuln fuzz check docker-smoke ui-build ui-check ui-e2e
+.PHONY: help build test race purego vet fmt fmt-check contracts vuln fuzz check docker-smoke ui-build ui-check ui-e2e release
 
 help: ## Show development commands.
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -38,7 +38,7 @@ fmt-check: ## Check formatting without modifying source.
 contracts: ## Verify generated OpenAPI, coverage inventory, and release tooling.
 	python3 scripts/generate_openapi.py --check
 	python3 scripts/check_capabilities.py
-	python3 -m unittest discover -s scripts -p 'test_release_notes.py'
+	python3 -m unittest discover -s scripts -p 'test_release*.py'
 	python3 -m unittest discover -s scripts -p 'test_capacity_runner.py'
 	python3 -m unittest discover -s scripts -p 'test_docker_smoke.py'
 
@@ -57,3 +57,6 @@ check: fmt-check test vet purego contracts ## Run the main local verification su
 
 docker-smoke: ## Test a separately built gobale:dev image without a Bale account.
 	python3 scripts/docker_smoke.py gobale:dev
+
+release: ## Publish a reviewed, committed VERSION and wait for public verification.
+	python3 scripts/release.py --version "$(VERSION)"

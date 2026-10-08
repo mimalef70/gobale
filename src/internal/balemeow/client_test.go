@@ -117,7 +117,12 @@ func (f *fakeWS) send(ws *websocket.Conn, msg *wire.ServerMessage) {
 	_ = ws.Write(ctx, websocket.MessageBinary, b)
 }
 func (f *fakeWS) client() *Client {
-	return New(Options{WebSocketEndpoint: "ws" + strings.TrimPrefix(f.server.URL, "http"), RequestTimeout: 100 * time.Millisecond, HandshakeTimeout: time.Second, PingInterval: time.Hour})
+	c := New(Options{WebSocketEndpoint: "ws" + strings.TrimPrefix(f.server.URL, "http"), RequestTimeout: 100 * time.Millisecond, HandshakeTimeout: time.Second, PingInterval: time.Hour})
+	// Most protocol fixtures exercise one RPC contract. Sender-name tests opt in
+	// to automatic enrichment and cold contact refresh explicitly.
+	c.senderLookupAfter = time.Now().Add(time.Hour)
+	c.senderContactsAfter = time.Now().Add(time.Hour)
+	return c
 }
 func connectTest(t *testing.T, c *Client, sink domains.Sink) {
 	t.Helper()

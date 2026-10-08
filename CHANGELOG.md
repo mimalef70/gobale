@@ -1,5 +1,37 @@
 # Changelog
 
+## 2.1.0 — 2026-10-08
+
+- Add a consumer-ready `message` projection to newly accepted message/edit events
+  and history, with account-scoped sender names, display text, reply/edit identity,
+  separate forward provenance and consistent attachment metadata. Forwarded text
+  and media no longer require walking nested quote content. Polls and unsupported
+  variants have explicit display fallbacks. Previously persisted webhook bytes and
+  event IDs are preserved for retry/replay; unavailable names remain explicit.
+- Expose structural receipt range validity without guessing the meaning of a zero
+  date, inventing message IDs or treating a range as proof for an unknown send.
+- Accept one-request multipart file/image/video/audio/voice sends on existing media
+  send routes. Atomically register the file with a durable outbox request and RID;
+  exact file/request retries share the existing connection idempotency namespace.
+  `ptt=true` on multipart audio selects verified Ogg Opus voice validation, without
+  conversion. Multipart scheduling is not supported; upload separately first.
+- Accept bounded WebP headers for native image sends with matching MIME. Native
+  provider acceptance/rendering of WebP remains live-unverified.
+- Return alias, immutable instance, bound account, safe challenge metadata and
+  server time with authentication, transport and recovery in one status response.
+- Mark webhook HTTP 4xx failures terminal except 408/425/429, retaining the ledger
+  and explicit retry/replay while allowing subsequent events to progress. Network
+  errors and other unsuccessful responses retain bounded retry behavior. Consumers
+  should return 503 for temporary persistence failures and 422 for permanent ones.
+- These changes do not extend dated live-account, recovery, capacity or consumer
+  application acceptance claims.
+
+- Add `make release VERSION=...` to coordinate reviewed-commit CI, immutable tag
+  CI, dual-registry publication and API documentation deployment. Publication now
+  finishes with anonymous verification of all four archives, manifest/checksums,
+  tag revision and both registry digests, plus native Linux amd64/arm64 clean-volume
+  container restart tests. Existing tags/releases are never overwritten.
+
 ## 2.0.1 — 2026-10-07
 
 GoBale 2.0 introduces a breaking machine-API contract for safe multi-account

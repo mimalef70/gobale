@@ -10,6 +10,7 @@ import (
 	"io"
 	"math/rand/v2"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -389,12 +390,23 @@ func (s *Service) deliver(d domains.Delivery) {
 		update("retry", time.Now().UTC(), "service shutdown interrupted delivery; retry pending")
 		return
 	}
+	// A receiver can reject one event permanently without holding up all later
+	// work for this destination. Keep the failed ledger row and immutable body
+	// for inspection and explicit retry/replay; never record it as delivered.
+	if err == nil && permanentWebhookStatus(response.StatusCode) {
+		update("failed", time.Time{}, "webhook endpoint permanently rejected delivery (HTTP "+strconv.Itoa(response.StatusCode)+"); explicit retry or replay required")
+		return
+	}
 	if d.Attempts >= 8 {
 		update("failed", time.Time{}, "webhook delivery failed after 8 attempts")
 		return
 	}
 	delay := webhookRetryDelay(d.Attempts)
 	update("retry", time.Now().UTC().Add(delay), "webhook endpoint did not acknowledge delivery")
+}
+
+func permanentWebhookStatus(status int) bool {
+	return status >= 400 && status < 500 && status != http.StatusRequestTimeout && status != http.StatusTooEarly && status != http.StatusTooManyRequests
 }
 
 func webhookRetryDelay(attempt int) time.Duration {

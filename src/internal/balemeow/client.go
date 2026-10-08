@@ -40,7 +40,7 @@ type Options struct {
 	DeviceTitle            string
 	HTTPClient             *http.Client
 	LoadCheckpoint         func(context.Context) (string, error)
-	SaveMediaReference     func(context.Context, domains.Peer, string, domains.ProviderMedia) error
+	SaveMediaReference     func(context.Context, domains.Peer, string, domains.ProviderMedia) (bool, error)
 	RecoveryVerified       bool
 	MediaSource            func(context.Context, string) (io.ReadCloser, MediaInfo, error)
 	MaxMediaBytes          int64
@@ -92,19 +92,22 @@ type connection struct {
 }
 
 type Client struct {
-	opts          Options
-	peerHashes    map[string]int64
-	mu            sync.Mutex
-	authMu        sync.Mutex
-	session       *domains.Session
-	sink          domains.Sink
-	status        domains.ConnectionStatus
-	challenge     *authChallenge
-	conn          *connection
-	lastConn      *connection
-	connecting    chan struct{}
-	connectErr    error
-	connectCancel context.CancelFunc
+	opts                Options
+	peerHashes          map[string]int64
+	senderNames         map[string]senderName
+	senderLookupAfter   time.Time
+	senderContactsAfter time.Time
+	mu                  sync.Mutex
+	authMu              sync.Mutex
+	session             *domains.Session
+	sink                domains.Sink
+	status              domains.ConnectionStatus
+	challenge           *authChallenge
+	conn                *connection
+	lastConn            *connection
+	connecting          chan struct{}
+	connectErr          error
+	connectCancel       context.CancelFunc
 }
 
 var _ domains.Client = (*Client)(nil)
@@ -258,7 +261,7 @@ func (c *Client) Connect(ctx context.Context, session *domains.Session, sink dom
 	stored.Data = append([]byte(nil), session.Data...)
 	c.session = &stored
 	c.sink = func(ctx context.Context, event domains.Event) error {
-		return sink(ctx, c.prepareEvent(event))
+		return sink(ctx, c.prepareEvent(ctx, event))
 	}
 	c.status.Auth = "authenticated"
 	c.status.Transport = "connecting"
@@ -507,6 +510,9 @@ func (c *Client) Logout(ctx context.Context) error {
 	c.challenge = nil
 	c.status.Auth = "unauthenticated"
 	c.peerHashes = make(map[string]int64)
+	c.senderNames = nil
+	c.senderLookupAfter = time.Time{}
+	c.senderContactsAfter = time.Time{}
 	c.clearCookies()
 	c.mu.Unlock()
 	return nil

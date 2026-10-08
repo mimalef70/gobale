@@ -38,7 +38,9 @@ func additionalEvents(account string, data []byte, u *wire.UpdateContainer) ([]d
 			if e != nil || v.StartDate < 0 || v.Date < 0 {
 				return nil, protocolError()
 			}
-			add(x.k, p, "", v.Date, map[string]any{"start_date": sid(v.StartDate), "date": sid(v.Date)})
+			b := receiptRangePayload(v.StartDate, v.Date)
+			b["date"] = sid(v.Date)
+			add(x.k, p, "", v.Date, b)
 		}
 	}
 	if v := u.ReadByMe; v != nil {
@@ -46,7 +48,7 @@ func additionalEvents(account string, data []byte, u *wire.UpdateContainer) ([]d
 		if e != nil || v.StartDate < 0 || v.GetUnreadCount().GetValue() < 0 || v.GetEndDate().GetValue() < 0 {
 			return nil, protocolError()
 		}
-		b := map[string]any{"start_date": sid(v.StartDate)}
+		b := receiptRangePayload(v.StartDate, v.GetEndDate().GetValue())
 		if v.UnreadCount != nil {
 			b["unread_count"] = v.UnreadCount.Value
 		}
@@ -115,11 +117,30 @@ func additionalEvents(account string, data []byte, u *wire.UpdateContainer) ([]d
 				direction = "outgoing"
 			}
 			id := sid(m.Rid)
-			out = append(out, domains.Event{ID: eventHash(account + "|message|" + messageIdentityPeer(p) + "|" + id), Type: "message", AccountID: account, Peer: p, MessageID: id, SenderID: sender, Direction: direction, Time: time.UnixMilli(m.Date).UTC(), Payload: decoratedPayload(m.Message, m.QuotedMessage, m.Previous, m.Thread, m.GroupedId, m.AuthorSign), Media: providerMedia(m.Message)})
+			out = append(out, domains.Event{ID: eventHash(account + "|message|" + messageIdentityPeer(p) + "|" + id), Type: "message", AccountID: account, Peer: p, MessageID: id, SenderID: sender, Direction: direction, Time: time.UnixMilli(m.Date).UTC(), Payload: decoratedPayload(m.Message, m.QuotedMessage, m.Previous, m.Thread, m.GroupedId, m.AuthorSign), Media: messageMedia(m.Message, m.QuotedMessage)})
 		}
 	}
 	if len(out) > 4096 {
 		return nil, protocolError()
 	}
 	return out, nil
+}
+
+// Receipt bounds are observations, not per-message reconciliation evidence.
+// In particular, a zero bound has no reviewed provider meaning; it must never
+// become an unbounded range or use the event's local timestamp as an endpoint.
+func receiptRangePayload(start, end int64) map[string]any {
+	status := "unknown"
+	if start > 0 && end > 0 {
+		status = "valid"
+		if end < start {
+			status = "invalid"
+		}
+	}
+	return map[string]any{
+		"start_date":            sid(start),
+		"range_status":          status,
+		"range_valid":           status == "valid",
+		"message_ids_supported": false,
+	}
 }

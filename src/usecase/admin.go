@@ -47,24 +47,21 @@ func (s *Service) LoginState(ctx context.Context, id string) (domains.LoginState
 	if e == nil {
 		return result, nil
 	}
-	// Copy the public challenge once. Invalidation or expiration between the
-	// status and metadata reads must never advertise an awaiting state with a
-	// null challenge on a refresh.
-	result.Challenge = e.publicChallenge(now)
-	e.clientMu.RLock()
-	status := cleanStatus(e.client.Status())
-	e.clientMu.RUnlock()
+	status, challenge := e.adminSnapshot(now)
 	result.State = status.Auth
-	if result.State == "authenticated" {
-		result.Challenge = nil
-	}
-	if result.Challenge == nil && (result.State == "awaiting_code" || result.State == "awaiting_password") {
-		result.State = "auth_required"
-	}
+	result.Challenge = challenge
 	return result, nil
 }
 
 func (e *clientEntry) adminStatus(now time.Time) domains.ConnectionStatus {
+	status, _ := e.adminSnapshot(now)
+	return status
+}
+
+func (e *clientEntry) adminSnapshot(now time.Time) (domains.ConnectionStatus, *domains.PublicChallenge) {
+	// Copy once so a refresh never advertises an awaiting state with no usable
+	// challenge. This read does not wait for the lifecycle/provider operation lock.
+	challenge := e.publicChallenge(now)
 	e.clientMu.RLock()
 	client := e.client
 	e.clientMu.RUnlock()
@@ -72,11 +69,38 @@ func (e *clientEntry) adminStatus(now time.Time) domains.ConnectionStatus {
 	// Expired provider challenges can remain in a client's status until another
 	// authentication call. Never advertise them as usable in a refreshed form.
 	if status.Auth == "awaiting_code" || status.Auth == "awaiting_password" {
-		if e.publicChallenge(now) == nil {
+		if challenge == nil {
 			status.Auth = "auth_required"
 		}
+	} else {
+		challenge = nil
 	}
-	return status
+	return status, challenge
+}
+
+// Status returns identity, authentication, transport, recovery and public login
+// metadata together without constructing a client, reconnecting or making RPCs.
+func (s *Service) Status(ctx context.Context, id string) (domains.DeviceStatus, error) {
+	d, err := s.ResolveDevice(ctx, id)
+	if err != nil {
+		return domains.DeviceStatus{}, err
+	}
+	now := time.Now().UTC()
+	result := domains.DeviceStatus{ConnectionStatus: domains.ConnectionStatus{Auth: "auth_required", Transport: "disconnected", Recovery: "degraded"}, ServerTime: now}
+	s.mu.RLock()
+	e := s.clients[d.ConnectionID]
+	s.mu.RUnlock()
+	if e != nil {
+		result.ConnectionStatus, result.Challenge = e.adminSnapshot(now)
+	}
+	// Recheck this exact connection after the snapshot, including a binding that
+	// completed concurrently. Deletion/reuse must not resolve another alias.
+	d, err = s.store.DeviceByConnection(ctx, d.ConnectionID)
+	if err != nil {
+		return domains.DeviceStatus{}, err
+	}
+	result.DeviceID, result.InstanceID, result.AccountID = d.ID, d.InstanceToken(), d.AccountID
+	return result, nil
 }
 
 func (e *clientEntry) publicChallenge(now time.Time) *domains.PublicChallenge {

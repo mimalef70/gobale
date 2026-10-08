@@ -205,6 +205,20 @@ another release-note directory. Preserve unresolved limitations in release notes
 Review staged files and secret scans before publishing. Pin Actions to
 verified full SHAs; never execute unreviewed PR code with publishing credentials.
 
+For a user request to release, perform version/changelog/contract updates, review,
+run the required checks, and commit the reviewed changes. Then run
+`make release VERSION=MAJOR.MINOR.PATCH` (or the explicitly intended prerelease).
+This command pushes the reviewed commit to main, waits for main CI and Pages,
+creates/pushes the immutable tag, waits for tag CI, dispatches release.yml, and
+waits for publication plus anonymous assets/registry verification and native
+Linux amd64/arm64 restart jobs. Existing credentials are repository secrets
+DOCKERHUB_USERNAME/DOCKERHUB_TOKEN and the workflow GITHUB_TOKEN; do not copy
+browser sessions or expose secret values. A failed/partial release stops instead
+of overwriting it: inspect the failed jobs, drafts and registry digests, then
+resume only the necessary failed verification/job. Report success only after
+public verification passes. An ordinary code-change request is not permission
+to publish. The manual equivalent is retained below for diagnosis.
+
 Push the reviewed commit and wait for CI. Tag that exact revision with
 `vMAJOR.MINOR.PATCH` for an explicitly requested full release, or append
 `-alpha.N`, `-beta.N` or `-rc.N` for prereleases, then wait for tag CI. Never move

@@ -31,8 +31,10 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
 def request(url, authorization, *, accept="application/json"):
     # Credentials only go to the fixed registry/auth hosts below. Do not forward
     # them through redirects or include registry response bodies in diagnostics.
-    req = urllib.request.Request(url, headers={"Authorization": authorization,
-                                              "Accept": accept})
+    headers = {"Accept": accept}
+    if authorization:
+        headers["Authorization"] = authorization
+    req = urllib.request.Request(url, headers=headers)
     try:
         try:
             response = urllib.request.build_opener(NoRedirect).open(req, timeout=30)
@@ -68,7 +70,7 @@ def read_manifest(target, reference):
     image, registry, auth_endpoint, service, repository, username, password = target
     basic = base64.b64encode((username + ":" + password).encode()).decode()
     query = urllib.parse.urlencode({"service": service, "scope": "repository:" + repository + ":pull"})
-    status, _, raw = request(auth_endpoint + "?" + query, "Basic " + basic)
+    status, _, raw = request(auth_endpoint + "?" + query, "Basic " + basic if username or password else "")
     if status != 200:
         raise RegistryError(image + ": registry authentication failed (HTTP " + str(status) + ")")
     try:

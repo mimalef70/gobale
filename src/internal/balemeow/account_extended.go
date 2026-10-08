@@ -415,6 +415,7 @@ func (c *Client) accountExtendedCall(ctx context.Context, op string, raw json.Ra
 			}
 			for _, u := range r.Users {
 				c.rememberRef("user", &wire.PeerRef{Id: u.Id, AccessHash: u.AccessHash})
+				c.rememberUserName(u)
 			}
 		}
 		return json.Marshal(map[string]any{"users": out})
@@ -443,6 +444,7 @@ func (c *Client) accountExtendedCall(ctx context.Context, op string, raw json.Ra
 		}
 		for _, u := range r.Users {
 			c.rememberRef("user", &wire.PeerRef{Id: u.Id, AccessHash: u.AccessHash})
+			c.rememberUserName(u)
 		}
 		for _, v := range r.Peers {
 			c.rememberRef("user", v)

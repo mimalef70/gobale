@@ -1,6 +1,7 @@
 package balemeow
 
 import (
+	"context"
 	"encoding/json"
 	"github.com/mimalef70/gobale/src/domains"
 	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
@@ -323,9 +324,15 @@ func positionBody(p *wire.MessagePosition) map[string]any {
 func decoratedPayload(m *wire.Message, q *wire.QuotedMessage, previous, thread *wire.MessagePosition, grouped *wire.Int64Value, author *wire.StringValue) json.RawMessage {
 	b := contentBody(m, 0)
 	if q != nil {
-		b["quoted_message"] = quoteBody(q)
 		if m.GetEmpty() != nil {
-			b["kind"] = "forward"
+			// An empty current message plus a quote is a provider forward. Its
+			// content belongs to the current message; ordinary reply quotes do not.
+			b = contentBody(q.Message, 0)
+			origin := quoteBody(q)
+			delete(origin, "content")
+			b["forwarded_from"] = origin
+		} else {
+			b["quoted_message"] = quoteBody(q)
 		}
 	}
 	if previous != nil {
@@ -366,21 +373,29 @@ func providerMedia(m *wire.Message) *domains.ProviderMedia {
 	return &domains.ProviderMedia{FileID: sid(d.FileId), AccessHash: sid(d.AccessHash), Size: int64(d.FileSize), Name: d.Name, ContentType: d.MimeType}
 }
 
+func messageMedia(m *wire.Message, q *wire.QuotedMessage) *domains.ProviderMedia {
+	if m.GetEmpty() != nil && q != nil {
+		return providerMedia(q.Message)
+	}
+	return providerMedia(m)
+}
+
 func sortActions(v []map[string]any) {
 	sort.Slice(v, func(i, j int) bool { return v[i]["type"].(string) < v[j]["type"].(string) })
 }
 
 // prepareEvent is applied once to the connection sink, covering both live and
 // recovered updates. The sink commits the private reference with the event.
-func (c *Client) prepareEvent(e domains.Event) domains.Event {
+func (c *Client) prepareEvent(ctx context.Context, e domains.Event) domains.Event {
 	e.Peer = c.canonicalPeer(e.Peer)
 	var b map[string]any
 	if json.Unmarshal(e.Payload, &b) == nil {
 		c.canonicalContentPeers(b, 0)
-		if e.Media != nil && c.opts.SaveMediaReference != nil {
-			markDownloadSupported(b)
-		}
 		e.Payload, _ = json.Marshal(b)
+	}
+	projectEventMessage(&e)
+	if e.Message != nil {
+		e.Message.SenderDisplayName, e.Message.SenderNameStatus = c.senderDisplayName(ctx, e.Message.From)
 	}
 	return e
 }
@@ -394,7 +409,7 @@ func (c *Client) canonicalContentPeers(b map[string]any, depth int) {
 		p := c.canonicalPeer(domains.Peer{Type: kind, ID: id})
 		v["type"] = p.Type
 	}
-	for _, key := range []string{"content", "quoted_message"} {
+	for _, key := range []string{"content", "quoted_message", "forwarded_from"} {
 		if v, ok := b[key].(map[string]any); ok {
 			c.canonicalContentPeers(v, depth+1)
 		}

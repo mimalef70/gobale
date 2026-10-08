@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "snapshot_date": "2026-10-07",
+  "snapshot_date": "2026-10-08",
   "scope": "GoBale implementation and recorded validation snapshot. Native operation IDs are not endpoint counts or a compatibility percentage. docs/openapi.yaml is the complete public API contract.",
-  "verification": "2026-10-06: offline Go tests, race, purego and vet passed at the original snapshot. Dated 2026-10-07 notes below add synthetic regression evidence only. Implemented status proves code exists, not live interoperability. Only explicit dated observations and AGENTS.md describe live coverage; unmentioned capabilities remain live-unverified. Route observations retain their original scope and do not generalize to new options.",
+  "verification": "2026-10-06: offline Go tests, race, purego and vet passed at the original snapshot. Dated 2026-10-07 notes below add synthetic regression evidence only. Implemented status proves code exists, not live interoperability. Only explicit dated observations and AGENTS.md describe live coverage; unmentioned capabilities remain live-unverified. Route observations retain their original scope and do not generalize to new options. 2026-10-08: make check (default/purego/vet/contracts), race, fuzz and vuln passed for the consumer-message/media/status/webhook changes; the added evidence is entirely synthetic/offline and does not extend native live acceptance.",
   "statuses": {
     "implemented": "Reviewed implementation exists; no live coverage is implied.",
     "implemented_with_limits": "Reviewed implementation exists with explicit limits or unresolved behavior.",
@@ -1687,6 +1687,36 @@
       "capability": "consumer_connection_contract",
       "status": "implemented_with_limits",
       "note": "2026-10-07 offline default/purego/race fixtures verify schema-7 atomic keyed provisioning, concurrent/restart replay and retired aliases, mandatory machine/browser instance guards, three isolated account workflows, unchanged signed webhook retry after SQLite reopen, and required REST send/schedule idempotency. Newly persisted envelopes include authoritative instance_id; historical bodies stay unchanged. Per-connection backlog admission and bounded schedule scanning prevent a full connection hiding other due work. The receiver example verifies a configured binding before durable acceptance. No consumer application integration, tenant ACL, live-provider expansion or production capacity is established by these synthetic tests."
+    },
+    {
+      "capability": "consumer_message_projection",
+      "status": "implemented_with_limits",
+      "note": "2026-10-08: synthetic protocol, storage, restart/replay and race tests cover automatic bounded account-scoped sender names, cold contact lookup, real signed IDs, Unicode, reply/edit authorship, flattened forwards, poll/unsupported display text and fixed attachment metadata. Historical signed bodies stay unchanged. Sender names may be unavailable; original edit authorship is not inferred from the updater. No new live-provider or consumer application integration is established."
+    },
+    {
+      "capability": "multipart_media_send",
+      "status": "implemented_with_limits",
+      "note": "2026-10-08: default/purego/race tests cover one-request file/image/video/audio/voice submission, atomic media/outbox/RID persistence, connection-scoped content idempotency, conflicts, concurrent retries, unknown outcome after restart, pinning, staging cleanup and streamed alias reuse. ptt=true selects validated Ogg Opus without conversion. Multipart schedules require a separate upload. WebP header/MIME/dimension inspection and byte-preserving fake-provider send passed; real-provider WebP acceptance/rendering remains unverified."
+    },
+    {
+      "capability": "receipt_range_validation",
+      "status": "implemented_with_limits",
+      "note": "2026-10-08: independent literal-wire tests preserve zero, omitted, ordered, equal and reversed receipt bounds. range_valid is structural only; zero/missing bounds remain unknown. Provider meaning of date=0 and exact per-message receipt coverage remain unproven; message_ids_supported is false and receipts do not reconcile ambiguous sends."
+    },
+    {
+      "capability": "webhook_terminal_failure_policy",
+      "status": "implemented_with_limits",
+      "note": "2026-10-08: synthetic default/purego/race fixtures verify permanent 4xx except 408/425/429, continued bounded transient retry, queue progress after terminal failure, independent destinations, retained terminal ledger and unchanged explicit replay after restart. No recipient delivery or business-processing claim follows from callback acceptance."
+    },
+    {
+      "capability": "combined_connection_status",
+      "status": "implemented_with_limits",
+      "note": "2026-10-08: synthetic REST/usecase tests cover one local status response with immutable identity, account binding, auth/transport/recovery, copied public challenge metadata, expiry and server time. Reads do not construct clients or call the provider; concurrent lifecycle state is an observational snapshot, not a transactional provider-state guarantee."
+    },
+    {
+      "capability": "attachment_registration_truthfulness",
+      "status": "implemented_with_limits",
+      "note": "2026-10-08: synthetic storage/history tests verify that download_supported reflects the exact accepted private reference, including stale originals/history after newer edits/deletion tombstones. Attachment metadata survives unavailable downloads; quotes cannot rebind another message attachment. Registration, durable event/delivery bytes and checkpoints remain atomic. Future provider availability is not guaranteed."
     }
   ]
 }

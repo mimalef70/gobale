@@ -34,7 +34,7 @@ func TestNestedTemplateQuoteAndHistoryPreservePublicContent(t *testing.T) {
 	h := &wire.HistoryItem{SenderId: 42, Rid: -55, Date: 1720000000001, Message: &wire.Message{Empty: &wire.Empty{}}, QuotedMessage: q, EditedAt: &wire.Int64Value{Value: 1720000000002}, Next: &wire.MessagePosition{Rid: 99, Date: 1720000000003}}
 	var hp map[string]any
 	_ = json.Unmarshal(decoratedHistoryPayload(h, false), &hp)
-	if hp["kind"] != "forward" || hp["quoted_message"].(map[string]any)["message_id"] != "-33" {
+	if hp["kind"] != "text" || hp["message"] != "quoted" || hp["forwarded_from"].(map[string]any)["message_id"] != "-33" {
 		t.Fatalf("lost forward metadata: %#v", hp)
 	}
 }

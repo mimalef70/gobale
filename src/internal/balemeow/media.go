@@ -20,6 +20,7 @@ import (
 
 	"github.com/mimalef70/gobale/src/domains"
 	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	_ "golang.org/x/image/webp"
 )
 
 // MediaInfo is provided by the gateway's immutable, account-scoped media store.
@@ -82,10 +83,10 @@ func (c *Client) sendMedia(ctx context.Context, r domains.SendRequest, peer *wir
 		}
 		var header bytes.Buffer
 		cfg, format, err := image.DecodeConfig(io.TeeReader(io.LimitReader(source, 1<<20), &header))
-		if err != nil || cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > math.MaxInt32 || cfg.Height > math.MaxInt32 {
-			return domains.SendResult{}, boundedError("INVALID_MEDIA", "image header is invalid or exceeds the 1 MiB inspection limit", 400)
+		if err != nil || cfg.Width <= 0 || cfg.Height <= 0 || cfg.Width > 8192 || cfg.Height > 8192 || int64(cfg.Width)*int64(cfg.Height) > 16777216 {
+			return domains.SendResult{}, boundedError("INVALID_MEDIA", "image header is invalid or exceeds inspection or dimension limits", 400)
 		}
-		canonical := map[string]string{"jpeg": "image/jpeg", "png": "image/png", "gif": "image/gif"}[format]
+		canonical := map[string]string{"jpeg": "image/jpeg", "png": "image/png", "gif": "image/gif", "webp": "image/webp"}[format]
 		if contentType != canonical {
 			return domains.SendResult{}, boundedError("INVALID_MEDIA", "image content type does not match its bytes", 400)
 		}

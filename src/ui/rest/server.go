@@ -72,7 +72,7 @@ func New(service *usecase.Service, store *storage.Store, opts Options) (*Server,
 		slots = make(chan struct{}, 4)
 	}
 	s := &Server{service: service, store: store, opts: opts, mediaSlots: slots}
-	s.App = fiber.New(fiber.Config{AppName: "GoBale", BodyLimit: int(opts.MaxMediaBytes + 4096), StreamRequestBody: true, DisablePreParseMultipartForm: true, ReadTimeout: 60 * time.Second, WriteTimeout: 60 * time.Second, ErrorHandler: s.handleError})
+	s.App = fiber.New(fiber.Config{AppName: "GoBale", BodyLimit: int(opts.MaxMediaBytes + multipartRequestLimit + multipartOverheadLimit), StreamRequestBody: true, DisablePreParseMultipartForm: true, ReadTimeout: 60 * time.Second, WriteTimeout: 60 * time.Second, ErrorHandler: s.handleError})
 	s.App.Use(s.recoverRequest, s.requestDeadline)
 	r := s.App.Group(opts.BasePath)
 	if opts.UIEnabled {
@@ -419,6 +419,9 @@ func (s *Server) send(kind string) fiber.Handler {
 		key, e := requiredIdempotency(c)
 		if e != nil {
 			return e
+		}
+		if isMultipartRequest(c) {
+			return s.sendMultipart(c, d, kind, key)
 		}
 		var req domains.SendRequest
 		if e = decode(c, &req); e != nil {

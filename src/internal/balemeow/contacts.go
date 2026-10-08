@@ -59,6 +59,7 @@ func (c *Client) contacts(ctx context.Context, op string, raw json.RawMessage) (
 			return nil, protocolError()
 		}
 		c.rememberRef("user", &wire.PeerRef{Id: u.Id, AccessHash: u.AccessHash})
+		c.rememberUserName(u)
 		seen[u.Id] = true
 		out = append(out, map[string]any{"peer": domains.Peer{Type: "user", ID: strconv.FormatUint(uint64(u.Id), 10)}, "name": u.Name, "username": u.GetNick().GetValue(), "is_bot": u.GetIsBot().GetValue(), "is_deleted": u.GetIsDeleted().GetValue()})
 	}

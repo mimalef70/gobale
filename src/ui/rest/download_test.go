@@ -45,7 +45,9 @@ func TestRemoteDownloadUsesScopedReferenceAndReleasesSlot(t *testing.T) {
 	_, err = svc.CreateDevice(context.Background(), "two")
 	require.NoError(t, err)
 	peer := domains.Peer{Type: "user", ID: "123"}
-	require.NoError(t, st.SaveProviderMedia(context.Background(), one.ConnectionID, peer, "456", domains.ProviderMedia{FileID: "-789", AccessHash: "7987654321", Size: 7, Name: "test.txt", ContentType: "text/plain"}))
+	available, err := st.SaveProviderMedia(context.Background(), one.ConnectionID, peer, "456", domains.ProviderMedia{FileID: "-789", AccessHash: "7987654321", Size: 7, Name: "test.txt", ContentType: "text/plain"})
+	require.NoError(t, err)
+	require.True(t, available)
 	srv, err := New(svc, st, Options{BasicAuth: "test:password", MediaSlots: make(chan struct{}, 1), MaxMediaBytes: 1024})
 	require.NoError(t, err)
 	for _, device := range []string{"two", "one", "one"} {

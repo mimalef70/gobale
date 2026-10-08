@@ -37,7 +37,7 @@ func TestDownloadUsesScopedEncryptedReferenceAndReaderOwnsContext(t *testing.T) 
 	two := mustDevice(t, s, "two")
 	peer := domains.Peer{Type: "user", ID: "42"}
 	media := domains.ProviderMedia{FileID: "99", AccessHash: "-7", Name: "file.txt", ContentType: "text/plain", Size: 5}
-	if e := st.SaveProviderMedia(ctx, one.ConnectionID, peer, "10", media); e != nil {
+	if _, e := st.SaveProviderMedia(ctx, one.ConnectionID, peer, "10", media); e != nil {
 		t.Fatal(e)
 	}
 	if _, _, e := s.Download(ctx, two.ID, peer, "10"); e == nil {

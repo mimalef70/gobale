@@ -400,17 +400,6 @@ func (s *Service) submitAuth(ctx context.Context, id, challenge, value string, p
 	}
 	return cleanStatus(e.client.Status()), safeError(err)
 }
-func (s *Service) Status(ctx context.Context, id string) (domains.ConnectionStatus, error) {
-	d, err := s.ResolveDevice(ctx, id)
-	if err != nil {
-		return domains.ConnectionStatus{}, err
-	}
-	e, err := s.entry(d)
-	if err != nil {
-		return domains.ConnectionStatus{}, err
-	}
-	return e.adminStatus(time.Now()), nil
-}
 func (s *Service) Reconnect(ctx context.Context, id string) error {
 	d, err := s.ResolveDevice(ctx, id)
 	if err != nil {

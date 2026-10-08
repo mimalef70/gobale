@@ -147,7 +147,7 @@ func run(parent context.Context, cfg config.Settings) error {
 		return balemeow.New(balemeow.Options{GRPCEndpoint: cfg.GRPCEndpoint, WebSocketEndpoint: cfg.WebSocketEndpoint, Origin: cfg.Origin, AppID: cfg.AppID, APIKey: cfg.APIKey, APIVersion: cfg.APIVersion, DeviceTitle: cfg.DeviceTitle, MaxMediaBytes: cfg.MaxMediaBytes,
 			RecoveryVerified: true,
 			LoadCheckpoint:   func(ctx context.Context) (string, error) { return st.Checkpoint(ctx, d.ConnectionID) },
-			SaveMediaReference: func(ctx context.Context, peer domains.Peer, messageID string, m domains.ProviderMedia) error {
+			SaveMediaReference: func(ctx context.Context, peer domains.Peer, messageID string, m domains.ProviderMedia) (bool, error) {
 				return st.SaveProviderMedia(ctx, d.ConnectionID, peer, messageID, m)
 			},
 			OnDiagnostic: func(d balemeow.Diagnostic) {

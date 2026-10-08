@@ -1,5 +1,9 @@
 # Webhook payloads
 
+The consumer message projection, multipart sends, receipt validity fields,
+combined status and permanent webhook-failure policy below were introduced in
+2.1.0; use a matching gateway build and contract.
+
 This guide describes GoBale 2.0. Required machine-API instance guards,
 `webhook_filter` and new-event `instance_id` were introduced in
 [2.0.1](../CHANGELOG.md#201--2026-10-07). Use the documentation from the same tag
@@ -124,7 +128,19 @@ Synthetic incoming-message example:
   "sender_id": "456",
   "direction": "incoming",
   "timestamp": "2026-10-06T12:00:00Z",
-  "payload": {"kind": "text", "message": "Hello"}
+  "payload": {"kind": "text", "message": "Hello"},
+  "message": {
+    "id": "987654321",
+    "chat_id": "456",
+    "from": "456",
+    "sender_display_name": "Example contact",
+    "sender_name_status": "available",
+    "is_from_me": false,
+    "timestamp": "2026-10-06T12:00:00Z",
+    "body": "Hello",
+    "kind": "text",
+    "supported": true
+  }
 }
 ```
 
@@ -138,7 +154,8 @@ Synthetic incoming-message example:
 | `peer` | Conversation type/ID where applicable; account-level notifications may have empty peer fields. |
 | `message_id`, `sender_id`, `direction` | Optional event-specific fields; message direction is `incoming`, `outgoing` or `unknown` when provenance is absent. |
 | `timestamp` | RFC3339 event timestamp; no universal ordering guarantee is implied. |
-| `payload` | Normalized event-specific content; not raw provider protobuf. |
+| `payload` | Reviewed structured event content; not raw provider protobuf. |
+| `message` | Display-ready projection on new message/edit events, described below. Previously persisted bodies are unchanged. |
 
 Keep all IDs as strings. Message/file IDs may be negative signed 64-bit values;
 they must not pass through a JavaScript `Number`. Do not parse meaning from
@@ -148,8 +165,8 @@ After verifying the raw-body signature, match `session_id`, `instance_id` and
 `device_id` to the consumer's saved alias, instance and Bale account binding.
 The gateway sets these fields from storage, never from untrusted provider metadata. A channel
 with no authenticated account binding must defer business processing until it
-has confirmed that binding through the authenticated device API. Return non-2xx
-for a retry, or acknowledge only after a durable quarantine write; do not guess
+has confirmed that binding through the authenticated device API. Return 503
+for a temporary retry, or acknowledge only after a durable quarantine write; do not guess
 ownership from the incoming event or message content.
 Historical bodies created before `instance_id` was introduced are preserved on
 retry/replay. Do not automatically bind such a body to a newly created channel;
@@ -174,6 +191,36 @@ not the persisted body.
 
 ## Received content
 
+New `message` and `message.edited` events include one `message` object for the
+consumer. The historical-message API includes the same projection. Read
+`message.body` to display text/captions, forwarded text, poll questions/options
+or explicit fallback text for special/unsupported content. Treat it as plain
+Unicode text, never trusted HTML. Structured poll, keyboard and service data
+remain in `payload`.
+
+| Projection field | Meaning |
+| --- | --- |
+| `id`, `chat_id`, `from` | Real Bale message, chat and sender IDs as strings. `chat_id` is disambiguated by envelope `peer.type` and connection; `from` is empty when the original author is unknown, including edits. |
+| `sender_display_name`, `sender_name_status` | Account-scoped contact/local display name or an empty string with `unavailable`. The gateway resolves names internally with bounded cached reads; a failed lookup does not discard or indefinitely delay an event. No extra consumer profile call is required. |
+| `is_from_me` | True/false only for established outgoing/incoming direction; null when unknown. |
+| `timestamp` | RFC3339 message/event time, retaining the provider semantics of that event. |
+| `body`, `kind`, `supported` | Display text and content kind. Unknown variants remain visible with fallback text and `supported:false`. |
+| `replied_to_id`, `quoted_body` | Optional replied-to message identity and display text. Quote media never replaces the current message attachment. |
+| `original_message_id`, `editor_id` | Target message ID on edits, plus updater ID only when supplied by the provider. The original sender remains unknown; an editor does not populate `from`, `sender_display_name` or `is_from_me`. |
+| `forwarded_from` | Separate original message/sender/peer/date provenance when present. Forwarded content is projected as normal text/media; `from` stays the forwarding sender. |
+| `media` | Optional attachment with fixed `type`, `file_id`, `name`, `mime_type`, `size`, `download_supported` fields. Unknown string metadata stays empty. Voice has type `voice`, separate from `audio`. |
+
+A name is a cached display label, not verified identity or a consumer permission.
+Unavailable names stay explicit; the gateway never substitutes another account's
+contacts. The name and all projected content are frozen when the event commits,
+so retries/replay never rewrite the signed body after a later lookup. Previously
+persisted events are preserved byte for byte and may lack this projection.
+
+`media.download_supported` means the selected connection accepted a private
+attachment reference in durable storage. It cannot guarantee later provider
+availability. A failed download does not remove the attachment metadata; show
+that an attachment exists and handle the download error separately.
+
 Message payloads use `kind` and optional normalized fields. Text is in `message`;
 documents can include `name`, `mime_type`, `size`, `caption`, `media_type` and
 `download_supported`. Native voice arrives as `kind:"document"`,
@@ -194,8 +241,9 @@ JSON or a public URL. The requested size may fall back to an available rendition
 absent photos. This user route does not imply group/channel-avatar support.
 
 Payloads may include `quoted_message`, forward context, mentions, service actions,
-polls, stickers, contacts, locations, gifts or nested template `content`. Render
-nested content deliberately instead of assuming top-level text. Keyboard metadata
+polls, stickers, contacts, locations, gifts or nested template `content`. Use
+`message.body` for display, and inspect structured fields when implementing richer
+controls. Keyboard metadata
 does not execute a URL, callback or Mini App, and receiving a template does not
 prove ordinary-account template sending works. Anonymous poll voters and private
 gift/financial fields are not exposed. Incoming gifts do not authorize payments.
@@ -211,19 +259,48 @@ An event family in the schema is not proof of every provider variant working liv
 See [OpenAPI](openapi.yaml) for schemas and the [README](../readme.md) for current
 support limits. Do not log message bodies or credential-bearing Mini App results.
 
+## Receipt ranges
+
+`message.read` and `message.received` preserve `start_date` and `date` as decimal
+millisecond strings. `message.read_by_me` may instead include `end_date`.
+Every receipt includes `range_status`, `range_valid` and
+`message_ids_supported:false`:
+
+| Bounds | range_status | range_valid |
+| --- | --- | --- |
+| Both positive, end greater than or equal to start | `valid` | `true` |
+| Zero or missing endpoint | `unknown` | `false` |
+| Positive reversed endpoints | `invalid` | `false` |
+
+These labels validate the shape of the observed range only. The reviewed schema
+does not establish what a zero end date means; GoBale does not treat it as an
+open-ended range, replace it with now, or infer that all messages were read.
+Preserve the receipt for inspection and do not advance message delivery/read
+state from unknown or invalid bounds. Even positive bounds do not establish exact
+endpoint inclusion or per-message identity. No message-ID list is invented and
+these receipts cannot reconcile an unknown send. The event envelope timestamp
+is not a replacement for a missing receipt bound.
+
 ## Retries, changes and replay
 
 Each delivery has a 10-second request timeout and a normal budget of eight attempts,
-with exponential backoff and equal jitter. Non-2xx responses, network errors and
-timeouts retry; redirects are not followed. An interrupted attempt can repeat
+with exponential backoff and equal jitter. HTTP 408/425/429, 5xx, redirects,
+network errors and timeouts retry; redirects are not followed. Other HTTP 4xx
+responses immediately become `failed`, preserving the event and delivery ledger
+while allowing later events for that connection/destination to proceed. An interrupted attempt can repeat
 after a crash or shutdown, so eight is not an absolute HTTP-request maximum.
 Ordering is per connection/destination: a slow target blocks later events for
 that target, while other destinations/accounts continue. Exhausted deliveries
 remain inspectable rather than disappearing.
 
 A 2xx response acknowledges durable receipt, not completion of the consumer's
-business work. All non-2xx responses are retried, including 400/401/403; a
-signature or binding error therefore needs a configuration fix, not just waiting.
+business work. Use 503 for temporary inability to persist an event. Use 422 for
+a permanently unprocessable event, or durably quarantine it before returning 2xx.
+400/401/403 are permanent too: fix the payload, signature or binding configuration
+and then explicitly retry/replay. A permanent failure does not discard the event
+or prove that the consumer processed it. Temporary retries retain queue order;
+failed deliveries release later events, and explicit retry cannot undo deliveries
+that already completed.
 
 Changing a device URL pauses unstarted old-configuration work. Secret-only rotation
 applies on the next attempt for the same URL; an in-flight request may still use

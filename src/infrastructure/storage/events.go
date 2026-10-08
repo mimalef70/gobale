@@ -121,15 +121,29 @@ func (s *Store) appendEvent(ctx context.Context, conn string, event domains.Even
 		}
 		return false, s.commitTx(tx)
 	}
+	mediaAvailable := false
 	switch event.Type {
 	case "message", "message.edited":
 		if (event.Media != nil || event.Type == "message.edited") && event.MessageID != "" && event.Peer.ID != "" {
-			if e = s.saveProviderMediaTx(ctx, tx, conn, event.Peer, event.MessageID, event.Media, event.Time.UnixMilli()); e != nil {
+			if mediaAvailable, e = s.saveProviderMediaTx(ctx, tx, conn, event.Peer, event.MessageID, event.Media, event.Time.UnixMilli()); e != nil {
+				return false, e
+			}
+		}
+		if e = setEventMediaAvailability(&event, mediaAvailable); e != nil {
+			return false, e
+		}
+		updatedBody, err := marshal(event)
+		if err != nil {
+			return false, err
+		}
+		if updatedBody != body {
+			body = updatedBody
+			if _, e = tx.ExecContext(ctx, `UPDATE events SET body=? WHERE connection_id=? AND id=?`, body, conn, event.ID); e != nil {
 				return false, e
 			}
 		}
 	case "message.deleted":
-		if e = s.saveProviderMediaTx(ctx, tx, conn, event.Peer, event.MessageID, nil, event.Time.UnixMilli()); e != nil {
+		if _, e = s.saveProviderMediaTx(ctx, tx, conn, event.Peer, event.MessageID, nil, event.Time.UnixMilli()); e != nil {
 			return false, e
 		}
 	}
