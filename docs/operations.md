@@ -1,6 +1,6 @@
 # Operating GoBale
 
-This guide describes GoBale 2.1.0. Its mandatory account-instance guards and
+This guide describes GoBale 2.1.1. Its mandatory account-instance guards and
 idempotency keys change the 1.x machine API; coordinate consumer updates and
 back up storage before upgrading. See [Backup, restore and upgrades](#backup-restore-and-upgrades).
 Use the documentation at the same tag as your installed artifact. The hosted API
@@ -71,7 +71,7 @@ key value and fixes the container storage paths, with `APP_MASTER_KEY_FILE` empt
 Host values of `APP_DATABASE`, `APP_MEDIA_ROOT` and `APP_MASTER_KEY_FILE` are not
 forwarded. `GOBALE_IMAGE` selects the Compose image, not a GoBale setting; explicitly
 use `gobale:local` for a development build. Compose's default image is
-`ghcr.io/mimalef70/gobale:v2.1.0`; `mimalef70/gobale:v2.1.0` selects Docker Hub.
+`ghcr.io/mimalef70/gobale:v2.1.1`; `mimalef70/gobale:v2.1.1` selects Docker Hub.
 
 ## Deployment and access
 
@@ -120,14 +120,14 @@ the configured HTTP proxies. These are intentionally different network policies.
 ### Docker without Compose
 
 Run these commands from a dedicated configuration directory in a POSIX shell on
-Linux or macOS. They use the v2.1.0 image and a dedicated named volume; host Go and
+Linux or macOS. They use the v2.1.1 image and a dedicated named volume; host Go and
 Node installations are not needed. Skip initialization if the directory already
 has `.env` and `master.key`.
 
 ```sh
 mkdir -p gobale-data
 cd gobale-data
-export GOBALE_IMAGE=ghcr.io/mimalef70/gobale:v2.1.0
+export GOBALE_IMAGE=ghcr.io/mimalef70/gobale:v2.1.1
 docker pull "$GOBALE_IMAGE"
 docker run --rm --user "$(id -u):$(id -g)" \
   --volume "$PWD:/config" --workdir /config \
@@ -262,7 +262,7 @@ protocol and storage changes before replacing the running version.
 
 GoBale 2.0.1 upgrades storage from schema 5 used by v1.0.0 to schema 7, applying
 schema 6 on the way. The storage schema number is independent of the application
-version. Stop the old process, back up its complete storage and key, deploy 2.1.0
+version. Stop the old process, back up its complete storage and key, deploy 2.1.1
 with the same key, and update consumers before resuming requests. Do not run a
 1.x binary against the migrated database; rollback requires the pre-upgrade
 snapshot and the matching old binary/configuration.

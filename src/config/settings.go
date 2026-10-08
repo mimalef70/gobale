@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-const AppVersion = "2.1.0"
+const AppVersion = "2.1.1"
 
 type Settings struct {
 	UIEnabled                                                                                     bool

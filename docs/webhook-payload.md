@@ -2,8 +2,8 @@
 
 The consumer message projection, multipart sends, receipt validity fields,
 combined status and permanent webhook-failure policy below were introduced in
-2.1.0; use a matching gateway build and contract. The sender-name lookup fixes
-described below are in [Unreleased](../CHANGELOG.md#unreleased), after 2.1.0.
+2.1.0. The sender-name lookup fixes described below are included in
+[2.1.1](../CHANGELOG.md#211--2026-10-08); use a matching gateway build and contract.
 
 This guide describes GoBale 2.0. Required machine-API instance guards,
 `webhook_filter` and new-event `instance_id` were introduced in

@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.1.1 — 2026-10-08
 
 - Resolve first-message sender names through the reviewed bounded recent-dialog
   scan when the account's contacts do not contain a trusted user reference.
@@ -14,6 +14,21 @@
 - Keep already persisted webhook bodies, event IDs and replay content unchanged.
   Enrichment runs automatically; no name-completion event is introduced. These
   fixes do not extend live-provider, recovery-gap or capacity acceptance claims.
+- Retry transient failures during anonymous release verification downloads with
+  bounded backoff. Keep access denials, missing assets and validation failures
+  terminal; publication is never retried by the download verifier.
+
+### Verified scope and remaining limits
+
+- Sender-name fixes have synthetic regression coverage; they do not establish
+  new live-provider or consumer-application acceptance. Existing signed webhook
+  bodies and retry/replay identity remain unchanged.
+- Ordinary-user keyboard-template sends remain rejected in live tests. Long-gap
+  recovery, exhaustive history export, long-duration Linux capacity and deployment
+  retention remain acceptance gates. Mentions, scheduled forwarding, WebP sends,
+  account-security/report/story writes and Mini App credential interoperability
+  retain their documented live-verification limits. No financial mutation support
+  is claimed.
 
 ## 2.1.0 — 2026-10-08
 
