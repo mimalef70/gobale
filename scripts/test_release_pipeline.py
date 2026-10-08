@@ -1,5 +1,8 @@
 """Failure-boundary tests for the explicit publication coordinator and public proof."""
 import hashlib
+import io
+import ssl
+import urllib.error
 import json
 from pathlib import Path
 import unittest
@@ -7,11 +10,29 @@ from unittest.mock import patch
 import yaml
 
 from release import ensure_tag, wait_for_run
-from verify_release import parse_checksums, validate_manifest, verify_registries
+from verify_release import parse_checksums, validate_manifest, verify_registries, public_bytes
 from release_registry import RegistryError
 
 
 class PublicProofTest(unittest.TestCase):
+    def test_transient_download_retries_never_publish_or_disable_tls(self):
+        with patch('verify_release.urllib.request.urlopen', side_effect=[ssl.SSLError('synthetic interrupted read'), io.BytesIO(b'verified')]) as request, patch('verify_release.time.sleep') as sleep:
+            self.assertEqual(public_bytes('https://example.test/asset'), b'verified')
+            self.assertEqual(request.call_count, 2)
+            self.assertNotIn('Authorization', request.call_args.args[0].headers)
+            self.assertEqual(request.call_args.kwargs, {'timeout': 60})
+            sleep.assert_called_once_with(1)
+        denied = urllib.error.HTTPError('https://example.test/asset', 403, 'denied', {}, None)
+        with patch('verify_release.urllib.request.urlopen', side_effect=denied) as request, patch('verify_release.time.sleep') as sleep:
+            with self.assertRaises(urllib.error.HTTPError):
+                public_bytes('https://example.test/asset')
+            self.assertEqual(request.call_count, 1)
+            sleep.assert_not_called()
+        with patch('verify_release.urllib.request.urlopen', side_effect=TimeoutError('synthetic')) as request, patch('verify_release.time.sleep'):
+            with self.assertRaises(TimeoutError):
+                public_bytes('https://example.test/asset')
+            self.assertEqual(request.call_count, 3)
+
     def test_anonymous_registry_calls_and_same_immutable_build(self):
         raw = json.dumps({'manifests': [{'platform': {'os': 'linux', 'architecture': arch}}
                                        for arch in ('amd64', 'arm64')]}).encode()

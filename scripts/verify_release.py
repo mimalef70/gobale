@@ -7,6 +7,8 @@ from pathlib import Path
 import re
 import tarfile
 import tempfile
+import time
+import urllib.error
 import urllib.request
 
 from release_notes import release_metadata
@@ -20,11 +22,23 @@ ROOT = Path(__file__).resolve().parents[1]
 def public_bytes(url, maximum=2 * 1024 * 1024):
     # No gh, Docker config, cookies, Authorization, or private environment inputs.
     request = urllib.request.Request(url, headers={'User-Agent': 'GoBale-release-verifier'})
-    with urllib.request.urlopen(request, timeout=60) as response:
-        data = response.read(maximum + 1)
-        if len(data) > maximum:
-            raise ValueError('Public response exceeded its size bound')
-        return data
+    # Only idempotent anonymous reads retry. Validation failures, absent assets
+    # and denied access remain failures; publication is never retried here.
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(request, timeout=60) as response:
+                data = response.read(maximum + 1)
+                if len(data) > maximum:
+                    raise ValueError('Public response exceeded its size bound')
+                return data
+        except urllib.error.HTTPError as error:
+            error.close()
+            if error.code not in {408, 429, 500, 502, 503, 504} or attempt == 2:
+                raise
+        except (OSError, urllib.error.URLError):
+            if attempt == 2:
+                raise
+        time.sleep(2 ** attempt)
 
 
 def public_json(url):
