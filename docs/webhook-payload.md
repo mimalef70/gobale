@@ -2,7 +2,8 @@
 
 The consumer message projection, multipart sends, receipt validity fields,
 combined status and permanent webhook-failure policy below were introduced in
-2.1.0; use a matching gateway build and contract.
+2.1.0; use a matching gateway build and contract. The sender-name lookup fixes
+described below are in [Unreleased](../CHANGELOG.md#unreleased), after 2.1.0.
 
 This guide describes GoBale 2.0. Required machine-API instance guards,
 `webhook_filter` and new-event `instance_id` were introduced in
@@ -201,7 +202,7 @@ remain in `payload`.
 | Projection field | Meaning |
 | --- | --- |
 | `id`, `chat_id`, `from` | Real Bale message, chat and sender IDs as strings. `chat_id` is disambiguated by envelope `peer.type` and connection; `from` is empty when the original author is unknown, including edits. |
-| `sender_display_name`, `sender_name_status` | Account-scoped contact/local display name or an empty string with `unavailable`. The gateway resolves names internally with bounded cached reads; a failed lookup does not discard or indefinitely delay an event. No extra consumer profile call is required. |
+| `sender_display_name`, `sender_name_status` | Account-scoped contact/local display name or an empty string with `unavailable`. Incoming events resolve names internally before durable acceptance, with bounded reads and rate-limit waits. Consumers do not need to orchestrate profile reads; inaccessible or missing names remain explicit. |
 | `is_from_me` | True/false only for established outgoing/incoming direction; null when unknown. |
 | `timestamp` | RFC3339 message/event time, retaining the provider semantics of that event. |
 | `body`, `kind`, `supported` | Display text and content kind. Unknown variants remain visible with fallback text and `supported:false`. |
@@ -211,9 +212,38 @@ remain in `payload`.
 | `media` | Optional attachment with fixed `type`, `file_id`, `name`, `mime_type`, `size`, `download_supported` fields. Unknown string metadata stays empty. Voice has type `voice`, separate from `audio`. |
 
 A name is a cached display label, not verified identity or a consumer permission.
-Unavailable names stay explicit; the gateway never substitutes another account's
-contacts. The name and all projected content are frozen when the event commits,
-so retries/replay never rewrite the signed body after a later lookup. Previously
+The gateway never substitutes another account's contacts. For incoming events,
+including recovered updates, a cold sender lookup uses the selected account's
+contacts and, if no trusted user reference is available, the same bounded recent
+conversation scan used by other user reads (`LoadDialogs`, at most ten pages of
+100 conversations). It reads the matching profile only if those results did not
+already supply a display name. Names must pass the gateway's display-text checks;
+provider access hashes stay private.
+
+Lookup starts are spaced at least one second apart per connection. A second cold
+sender waits on the existing ordered update consumer for the next slot instead
+of losing its lookup to throttling. A cold event can add up to one second of
+rate-limit wait plus a shared 500 ms budget for contacts, conversation pages and
+profile reads, before durable acceptance. Each storage call gets its own timeout
+after enrichment; a recovery page does not share one storage deadline across all
+its events. The socket reader can still receive RPC replies during these waits.
+Backlogs add queueing time: the update queue remains bounded, and overflow reports
+`EVENT_BACKPRESSURE` and closes the connection for recovery. This is not a promise
+of bounded end-to-end delivery latency or complete recovery of arbitrary gaps.
+Cancellation or disconnect ends lookup work without an unbounded wait.
+
+Successful names are cached for 15 minutes; a completed lookup that finds no
+usable name is cached for 30 seconds. Partial contact/dialog users with omitted
+or unsafe names do not erase valid names or create negative cache entries for
+users whose profiles have not been looked up. Contact refreshes are bounded to once per
+15 minutes after success, or once per 30 seconds after failure. A recent contact
+refresh does not suppress the conversation lookup for a different new sender.
+Missing/inaccessible profiles, unsafe text, scan limits and timeouts still yield
+an empty name with `sender_name_status:"unavailable"`; there is no later name
+completion event. History uses names available in the selected account's cache.
+
+The name and all projected content are frozen when the event commits, so later
+cache fills, retries and replay never rewrite the signed body. Previously
 persisted events are preserved byte for byte and may lack this projection.
 
 `media.download_supported` means the selected connection accepted a private

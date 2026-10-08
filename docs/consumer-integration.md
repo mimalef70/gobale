@@ -2,7 +2,8 @@
 
 The consumer message projection, multipart sends, receipt validity fields,
 combined status and permanent webhook-failure policy below were introduced in
-2.1.0; use a matching gateway build and contract.
+2.1.0; use a matching gateway build and contract. The sender-name lookup fixes
+described below are in [Unreleased](../CHANGELOG.md#unreleased), after 2.1.0.
 
 This guide describes the GoBale 2.0 API contract. Atomic keyed provisioning,
 mandatory machine-API instance guards, required send/schedule keys and new-event
@@ -190,6 +191,23 @@ Keep public IDs as strings, including negative signed message/file IDs. Use
 identifies an event and is not interchangeable with it. Use the documented event
 names instead of translating every unknown event into an empty successful text
 message. Unsupported variants and recovery gaps must remain visible.
+
+For incoming events, the gateway resolves sender names before durable acceptance.
+A sender absent from contacts can be found through a bounded scan of recent
+conversations; reads use only references established by the selected account.
+Cold senders wait for their per-connection lookup slot, including when two new
+senders arrive close together. A lookup can add up to one second of rate-limit
+wait and 500 ms of provider reads; preceding queued events add further delay.
+Queue limits and recovery status still apply. See [sender-name lookup and
+limits](webhook-payload.md#received-content).
+
+Render `message.sender_display_name` when `sender_name_status` is `available`, and
+handle `unavailable` explicitly. Names are display labels, not identity or access
+proof. Provider failure, unavailable/unsafe names and lookup bounds can still
+prevent enrichment. Consumers need no separate profile request to activate the
+lookup. Completed unavailable lookups are cached for 30 seconds; a later cache
+fill does not change previously committed messages or generate a completion
+event. Retry/replay preserves the original signed body.
 
 For attachments, honor `download_supported` and use
 `GET /message/{message_id}/download?peer=type:id` with the same saved device

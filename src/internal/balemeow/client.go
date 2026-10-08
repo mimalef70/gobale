@@ -261,7 +261,16 @@ func (c *Client) Connect(ctx context.Context, session *domains.Session, sink dom
 	stored.Data = append([]byte(nil), session.Data...)
 	c.session = &stored
 	c.sink = func(ctx context.Context, event domains.Event) error {
-		return sink(ctx, c.prepareEvent(ctx, event))
+		// Name resolution may wait for its bounded rate limit. Give each durable
+		// acceptance its own request budget afterwards, rather than spending the
+		// storage deadline on enrichment or earlier events in a recovery page.
+		event = c.prepareEvent(ctx, event)
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		commitCtx, cancel := context.WithTimeout(ctx, c.opts.RequestTimeout)
+		defer cancel()
+		return sink(commitCtx, event)
 	}
 	c.status.Auth = "authenticated"
 	c.status.Transport = "connecting"

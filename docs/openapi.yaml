@@ -57676,8 +57676,12 @@ components:
       - kind
       - supported
       description: Consumer-ready projection for message/edit events. IDs retain their real Bale string values;
-        chat_id is scoped by the envelope peer.type and connection. Unknown sender names are empty/unavailable;
-        unknown direction has null is_from_me. Edits keep from/name/direction unknown and expose the verified updater
+        chat_id is scoped by the envelope peer.type and connection. Incoming event names are enriched before durable
+        acceptance using account-scoped cached names, contacts, a bounded recent-dialog scan and verified profile
+        reads. Cold lookups wait for the next per-connection one-second slot and share a 500ms provider-read deadline;
+        queueing can add delay. Missing, inaccessible, unsafe or timed-out names are empty/unavailable. History
+        uses available cached names. Later cache fills do not rewrite persisted bodies or emit name-completion events.
+        Unknown direction has null is_from_me. Edits keep from/name/direction unknown and expose the verified updater
         separately as editor_id. Body is plain Unicode text or a display fallback, never HTML. Older persisted events
         retain their exact bytes and may omit this projection.
     ReceiptPayload:

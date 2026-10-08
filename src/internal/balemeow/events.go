@@ -71,9 +71,9 @@ func (c *Client) consumeUpdates(conn *connection) {
 			return
 		}
 		if c.opts.LoadCheckpoint != nil {
-			ctx, cancel := context.WithTimeout(drainCtx, c.opts.RequestTimeout)
-			err := c.consumeRecoveredStream(ctx, conn, data)
-			cancel()
+			// RPCs and each durable sink call own their individual deadlines.
+			// The drain lifetime still bounds the whole frame after disconnect.
+			err := c.consumeRecoveredStream(drainCtx, conn, data)
 			if err != nil {
 				c.reportDiagnostic(diagnosticCode(err, "RECOVERY_STREAM_FAILED"))
 				if isProtocolFault(err) {
@@ -95,9 +95,7 @@ func (c *Client) consumeUpdates(conn *connection) {
 			return
 		}
 		for _, event := range events {
-			ctx, cancel := context.WithTimeout(drainCtx, c.opts.RequestTimeout)
-			err = sink(ctx, event)
-			cancel()
+			err = sink(drainCtx, event)
 			if err != nil {
 				if conn.ctx.Err() != nil {
 					c.recordDrainFailure(conn)

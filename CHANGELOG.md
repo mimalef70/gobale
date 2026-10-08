@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+- Resolve first-message sender names through the reviewed bounded recent-dialog
+  scan when the account's contacts do not contain a trusted user reference.
+  Keep contact refresh, dialog pagination and profile reads within one bounded
+  lookup; unavailable names remain explicit.
+- Wait for the next per-connection sender lookup slot before event persistence,
+  so messages from two cold senders arriving close together do not lose the
+  second lookup solely to throttling. Keep the ordered update queue bounded,
+  cancel lookup waits on disconnect, and give each durable event acceptance its
+  own storage timeout after enrichment, including during recovery.
+- Keep already persisted webhook bodies, event IDs and replay content unchanged.
+  Enrichment runs automatically; no name-completion event is introduced. These
+  fixes do not extend live-provider, recovery-gap or capacity acceptance claims.
+
 ## 2.1.0 — 2026-10-08
 
 - Add a consumer-ready `message` projection to newly accepted message/edit events

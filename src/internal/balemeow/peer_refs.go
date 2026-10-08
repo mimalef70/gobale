@@ -94,6 +94,12 @@ func (c *Client) resolvedUserRef(ctx context.Context, peer domains.Peer) (*wire.
 	if ref, ok := c.cachedUserRef(peer, value.Id); ok {
 		return ref, nil
 	}
+	return c.dialogUserRef(ctx, peer, value.Id)
+}
+
+// dialogUserRef shares the reviewed, bounded provider-reference scan with
+// incoming sender enrichment. The caller owns the deadline and contact policy.
+func (c *Client) dialogUserRef(ctx context.Context, peer domains.Peer, id uint32) (*wire.PeerRef, error) {
 	cursor := int64(-1)
 	for page := 0; page < 10; page++ {
 		if err := ctx.Err(); err != nil {
@@ -110,7 +116,7 @@ func (c *Client) resolvedUserRef(ctx context.Context, peer domains.Peer) (*wire.
 		if err := c.rememberConversationRefs(response.Users, response.Groups, response.UserPeers, response.GroupPeers); err != nil {
 			return nil, err
 		}
-		if ref, ok := c.cachedUserRef(peer, value.Id); ok {
+		if ref, ok := c.cachedUserRef(peer, id); ok {
 			return ref, nil
 		}
 		if len(response.Dialogs) < 100 {
@@ -118,6 +124,9 @@ func (c *Client) resolvedUserRef(ctx context.Context, peer domains.Peer) (*wire.
 		}
 		next := int64(0)
 		for _, d := range response.Dialogs {
+			if d == nil {
+				return nil, protocolError()
+			}
 			if d.SortDate > 0 && (next == 0 || d.SortDate < next) {
 				next = d.SortDate
 			}
