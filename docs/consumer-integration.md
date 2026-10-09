@@ -1,6 +1,6 @@
 # Consumer integration contract
 
-This guide describes GoBale [3.0.0](../CHANGELOG.md#300--2026-10-09).
+This guide describes GoBale [2.2.0](../CHANGELOG.md#220--2026-10-09).
 Update consumers with the gateway: account name uses `push_name`, media text uses
 `caption`, multipart requests use ordinary fields and endpoint-named file parts,
 and acknowledged operation IDs appear directly at `results.message_id`.

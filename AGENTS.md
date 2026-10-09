@@ -204,6 +204,12 @@ Keep soak outputs/private evidence in ignored `artifacts/`. Test Docker using
 
 ## Release procedure
 
+Increasing the major version requires the user's explicit approval of that major
+version before changing release metadata, creating a tag or publishing. A generic
+request to release does not authorize a major bump, and API/contract changes alone
+do not grant that approval. For an authorized release without major-version
+approval, choose an appropriate minor or patch version within the current major.
+
 Set the version consistently in configuration, generated OpenAPI and the matching
 `CHANGELOG.md` version section. The workflow extracts that section; do not create
 another release-note directory. Preserve unresolved limitations in release notes.

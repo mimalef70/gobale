@@ -1,6 +1,6 @@
 # Changelog
 
-## 3.0.0 — 2026-10-09
+## 2.2.0 — 2026-10-09
 
 **Breaking public API and webhook changes.** Update send/name inputs, operation
 response readers and webhook consumers with this release. Storage remains at

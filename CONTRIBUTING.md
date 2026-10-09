@@ -69,7 +69,7 @@ The Pages workflow deploys documentation from `main`, so the hosted contract can
 be newer than the latest release. A push to `main` runs CI; it does not publish
 release archives or container images. Release publication requires the explicit
 tag and manual workflow dispatch described in [AGENTS.md](AGENTS.md#release-procedure).
-After preparing and committing a reviewed version, `make release VERSION=3.0.0`
+After preparing and committing a reviewed version, `make release VERSION=2.2.0`
 coordinates main CI, documentation, tag CI and the release workflow. It stops on
 failed gates and never moves existing tags or overwrites published assets. The
 final jobs anonymously download all release assets and both registry indexes,
