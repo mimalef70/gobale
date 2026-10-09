@@ -124,10 +124,11 @@ tags:
     Supply peer or phone, never both; exact phone lookup does not implicitly import a contact or prove an inaccessible
     number unregistered.'
 - name: Send operations
-  description: Inspect results.state before using results.result. Extension mutations normally put normalized output
-    in results.result.data; an exact authenticated own-message echo can instead reconcile the message ID and date
-    directly in results.result. An unknown outcome must be reconciled, not blindly resubmitted. Reads and ephemeral
-    presence calls are not outbox work and return read errors on timeout.
+  description: Inspect results.state before using results.message_id or results.data. Acknowledged sends expose
+    message_id/date directly in results; extension mutations put normalized output in results.data. An exact authenticated
+    own-message echo can reconcile the message ID and date. Pending and unknown results never imply message acknowledgement.
+    An unknown outcome must be reconciled, not blindly resubmitted. Reads and ephemeral presence calls are not outbox
+    work and return read errors on timeout.
 - name: Service
   description: Administrative Basic authentication grants access to every configured account; tenant authorization
     belongs in the consuming application. Only /health in the Basic API is unauthenticated. The optional embedded
@@ -35449,12 +35450,12 @@ paths:
                 additionalProperties: false
               - type: object
                 properties:
-                  name:
+                  push_name:
                     type: string
                     maxLength: 128
                     minLength: 1
                 required:
-                - name
+                - push_name
                 additionalProperties: false
               - type: object
                 properties:
@@ -41200,72 +41201,174 @@ paths:
         content:
           application/json:
             schema:
-              allOf:
-              - $ref: '#/components/schemas/SendRequest'
+              type: object
+              additionalProperties: false
+              oneOf:
               - required:
-                - media_id
-              description: Use media_id from POST /media. Provider format support is capability-gated.
+                - peer
+              - required:
+                - phone
+              properties:
+                peer:
+                  $ref: '#/components/schemas/Peer'
+                phone:
+                  type: string
+                  minLength: 1
+                  description: Exact phone lookup against provider contact information. Unknown or ambiguous matches
+                    fail; contacts are never imported implicitly.
+                caption:
+                  type: string
+                  maxLength: 65536
+                  description: Media caption, at most 65536 UTF-8 bytes. Not accepted on the text route.
+                ptt:
+                  type: boolean
+                  description: 'Audio only: true selects verified Ogg Opus voice without conversion.'
+                mentions:
+                  type: array
+                  maxItems: 100
+                  uniqueItems: true
+                  items:
+                    type: string
+                    pattern: ^[1-9][0-9]*$
+                  description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message
+                    for text or caption for media; part of the idempotency payload.
+                reply_message_id:
+                  type: string
+                  pattern: ^-?[0-9]+$
+                  description: Existing nonzero signed int64 message ID; preserve its sign.
+                media_id:
+                  type: string
+                  minLength: 1
+                scheduled_at:
+                  type: string
+                  format: date-time
+                timezone:
+                  type: string
+                  minLength: 1
+                  description: IANA timezone; required when scheduled_at is present.
+                recurrence:
+                  type: string
+                  enum:
+                  - none
+                  - once
+                  - ''
+                  - daily
+                  - weekly
+                  - monthly
+                  description: Omitted, empty or none means one occurrence. once is a backward-compatible alias
+                    for none.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                day_of_month:
+                  type: integer
+                  minimum: 1
+                  maximum: 31
+                end_at:
+                  type: string
+                  format: date-time
+                occurrence_limit:
+                  type: integer
+                  minimum: 1
+              description: Use media_id from POST /media and caption for optional text. Provider format support
+                is capability-gated.
+              required:
+              - media_id
           multipart/form-data:
             schema:
               type: object
               additionalProperties: false
               required:
-              - request
-              - file
+              - audio
+              oneOf:
+              - required:
+                - peer
+              - required:
+                - phone
               properties:
-                request:
-                  type: object
-                  additionalProperties: false
-                  oneOf:
-                  - required:
-                    - peer
-                  - required:
-                    - phone
-                  properties:
-                    peer:
-                      $ref: '#/components/schemas/Peer'
-                    phone:
-                      type: string
-                      minLength: 1
-                      description: Exact phone lookup against provider contact information. Unknown or ambiguous
-                        matches fail; contacts are never imported implicitly.
-                    message:
-                      type: string
-                      maxLength: 65536
-                      description: Text body or media caption, supplied through this message field. UTF-8 runtime
-                        limit is 65536 bytes. Required and nonempty for text sends.
-                    mentions:
-                      type: array
-                      maxItems: 100
-                      uniqueItems: true
-                      items:
-                        type: string
-                        pattern: ^[1-9][0-9]*$
-                      description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty
-                        message field (text body or media caption); part of the idempotency payload.
-                    reply_message_id:
-                      type: string
-                      pattern: ^-?[0-9]+$
-                      description: Existing nonzero signed int64 message ID; preserve its sign.
-                  description: JSON request field, at most 128 KiB. Choose peer or phone under the normal send contract;
-                    no media_id, caller request ID, payload, operation or scheduling fields.
-                file:
+                peer:
+                  $ref: '#/components/schemas/Peer'
+                phone:
                   type: string
-                  format: binary
-                  description: Exactly one file within the configured media byte limit, filename at most 255 bytes,
-                    with actual Content-Type (omitted defaults to application/octet-stream).
+                  minLength: 1
+                  description: Exact phone lookup against provider contact information. Unknown or ambiguous matches
+                    fail; contacts are never imported implicitly.
+                caption:
+                  type: string
+                  maxLength: 65536
+                  description: Media caption, at most 65536 UTF-8 bytes. Not accepted on the text route.
                 ptt:
                   type: boolean
-                  default: false
-                  description: true selects native voice validation; bytes must already be complete valid Ogg Opus.
-                    No conversion.
+                  description: 'Audio only: true selects verified Ogg Opus voice without conversion.'
+                mentions:
+                  type: array
+                  maxItems: 100
+                  uniqueItems: true
+                  items:
+                    type: string
+                    pattern: ^[1-9][0-9]*$
+                  description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message
+                    for text or caption for media; part of the idempotency payload.
+                reply_message_id:
+                  type: string
+                  pattern: ^-?[0-9]+$
+                  description: Existing nonzero signed int64 message ID; preserve its sign.
+                scheduled_at:
+                  type: string
+                  format: date-time
+                timezone:
+                  type: string
+                  minLength: 1
+                  description: IANA timezone; required when scheduled_at is present.
+                recurrence:
+                  type: string
+                  enum:
+                  - none
+                  - once
+                  - ''
+                  - daily
+                  - weekly
+                  - monthly
+                  description: Omitted, empty or none means one occurrence. once is a backward-compatible alias
+                    for none.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                day_of_month:
+                  type: integer
+                  minimum: 1
+                  maximum: 31
+                end_at:
+                  type: string
+                  format: date-time
+                occurrence_limit:
+                  type: integer
+                  minimum: 1
+                audio:
+                  type: string
+                  format: binary
+                  description: Exactly one file within the configured media byte limit; UTF-8 filename at most 255
+                    bytes; actual Content-Type (defaults to application/octet-stream).
             encoding:
-              request:
+              peer:
                 contentType: application/json
-      description: ' Multipart alternative: request JSON field plus one file part. Immediate sends only; upload
-        separately for scheduling. File registration and outbox request commit together before provider contact.
-        Stable keyed retries bind file SHA256, filename, MIME and canonical request; changed content returns 409.
-        Duplicate staging files are cleaned. Limits and instance guards match other sends.'
+              mentions:
+                contentType: application/json
+              weekdays:
+                contentType: application/json
+      description: ' Multipart uses ordinary fields plus the endpoint-named file part (voice uses audio). Choose
+        phone or a peer JSON object; mentions/weekdays are JSON arrays; ptt is true/false. Combined form metadata
+        is bounded to 128 KiB and 20 parts. scheduled_at creates a schedule with its file in one durable transaction;
+        immediate sends register the file and outbox request together. Keyed retries bind file SHA256, filename,
+        MIME and canonical request; changed content conflicts. Scheduling and immediate sends share the connection
+        idempotency namespace. Unused retry/conflict files are cleaned. No audio conversion, compression or WhatsApp-only
+        flags.'
       tags:
       - Send messages
   /send/chat-presence:
@@ -42136,67 +42239,168 @@ paths:
         content:
           application/json:
             schema:
-              allOf:
-              - $ref: '#/components/schemas/SendRequest'
+              type: object
+              additionalProperties: false
+              oneOf:
               - required:
-                - media_id
-              description: Use media_id from POST /media. Provider format support is capability-gated.
+                - peer
+              - required:
+                - phone
+              properties:
+                peer:
+                  $ref: '#/components/schemas/Peer'
+                phone:
+                  type: string
+                  minLength: 1
+                  description: Exact phone lookup against provider contact information. Unknown or ambiguous matches
+                    fail; contacts are never imported implicitly.
+                caption:
+                  type: string
+                  maxLength: 65536
+                  description: Media caption, at most 65536 UTF-8 bytes. Not accepted on the text route.
+                mentions:
+                  type: array
+                  maxItems: 100
+                  uniqueItems: true
+                  items:
+                    type: string
+                    pattern: ^[1-9][0-9]*$
+                  description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message
+                    for text or caption for media; part of the idempotency payload.
+                reply_message_id:
+                  type: string
+                  pattern: ^-?[0-9]+$
+                  description: Existing nonzero signed int64 message ID; preserve its sign.
+                media_id:
+                  type: string
+                  minLength: 1
+                scheduled_at:
+                  type: string
+                  format: date-time
+                timezone:
+                  type: string
+                  minLength: 1
+                  description: IANA timezone; required when scheduled_at is present.
+                recurrence:
+                  type: string
+                  enum:
+                  - none
+                  - once
+                  - ''
+                  - daily
+                  - weekly
+                  - monthly
+                  description: Omitted, empty or none means one occurrence. once is a backward-compatible alias
+                    for none.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                day_of_month:
+                  type: integer
+                  minimum: 1
+                  maximum: 31
+                end_at:
+                  type: string
+                  format: date-time
+                occurrence_limit:
+                  type: integer
+                  minimum: 1
+              description: Use media_id from POST /media and caption for optional text. Provider format support
+                is capability-gated.
+              required:
+              - media_id
           multipart/form-data:
             schema:
               type: object
               additionalProperties: false
               required:
-              - request
               - file
+              oneOf:
+              - required:
+                - peer
+              - required:
+                - phone
               properties:
-                request:
-                  type: object
-                  additionalProperties: false
-                  oneOf:
-                  - required:
-                    - peer
-                  - required:
-                    - phone
-                  properties:
-                    peer:
-                      $ref: '#/components/schemas/Peer'
-                    phone:
-                      type: string
-                      minLength: 1
-                      description: Exact phone lookup against provider contact information. Unknown or ambiguous
-                        matches fail; contacts are never imported implicitly.
-                    message:
-                      type: string
-                      maxLength: 65536
-                      description: Text body or media caption, supplied through this message field. UTF-8 runtime
-                        limit is 65536 bytes. Required and nonempty for text sends.
-                    mentions:
-                      type: array
-                      maxItems: 100
-                      uniqueItems: true
-                      items:
-                        type: string
-                        pattern: ^[1-9][0-9]*$
-                      description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty
-                        message field (text body or media caption); part of the idempotency payload.
-                    reply_message_id:
-                      type: string
-                      pattern: ^-?[0-9]+$
-                      description: Existing nonzero signed int64 message ID; preserve its sign.
-                  description: JSON request field, at most 128 KiB. Choose peer or phone under the normal send contract;
-                    no media_id, caller request ID, payload, operation or scheduling fields.
+                peer:
+                  $ref: '#/components/schemas/Peer'
+                phone:
+                  type: string
+                  minLength: 1
+                  description: Exact phone lookup against provider contact information. Unknown or ambiguous matches
+                    fail; contacts are never imported implicitly.
+                caption:
+                  type: string
+                  maxLength: 65536
+                  description: Media caption, at most 65536 UTF-8 bytes. Not accepted on the text route.
+                mentions:
+                  type: array
+                  maxItems: 100
+                  uniqueItems: true
+                  items:
+                    type: string
+                    pattern: ^[1-9][0-9]*$
+                  description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message
+                    for text or caption for media; part of the idempotency payload.
+                reply_message_id:
+                  type: string
+                  pattern: ^-?[0-9]+$
+                  description: Existing nonzero signed int64 message ID; preserve its sign.
+                scheduled_at:
+                  type: string
+                  format: date-time
+                timezone:
+                  type: string
+                  minLength: 1
+                  description: IANA timezone; required when scheduled_at is present.
+                recurrence:
+                  type: string
+                  enum:
+                  - none
+                  - once
+                  - ''
+                  - daily
+                  - weekly
+                  - monthly
+                  description: Omitted, empty or none means one occurrence. once is a backward-compatible alias
+                    for none.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                day_of_month:
+                  type: integer
+                  minimum: 1
+                  maximum: 31
+                end_at:
+                  type: string
+                  format: date-time
+                occurrence_limit:
+                  type: integer
+                  minimum: 1
                 file:
                   type: string
                   format: binary
-                  description: Exactly one file within the configured media byte limit, filename at most 255 bytes,
-                    with actual Content-Type (omitted defaults to application/octet-stream).
+                  description: Exactly one file within the configured media byte limit; UTF-8 filename at most 255
+                    bytes; actual Content-Type (defaults to application/octet-stream).
             encoding:
-              request:
+              peer:
                 contentType: application/json
-      description: ' Multipart alternative: request JSON field plus one file part. Immediate sends only; upload
-        separately for scheduling. File registration and outbox request commit together before provider contact.
-        Stable keyed retries bind file SHA256, filename, MIME and canonical request; changed content returns 409.
-        Duplicate staging files are cleaned. Limits and instance guards match other sends.'
+              mentions:
+                contentType: application/json
+              weekdays:
+                contentType: application/json
+      description: ' Multipart uses ordinary fields plus the endpoint-named file part (voice uses audio). Choose
+        phone or a peer JSON object; mentions/weekdays are JSON arrays; ptt is true/false. Combined form metadata
+        is bounded to 128 KiB and 20 parts. scheduled_at creates a schedule with its file in one durable transaction;
+        immediate sends register the file and outbox request together. Keyed retries bind file SHA256, filename,
+        MIME and canonical request; changed content conflicts. Scheduling and immediate sends share the connection
+        idempotency namespace. Unused retry/conflict files are cleaned. No audio conversion, compression or WhatsApp-only
+        flags.'
       tags:
       - Send messages
   /send/image:
@@ -42473,69 +42677,169 @@ paths:
         content:
           application/json:
             schema:
-              allOf:
-              - $ref: '#/components/schemas/SendRequest'
+              type: object
+              additionalProperties: false
+              oneOf:
               - required:
-                - media_id
-              description: Use media_id from POST /media. Provider format support is capability-gated.
+                - peer
+              - required:
+                - phone
+              properties:
+                peer:
+                  $ref: '#/components/schemas/Peer'
+                phone:
+                  type: string
+                  minLength: 1
+                  description: Exact phone lookup against provider contact information. Unknown or ambiguous matches
+                    fail; contacts are never imported implicitly.
+                caption:
+                  type: string
+                  maxLength: 65536
+                  description: Media caption, at most 65536 UTF-8 bytes. Not accepted on the text route.
+                mentions:
+                  type: array
+                  maxItems: 100
+                  uniqueItems: true
+                  items:
+                    type: string
+                    pattern: ^[1-9][0-9]*$
+                  description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message
+                    for text or caption for media; part of the idempotency payload.
+                reply_message_id:
+                  type: string
+                  pattern: ^-?[0-9]+$
+                  description: Existing nonzero signed int64 message ID; preserve its sign.
+                media_id:
+                  type: string
+                  minLength: 1
+                scheduled_at:
+                  type: string
+                  format: date-time
+                timezone:
+                  type: string
+                  minLength: 1
+                  description: IANA timezone; required when scheduled_at is present.
+                recurrence:
+                  type: string
+                  enum:
+                  - none
+                  - once
+                  - ''
+                  - daily
+                  - weekly
+                  - monthly
+                  description: Omitted, empty or none means one occurrence. once is a backward-compatible alias
+                    for none.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                day_of_month:
+                  type: integer
+                  minimum: 1
+                  maximum: 31
+                end_at:
+                  type: string
+                  format: date-time
+                occurrence_limit:
+                  type: integer
+                  minimum: 1
+              description: Use media_id from POST /media and caption for optional text. Provider format support
+                is capability-gated.
+              required:
+              - media_id
           multipart/form-data:
             schema:
               type: object
               additionalProperties: false
               required:
-              - request
-              - file
+              - image
+              oneOf:
+              - required:
+                - peer
+              - required:
+                - phone
               properties:
-                request:
-                  type: object
-                  additionalProperties: false
-                  oneOf:
-                  - required:
-                    - peer
-                  - required:
-                    - phone
-                  properties:
-                    peer:
-                      $ref: '#/components/schemas/Peer'
-                    phone:
-                      type: string
-                      minLength: 1
-                      description: Exact phone lookup against provider contact information. Unknown or ambiguous
-                        matches fail; contacts are never imported implicitly.
-                    message:
-                      type: string
-                      maxLength: 65536
-                      description: Text body or media caption, supplied through this message field. UTF-8 runtime
-                        limit is 65536 bytes. Required and nonempty for text sends.
-                    mentions:
-                      type: array
-                      maxItems: 100
-                      uniqueItems: true
-                      items:
-                        type: string
-                        pattern: ^[1-9][0-9]*$
-                      description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty
-                        message field (text body or media caption); part of the idempotency payload.
-                    reply_message_id:
-                      type: string
-                      pattern: ^-?[0-9]+$
-                      description: Existing nonzero signed int64 message ID; preserve its sign.
-                  description: JSON request field, at most 128 KiB. Choose peer or phone under the normal send contract;
-                    no media_id, caller request ID, payload, operation or scheduling fields.
-                file:
+                peer:
+                  $ref: '#/components/schemas/Peer'
+                phone:
+                  type: string
+                  minLength: 1
+                  description: Exact phone lookup against provider contact information. Unknown or ambiguous matches
+                    fail; contacts are never imported implicitly.
+                caption:
+                  type: string
+                  maxLength: 65536
+                  description: Media caption, at most 65536 UTF-8 bytes. Not accepted on the text route.
+                mentions:
+                  type: array
+                  maxItems: 100
+                  uniqueItems: true
+                  items:
+                    type: string
+                    pattern: ^[1-9][0-9]*$
+                  description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message
+                    for text or caption for media; part of the idempotency payload.
+                reply_message_id:
+                  type: string
+                  pattern: ^-?[0-9]+$
+                  description: Existing nonzero signed int64 message ID; preserve its sign.
+                scheduled_at:
+                  type: string
+                  format: date-time
+                timezone:
+                  type: string
+                  minLength: 1
+                  description: IANA timezone; required when scheduled_at is present.
+                recurrence:
+                  type: string
+                  enum:
+                  - none
+                  - once
+                  - ''
+                  - daily
+                  - weekly
+                  - monthly
+                  description: Omitted, empty or none means one occurrence. once is a backward-compatible alias
+                    for none.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                day_of_month:
+                  type: integer
+                  minimum: 1
+                  maximum: 31
+                end_at:
+                  type: string
+                  format: date-time
+                occurrence_limit:
+                  type: integer
+                  minimum: 1
+                image:
                   type: string
                   format: binary
-                  description: Exactly one file within the configured media byte limit, filename at most 255 bytes,
-                    with actual Content-Type (omitted defaults to application/octet-stream).
+                  description: Exactly one file within the configured media byte limit; UTF-8 filename at most 255
+                    bytes; actual Content-Type (defaults to application/octet-stream).
             encoding:
-              request:
+              peer:
                 contentType: application/json
-      description: ' Multipart alternative: request JSON field plus one file part. Immediate sends only; upload
-        separately for scheduling. File registration and outbox request commit together before provider contact.
-        Stable keyed retries bind file SHA256, filename, MIME and canonical request; changed content returns 409.
-        Duplicate staging files are cleaned. Limits and instance guards match other sends. Image header decoding
-        accepts JPEG, PNG, GIF and WebP, bounded to 8192 pixels per side and 16,777,216 pixels total. WebP native
-        receipt/rendering remains live-unverified.'
+              mentions:
+                contentType: application/json
+              weekdays:
+                contentType: application/json
+      description: ' Multipart uses ordinary fields plus the endpoint-named file part (voice uses audio). Choose
+        phone or a peer JSON object; mentions/weekdays are JSON arrays; ptt is true/false. Combined form metadata
+        is bounded to 128 KiB and 20 parts. scheduled_at creates a schedule with its file in one durable transaction;
+        immediate sends register the file and outbox request together. Keyed retries bind file SHA256, filename,
+        MIME and canonical request; changed content conflicts. Scheduling and immediate sends share the connection
+        idempotency namespace. Unused retry/conflict files are cleaned. No audio conversion, compression or WhatsApp-only
+        flags. Image header decoding accepts JPEG, PNG, GIF and WebP, bounded to 8192 pixels per side and 16,777,216
+        pixels total. WebP native receipt/rendering remains live-unverified.'
       tags:
       - Send messages
   /send/location:
@@ -43136,13 +43440,79 @@ paths:
         content:
           application/json:
             schema:
-              allOf:
-              - $ref: '#/components/schemas/SendRequest'
+              type: object
+              additionalProperties: false
+              oneOf:
               - required:
-                - message
-                properties:
-                  message:
-                    minLength: 1
+                - peer
+              - required:
+                - phone
+              properties:
+                peer:
+                  $ref: '#/components/schemas/Peer'
+                phone:
+                  type: string
+                  minLength: 1
+                  description: Exact phone lookup against provider contact information. Unknown or ambiguous matches
+                    fail; contacts are never imported implicitly.
+                message:
+                  type: string
+                  maxLength: 65536
+                  description: Text body, required for text sends. UTF-8 runtime limit is 65536 bytes. Media routes
+                    use caption instead.
+                  minLength: 1
+                mentions:
+                  type: array
+                  maxItems: 100
+                  uniqueItems: true
+                  items:
+                    type: string
+                    pattern: ^[1-9][0-9]*$
+                  description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message
+                    for text or caption for media; part of the idempotency payload.
+                reply_message_id:
+                  type: string
+                  pattern: ^-?[0-9]+$
+                  description: Existing nonzero signed int64 message ID; preserve its sign.
+                scheduled_at:
+                  type: string
+                  format: date-time
+                timezone:
+                  type: string
+                  minLength: 1
+                  description: IANA timezone; required when scheduled_at is present.
+                recurrence:
+                  type: string
+                  enum:
+                  - none
+                  - once
+                  - ''
+                  - daily
+                  - weekly
+                  - monthly
+                  description: Omitted, empty or none means one occurrence. once is a backward-compatible alias
+                    for none.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                day_of_month:
+                  type: integer
+                  minimum: 1
+                  maximum: 31
+                end_at:
+                  type: string
+                  format: date-time
+                occurrence_limit:
+                  type: integer
+                  minimum: 1
+              description: Ordinary text or media send. Select exactly one destination. For rich messages use their
+                typed operation endpoint, or ScheduleRequest for a delayed rich send. operation, payload and gateway
+                request_id are not caller inputs here.
+              required:
+              - message
       tags:
       - Send messages
   /send/poll:
@@ -45386,67 +45756,168 @@ paths:
         content:
           application/json:
             schema:
-              allOf:
-              - $ref: '#/components/schemas/SendRequest'
+              type: object
+              additionalProperties: false
+              oneOf:
               - required:
-                - media_id
-              description: Use media_id from POST /media. Provider format support is capability-gated.
+                - peer
+              - required:
+                - phone
+              properties:
+                peer:
+                  $ref: '#/components/schemas/Peer'
+                phone:
+                  type: string
+                  minLength: 1
+                  description: Exact phone lookup against provider contact information. Unknown or ambiguous matches
+                    fail; contacts are never imported implicitly.
+                caption:
+                  type: string
+                  maxLength: 65536
+                  description: Media caption, at most 65536 UTF-8 bytes. Not accepted on the text route.
+                mentions:
+                  type: array
+                  maxItems: 100
+                  uniqueItems: true
+                  items:
+                    type: string
+                    pattern: ^[1-9][0-9]*$
+                  description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message
+                    for text or caption for media; part of the idempotency payload.
+                reply_message_id:
+                  type: string
+                  pattern: ^-?[0-9]+$
+                  description: Existing nonzero signed int64 message ID; preserve its sign.
+                media_id:
+                  type: string
+                  minLength: 1
+                scheduled_at:
+                  type: string
+                  format: date-time
+                timezone:
+                  type: string
+                  minLength: 1
+                  description: IANA timezone; required when scheduled_at is present.
+                recurrence:
+                  type: string
+                  enum:
+                  - none
+                  - once
+                  - ''
+                  - daily
+                  - weekly
+                  - monthly
+                  description: Omitted, empty or none means one occurrence. once is a backward-compatible alias
+                    for none.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                day_of_month:
+                  type: integer
+                  minimum: 1
+                  maximum: 31
+                end_at:
+                  type: string
+                  format: date-time
+                occurrence_limit:
+                  type: integer
+                  minimum: 1
+              description: Use media_id from POST /media and caption for optional text. Provider format support
+                is capability-gated.
+              required:
+              - media_id
           multipart/form-data:
             schema:
               type: object
               additionalProperties: false
               required:
-              - request
-              - file
+              - video
+              oneOf:
+              - required:
+                - peer
+              - required:
+                - phone
               properties:
-                request:
-                  type: object
-                  additionalProperties: false
-                  oneOf:
-                  - required:
-                    - peer
-                  - required:
-                    - phone
-                  properties:
-                    peer:
-                      $ref: '#/components/schemas/Peer'
-                    phone:
-                      type: string
-                      minLength: 1
-                      description: Exact phone lookup against provider contact information. Unknown or ambiguous
-                        matches fail; contacts are never imported implicitly.
-                    message:
-                      type: string
-                      maxLength: 65536
-                      description: Text body or media caption, supplied through this message field. UTF-8 runtime
-                        limit is 65536 bytes. Required and nonempty for text sends.
-                    mentions:
-                      type: array
-                      maxItems: 100
-                      uniqueItems: true
-                      items:
-                        type: string
-                        pattern: ^[1-9][0-9]*$
-                      description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty
-                        message field (text body or media caption); part of the idempotency payload.
-                    reply_message_id:
-                      type: string
-                      pattern: ^-?[0-9]+$
-                      description: Existing nonzero signed int64 message ID; preserve its sign.
-                  description: JSON request field, at most 128 KiB. Choose peer or phone under the normal send contract;
-                    no media_id, caller request ID, payload, operation or scheduling fields.
-                file:
+                peer:
+                  $ref: '#/components/schemas/Peer'
+                phone:
+                  type: string
+                  minLength: 1
+                  description: Exact phone lookup against provider contact information. Unknown or ambiguous matches
+                    fail; contacts are never imported implicitly.
+                caption:
+                  type: string
+                  maxLength: 65536
+                  description: Media caption, at most 65536 UTF-8 bytes. Not accepted on the text route.
+                mentions:
+                  type: array
+                  maxItems: 100
+                  uniqueItems: true
+                  items:
+                    type: string
+                    pattern: ^[1-9][0-9]*$
+                  description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message
+                    for text or caption for media; part of the idempotency payload.
+                reply_message_id:
+                  type: string
+                  pattern: ^-?[0-9]+$
+                  description: Existing nonzero signed int64 message ID; preserve its sign.
+                scheduled_at:
+                  type: string
+                  format: date-time
+                timezone:
+                  type: string
+                  minLength: 1
+                  description: IANA timezone; required when scheduled_at is present.
+                recurrence:
+                  type: string
+                  enum:
+                  - none
+                  - once
+                  - ''
+                  - daily
+                  - weekly
+                  - monthly
+                  description: Omitted, empty or none means one occurrence. once is a backward-compatible alias
+                    for none.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                day_of_month:
+                  type: integer
+                  minimum: 1
+                  maximum: 31
+                end_at:
+                  type: string
+                  format: date-time
+                occurrence_limit:
+                  type: integer
+                  minimum: 1
+                video:
                   type: string
                   format: binary
-                  description: Exactly one file within the configured media byte limit, filename at most 255 bytes,
-                    with actual Content-Type (omitted defaults to application/octet-stream).
+                  description: Exactly one file within the configured media byte limit; UTF-8 filename at most 255
+                    bytes; actual Content-Type (defaults to application/octet-stream).
             encoding:
-              request:
+              peer:
                 contentType: application/json
-      description: ' Multipart alternative: request JSON field plus one file part. Immediate sends only; upload
-        separately for scheduling. File registration and outbox request commit together before provider contact.
-        Stable keyed retries bind file SHA256, filename, MIME and canonical request; changed content returns 409.
-        Duplicate staging files are cleaned. Limits and instance guards match other sends.'
+              mentions:
+                contentType: application/json
+              weekdays:
+                contentType: application/json
+      description: ' Multipart uses ordinary fields plus the endpoint-named file part (voice uses audio). Choose
+        phone or a peer JSON object; mentions/weekdays are JSON arrays; ptt is true/false. Combined form metadata
+        is bounded to 128 KiB and 20 parts. scheduled_at creates a schedule with its file in one durable transaction;
+        immediate sends register the file and outbox request together. Keyed retries bind file SHA256, filename,
+        MIME and canonical request; changed content conflicts. Scheduling and immediate sends share the connection
+        idempotency namespace. Unused retry/conflict files are cleaned. No audio conversion, compression or WhatsApp-only
+        flags.'
       tags:
       - Send messages
   /send/voice:
@@ -45719,12 +46190,14 @@ paths:
           maxLength: 256
         description: Stable per-device key. Identical repeats return same operation; changed payload returns 409.
       description: 'Sends a native voice note using media_id from POST /media. The upload must be single-stream
-        Ogg Opus; GoBale checks its bytes and derives the duration in milliseconds. Optional message caption and
-        reply_message_id use the ordinary media contract. No server-side transcoding. Scheduling uses the same durable
-        send path. Multipart alternative: request JSON field plus one file part. Immediate sends only; upload separately
-        for scheduling. File registration and outbox request commit together before provider contact. Stable keyed
-        retries bind file SHA256, filename, MIME and canonical request; changed content returns 409. Duplicate staging
-        files are cleaned. Limits and instance guards match other sends.
+        Ogg Opus; GoBale checks its bytes and derives the duration in milliseconds. Optional caption and reply_message_id
+        use the ordinary media contract. No server-side transcoding. Scheduling uses the same durable send path.
+        Multipart uses ordinary fields plus the endpoint-named file part (voice uses audio). Choose phone or a peer
+        JSON object; mentions/weekdays are JSON arrays; ptt is true/false. Combined form metadata is bounded to
+        128 KiB and 20 parts. scheduled_at creates a schedule with its file in one durable transaction; immediate
+        sends register the file and outbox request together. Keyed retries bind file SHA256, filename, MIME and
+        canonical request; changed content conflicts. Scheduling and immediate sends share the connection idempotency
+        namespace. Unused retry/conflict files are cleaned. No audio conversion, compression or WhatsApp-only flags.
 
 
         Accepted Content-Type values are audio/ogg, application/ogg and audio/opus, optionally with codecs=opus.
@@ -45741,11 +46214,79 @@ paths:
         content:
           application/json:
             schema:
-              allOf:
-              - $ref: '#/components/schemas/SendRequest'
+              type: object
+              additionalProperties: false
+              oneOf:
               - required:
-                - media_id
-              description: Use media_id from POST /media. Provider format support is capability-gated.
+                - peer
+              - required:
+                - phone
+              properties:
+                peer:
+                  $ref: '#/components/schemas/Peer'
+                phone:
+                  type: string
+                  minLength: 1
+                  description: Exact phone lookup against provider contact information. Unknown or ambiguous matches
+                    fail; contacts are never imported implicitly.
+                caption:
+                  type: string
+                  maxLength: 65536
+                  description: Media caption, at most 65536 UTF-8 bytes. Not accepted on the text route.
+                mentions:
+                  type: array
+                  maxItems: 100
+                  uniqueItems: true
+                  items:
+                    type: string
+                    pattern: ^[1-9][0-9]*$
+                  description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message
+                    for text or caption for media; part of the idempotency payload.
+                reply_message_id:
+                  type: string
+                  pattern: ^-?[0-9]+$
+                  description: Existing nonzero signed int64 message ID; preserve its sign.
+                media_id:
+                  type: string
+                  minLength: 1
+                scheduled_at:
+                  type: string
+                  format: date-time
+                timezone:
+                  type: string
+                  minLength: 1
+                  description: IANA timezone; required when scheduled_at is present.
+                recurrence:
+                  type: string
+                  enum:
+                  - none
+                  - once
+                  - ''
+                  - daily
+                  - weekly
+                  - monthly
+                  description: Omitted, empty or none means one occurrence. once is a backward-compatible alias
+                    for none.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                day_of_month:
+                  type: integer
+                  minimum: 1
+                  maximum: 31
+                end_at:
+                  type: string
+                  format: date-time
+                occurrence_limit:
+                  type: integer
+                  minimum: 1
+              description: Use media_id from POST /media and caption for optional text. Provider format support
+                is capability-gated.
+              required:
+              - media_id
             example:
               peer:
                 type: user
@@ -45757,52 +46298,82 @@ paths:
               type: object
               additionalProperties: false
               required:
-              - request
-              - file
+              - audio
+              oneOf:
+              - required:
+                - peer
+              - required:
+                - phone
               properties:
-                request:
-                  type: object
-                  additionalProperties: false
-                  oneOf:
-                  - required:
-                    - peer
-                  - required:
-                    - phone
-                  properties:
-                    peer:
-                      $ref: '#/components/schemas/Peer'
-                    phone:
-                      type: string
-                      minLength: 1
-                      description: Exact phone lookup against provider contact information. Unknown or ambiguous
-                        matches fail; contacts are never imported implicitly.
-                    message:
-                      type: string
-                      maxLength: 65536
-                      description: Text body or media caption, supplied through this message field. UTF-8 runtime
-                        limit is 65536 bytes. Required and nonempty for text sends.
-                    mentions:
-                      type: array
-                      maxItems: 100
-                      uniqueItems: true
-                      items:
-                        type: string
-                        pattern: ^[1-9][0-9]*$
-                      description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty
-                        message field (text body or media caption); part of the idempotency payload.
-                    reply_message_id:
-                      type: string
-                      pattern: ^-?[0-9]+$
-                      description: Existing nonzero signed int64 message ID; preserve its sign.
-                  description: JSON request field, at most 128 KiB. Choose peer or phone under the normal send contract;
-                    no media_id, caller request ID, payload, operation or scheduling fields.
-                file:
+                peer:
+                  $ref: '#/components/schemas/Peer'
+                phone:
+                  type: string
+                  minLength: 1
+                  description: Exact phone lookup against provider contact information. Unknown or ambiguous matches
+                    fail; contacts are never imported implicitly.
+                caption:
+                  type: string
+                  maxLength: 65536
+                  description: Media caption, at most 65536 UTF-8 bytes. Not accepted on the text route.
+                mentions:
+                  type: array
+                  maxItems: 100
+                  uniqueItems: true
+                  items:
+                    type: string
+                    pattern: ^[1-9][0-9]*$
+                  description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message
+                    for text or caption for media; part of the idempotency payload.
+                reply_message_id:
+                  type: string
+                  pattern: ^-?[0-9]+$
+                  description: Existing nonzero signed int64 message ID; preserve its sign.
+                scheduled_at:
+                  type: string
+                  format: date-time
+                timezone:
+                  type: string
+                  minLength: 1
+                  description: IANA timezone; required when scheduled_at is present.
+                recurrence:
+                  type: string
+                  enum:
+                  - none
+                  - once
+                  - ''
+                  - daily
+                  - weekly
+                  - monthly
+                  description: Omitted, empty or none means one occurrence. once is a backward-compatible alias
+                    for none.
+                weekdays:
+                  type: array
+                  items:
+                    type: integer
+                    minimum: 0
+                    maximum: 6
+                day_of_month:
+                  type: integer
+                  minimum: 1
+                  maximum: 31
+                end_at:
+                  type: string
+                  format: date-time
+                occurrence_limit:
+                  type: integer
+                  minimum: 1
+                audio:
                   type: string
                   format: binary
-                  description: Exactly one file within the configured media byte limit, filename at most 255 bytes,
-                    with actual Content-Type (omitted defaults to application/octet-stream).
+                  description: Exactly one file within the configured media byte limit; UTF-8 filename at most 255
+                    bytes; actual Content-Type (defaults to application/octet-stream).
             encoding:
-              request:
+              peer:
+                contentType: application/json
+              mentions:
+                contentType: application/json
+              weekdays:
                 contentType: application/json
       tags:
       - Send messages
@@ -49666,12 +50237,12 @@ paths:
             schema:
               type: object
               properties:
-                name:
+                push_name:
                   type: string
                   maxLength: 128
                   minLength: 1
               required:
-              - name
+              - push_name
               additionalProperties: false
       tags:
       - Account
@@ -49953,12 +50524,12 @@ paths:
             schema:
               type: object
               properties:
-                name:
+                push_name:
                   type: string
                   maxLength: 128
                   minLength: 1
               required:
-              - name
+              - push_name
               additionalProperties: false
       tags:
       - Account
@@ -56205,6 +56776,7 @@ components:
   schemas:
     Peer:
       type: object
+      additionalProperties: false
       required:
       - type
       - id
@@ -56248,8 +56820,15 @@ components:
         message:
           type: string
           maxLength: 65536
-          description: Text body or media caption, supplied through this message field. UTF-8 runtime limit is 65536
-            bytes. Required and nonempty for text sends.
+          description: Text body, required for text sends. UTF-8 runtime limit is 65536 bytes. Media routes use
+            caption instead.
+        caption:
+          type: string
+          maxLength: 65536
+          description: Media caption, at most 65536 UTF-8 bytes. Not accepted on the text route.
+        ptt:
+          type: boolean
+          description: 'Audio only: true selects verified Ogg Opus voice without conversion.'
         mentions:
           type: array
           maxItems: 100
@@ -56257,8 +56836,8 @@ components:
           items:
             type: string
             pattern: ^[1-9][0-9]*$
-          description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty message field
-            (text body or media caption); part of the idempotency payload.
+          description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message for text
+            or caption for media; part of the idempotency payload.
         reply_message_id:
           type: string
           pattern: ^-?[0-9]+$
@@ -56332,8 +56911,15 @@ components:
         message:
           type: string
           maxLength: 65536
-          description: Text body or media caption, supplied through this message field. UTF-8 runtime limit is 65536
-            bytes. Required and nonempty for text sends.
+          description: Text body, required for text sends. UTF-8 runtime limit is 65536 bytes. Media routes use
+            caption instead.
+        caption:
+          type: string
+          maxLength: 65536
+          description: Media caption, at most 65536 UTF-8 bytes. Not accepted on the text route.
+        ptt:
+          type: boolean
+          description: 'Audio only: true selects verified Ogg Opus voice without conversion.'
         mentions:
           type: array
           maxItems: 100
@@ -56341,8 +56927,8 @@ components:
           items:
             type: string
             pattern: ^[1-9][0-9]*$
-          description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty message field
-            (text body or media caption); part of the idempotency payload.
+          description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message for text
+            or caption for media; part of the idempotency payload.
         reply_message_id:
           type: string
           pattern: ^-?[0-9]+$
@@ -56399,6 +56985,14 @@ components:
               - text
             message:
               minLength: 1
+          not:
+            anyOf:
+            - required:
+              - caption
+            - required:
+              - ptt
+            - required:
+              - media_id
         - required:
           - kind
           - media_id
@@ -56410,6 +57004,17 @@ components:
               - audio
               - video
               - voice
+          not:
+            required:
+            - message
+          anyOf:
+          - properties:
+              kind:
+                enum:
+                - audio
+          - not:
+              required:
+              - ptt
     ScheduledRichSendRequest:
       type: object
       additionalProperties: false
@@ -56904,6 +57509,7 @@ components:
           uniqueItems: true
           items:
             type: object
+            additionalProperties: false
             required:
             - type
             - id
@@ -56925,6 +57531,7 @@ components:
           uniqueItems: true
           items:
             type: object
+            additionalProperties: false
             required:
             - type
             - id
@@ -57288,8 +57895,8 @@ components:
         message:
           type: string
           maxLength: 65536
-          description: Text body or media caption, supplied through this message field. UTF-8 runtime limit is 65536
-            bytes. Required and nonempty for text sends.
+          description: Canonical persisted text or media caption. HTTP media input uses caption; accepted storage
+            hashes retain message.
         mentions:
           type: array
           maxItems: 100
@@ -57297,8 +57904,8 @@ components:
           items:
             type: string
             pattern: ^[1-9][0-9]*$
-          description: Canonical positive uint32 user IDs (maximum 4294967295). Requires a nonempty message field
-            (text body or media caption); part of the idempotency payload.
+          description: Canonical positive uint32 user IDs (maximum 4294967295). Requires nonempty message for text
+            or caption for media; part of the idempotency payload.
         reply_message_id:
           type: string
           pattern: ^-?[0-9]+$
@@ -57418,8 +58025,17 @@ components:
           - failed
           - unknown
           - cancelled
-        result:
-          $ref: '#/components/schemas/SendResult'
+        message_id:
+          type: string
+          pattern: ^-?[0-9]+$
+          description: Nonzero signed int64 encoded as a decimal string. Preserve the sign.
+        date:
+          type: string
+          format: date-time
+        data:
+          $ref: '#/components/schemas/MutationResult'
+        status:
+          type: string
         error_code:
           type: string
         error_message:
@@ -57441,10 +58057,12 @@ components:
       - device_id
       - request
       - state
+      - status
       - created_at
       - updated_at
-      description: Unknown means the provider outcome is unresolved; do not blindly resend. An exact own-message
-        echo may reconcile it to succeeded.
+      description: Only succeeded operations expose message_id/date/data, directly beside send_id and state. Unknown
+        means the provider outcome is unresolved; do not blindly resend. An exact own-message echo may reconcile
+        it to succeeded.
     Schedule:
       type: object
       properties:
@@ -57689,34 +58307,37 @@ components:
       properties:
         start_date:
           type: string
-        date:
+          pattern: ^[0-9]+$
+          description: Provider startDate; the reviewed web client uses this as a cumulative peer watermark for
+            read/received events, not the lower endpoint of a closed range. Exact message coverage and boundary
+            inclusion are not live-verified.
+        read_date:
           type: string
+          pattern: ^[0-9]+$
+          description: 'Field 3 of message.read: provider readDate, not the end of a message range.'
+        received_date:
+          type: string
+          pattern: ^[0-9]+$
+          description: 'Field 3 of message.received: provider receivedDate, not the end of a message range.'
         end_date:
           type: string
+          pattern: ^[0-9]+$
+          description: Optional wrapped endDate of message.read_by_me only; omission and explicit zero remain distinct.
         unread_count:
           type: integer
           format: int64
           minimum: 0
-        range_status:
-          type: string
-          enum:
-          - valid
-          - unknown
-          - invalid
-        range_valid:
-          type: boolean
         message_ids_supported:
           type: boolean
           enum:
           - false
       required:
       - start_date
-      - range_status
-      - range_valid
       - message_ids_supported
-      description: 'Structural validity only: positive ordered endpoints are valid, zero/missing endpoints unknown,
-        reversed endpoints invalid. Zero has no established provider interpretation. Even valid bounds are not per-message
-        proof; no invented message IDs or unknown-send reconciliation.'
+      description: Provider receipt timestamps, not validated closed ranges or exact message-ID acknowledgments.
+        message.read includes read_date; message.received includes received_date; message.read_by_me may include
+        end_date/unread_count. No inferred receipt IDs or unknown-send reconciliation. Already persisted historical
+        bodies remain unchanged during retry/replay.
     Event:
       type: object
       properties:
@@ -57756,13 +58377,17 @@ components:
         timestamp:
           type: string
           format: date-time
-        message:
-          $ref: '#/components/schemas/Message'
+        content:
+          type: object
+          additionalProperties: true
+          description: Reviewed native content on projected message/edit events; uses MessagePayload. No provider
+            credentials or opaque raw bytes.
         payload:
           type: object
           additionalProperties: true
-          description: Event-specific normalized JSON. Message events use MessagePayload; receipt events use ReceiptPayload.
-            Other events have small metadata objects.
+          description: Consumer-ready Message on message/edit events; ReceiptPayload on receipt events; reviewed
+            event-specific metadata on other families. Historical signed bodies retain their original layout during
+            retry/replay.
       required:
       - event_id
       - event
@@ -58646,6 +59271,29 @@ components:
       - code
       - message
       additionalProperties: false
+    ScheduledSend:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - Message scheduled
+        schedule_id:
+          type: string
+          format: uuid
+        scheduled_at:
+          type: string
+          format: date-time
+        next_run_at:
+          type: string
+          format: date-time
+      required:
+      - status
+      - schedule_id
+      - scheduled_at
+      - next_run_at
+      description: Acknowledges creation of a local schedule, not sending or recipient delivery. GET /send/schedules/{schedule_id}
+        returns its current state.
     SendOrScheduleResponse:
       type: object
       properties:
@@ -58656,12 +59304,12 @@ components:
         results:
           oneOf:
           - $ref: '#/components/schemas/Operation'
-          - $ref: '#/components/schemas/Schedule'
+          - $ref: '#/components/schemas/ScheduledSend'
       required:
       - code
       - message
       - results
-      description: A scheduled_at request returns a Schedule immediately; an immediate send returns an Operation.
+      description: A scheduled_at request returns ScheduledSend immediately; an immediate send returns an Operation.
     ChatsResponse:
       type: object
       properties:

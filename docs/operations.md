@@ -439,7 +439,7 @@ burst, ten read/search requests/s and one 1 MiB upload every ten seconds.
 Production worker counts and the 500 ms poll interval are retained.
 
 ```sh
-# Build the separate local runtime image first; host Go 1.26.6 compiles the tests.
+# Build the separate local runtime image first; host Go 1.26.9 compiles the tests.
 docker build --file docker/golang.Dockerfile --tag gobale:dev .
 # Uses only synthetic identities and isolated Docker volumes, no Bale network.
 python3 scripts/start_soak.py --duration 10m --warmup 0s --accounts 300 --wait

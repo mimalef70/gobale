@@ -145,7 +145,10 @@ func (r *prefixScanner) Scan(dest ...any) error { return r.scanner.Scan(append(r
 
 // Search only the event's own reviewed text or document caption. Quoted replies,
 // IDs, media credentials and arbitrary JSON fields are deliberately excluded.
-const eventSearchText = `CASE json_extract(body,'$.payload.kind') WHEN 'text' THEN COALESCE(json_extract(body,'$.payload.message'),'') WHEN 'document' THEN COALESCE(json_extract(body,'$.payload.caption'),'') ELSE '' END`
+// Historical bodies used payload for native content; current message envelopes
+// retain that same reviewed content in content. Search never includes quotes.
+const eventContent = `CASE WHEN json_type(body,'$.content') IS NOT NULL THEN json_extract(body,'$.content') ELSE json_extract(body,'$.payload') END`
+const eventSearchText = `CASE json_extract((` + eventContent + `),'$.kind') WHEN 'text' THEN COALESCE(json_extract((` + eventContent + `),'$.message'),'') WHEN 'document' THEN COALESCE(json_extract((` + eventContent + `),'$.caption'),'') ELSE '' END`
 const eventDirection = `CASE WHEN type IN ('message','message.edited') AND (json_type(body,'$.sender_id') IS NOT 'text' OR CAST(json_extract(body,'$.sender_id') AS INTEGER) NOT BETWEEN 1 AND 4294967295 OR CAST(CAST(json_extract(body,'$.sender_id') AS INTEGER) AS TEXT)<>json_extract(body,'$.sender_id')) THEN 'unknown' WHEN json_extract(body,'$.direction') IN ('incoming','outgoing') THEN json_extract(body,'$.direction') ELSE 'unknown' END`
 
 func (s *Store) ListEventsFiltered(ctx context.Context, conn string, f domains.EventFilter) ([]domains.Event, error) {
@@ -180,7 +183,7 @@ func (s *Store) ListEventsFiltered(ctx context.Context, conn string, f domains.E
 		add("event_time<?", filterMillis(*f.EndTime))
 	}
 	if f.MediaOnly {
-		q += ` AND json_extract(body,'$.payload.kind')='document'`
+		q += ` AND json_extract((` + eventContent + `),'$.kind')='document'`
 	}
 	limit, offset := page(f.Limit, f.Offset)
 	q += ` ORDER BY event_time DESC,id LIMIT ? OFFSET ?`

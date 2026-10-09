@@ -19,6 +19,14 @@ type rowQuerier interface {
 }
 
 func lookupScheduleIdempotent(ctx context.Context, q rowQuerier, conn string, request domains.SendRequest, key string) (domains.Schedule, bool, error) {
+	wanted, err := requestHash(request)
+	if err != nil {
+		return domains.Schedule{}, false, err
+	}
+	return lookupScheduleHash(ctx, q, conn, wanted, key)
+}
+
+func lookupScheduleHash(ctx context.Context, q rowQuerier, conn, wanted, key string) (domains.Schedule, bool, error) {
 	if len(key) > 256 {
 		return domains.Schedule{}, false, domains.E("INVALID_IDEMPOTENCY_KEY", "idempotency key exceeds 256 bytes", 400)
 	}
@@ -38,10 +46,6 @@ func lookupScheduleIdempotent(ctx context.Context, q rowQuerier, conn string, re
 	if errors.Is(err, sql.ErrNoRows) {
 		return domains.Schedule{}, false, nil
 	}
-	if err != nil {
-		return domains.Schedule{}, false, err
-	}
-	wanted, err := requestHash(request)
 	if err != nil {
 		return domains.Schedule{}, false, err
 	}
@@ -78,7 +82,7 @@ func (s *Store) CreateSchedule(ctx context.Context, conn string, request domains
 }
 
 func (s *Store) createScheduleIdempotent(ctx context.Context, conn string, request domains.SendRequest, next time.Time, key string) (domains.Schedule, error) {
-	body, e := marshal(request)
+	hash, e := requestHash(request)
 	if e != nil {
 		return domains.Schedule{}, e
 	}
@@ -87,13 +91,25 @@ func (s *Store) createScheduleIdempotent(ctx context.Context, conn string, reque
 		return domains.Schedule{}, e
 	}
 	defer s.rollbackTx(tx)
+	v, e := s.createScheduleTx(ctx, tx, conn, request, next, key, hash)
+	if e != nil {
+		return v, e
+	}
+	return v, s.commitTx(tx)
+}
+
+func (s *Store) createScheduleTx(ctx context.Context, tx *sql.Tx, conn string, request domains.SendRequest, next time.Time, key, hash string) (domains.Schedule, error) {
+	body, e := marshal(request)
+	if e != nil {
+		return domains.Schedule{}, e
+	}
 	if e = activeTx(ctx, tx, conn); e != nil {
 		return domains.Schedule{}, e
 	}
-	if existing, found, e := lookupScheduleIdempotent(ctx, tx, conn, request, key); e != nil {
+	if existing, found, e := lookupScheduleHash(ctx, tx, conn, hash, key); e != nil {
 		return domains.Schedule{}, e
 	} else if found {
-		return existing, s.commitTx(tx)
+		return existing, nil
 	}
 	if next.IsZero() {
 		return domains.Schedule{}, domains.E("INVALID_SCHEDULE", "next run time is required", 400)
@@ -106,10 +122,6 @@ func (s *Store) createScheduleIdempotent(ctx context.Context, conn string, reque
 		return domains.Schedule{}, e
 	}
 	if key != "" {
-		hash, err := requestHash(request)
-		if err != nil {
-			return domains.Schedule{}, err
-		}
 		if _, e = tx.ExecContext(ctx, `INSERT INTO schedule_idempotency(connection_id,idempotency_key,payload_hash,schedule_id) VALUES(?,?,?,?)`, conn, key, hash, id); e != nil {
 			return domains.Schedule{}, e
 		}
@@ -118,7 +130,7 @@ func (s *Store) createScheduleIdempotent(ctx context.Context, conn string, reque
 	if e != nil {
 		return v, e
 	}
-	return v, s.commitTx(tx)
+	return v, nil
 }
 func (s *Store) GetSchedule(ctx context.Context, conn, id string) (domains.Schedule, error) {
 	return scanSchedule(s.db.QueryRowContext(ctx, `SELECT `+scheduleColumns+` FROM schedules s JOIN devices d ON d.connection_id=s.connection_id WHERE s.connection_id=? AND s.id=? AND d.deleted_at IS NULL`, conn, id))

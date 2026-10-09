@@ -95,7 +95,7 @@ func New(service *usecase.Service, store *storage.Store, opts Options) (*Server,
 		return c.Next()
 	})
 	s.registerAdminRoutes(r)
-	r.Get("/app/capabilities", func(c fiber.Ctx) error { return success(c, domains.OperationDefinitions()) })
+	r.Get("/app/capabilities", func(c fiber.Ctx) error { return success(c, publicOperationDefinitions()) })
 	r.Post("/operations/:operation", func(c fiber.Ctx) error {
 		if _, ok := domains.OperationDefinition(c.Params("operation")); !ok {
 			return domains.Unsupported(c.Params("operation"))
@@ -200,7 +200,7 @@ func (s *Server) registerAdminRoutes(r fiber.Router) {
 	r.Post("/deliveries/:delivery_id/replay", s.replayDelivery)
 }
 func success(c fiber.Ctx, v any) error {
-	return c.JSON(utils.ResponseData{Code: "SUCCESS", Message: "Success", Results: v})
+	return c.JSON(utils.ResponseData{Code: "SUCCESS", Message: "Success", Results: publicResults(v)})
 }
 func result(c fiber.Ctx, v any, e error) error {
 	if e != nil {
@@ -423,18 +423,13 @@ func (s *Server) send(kind string) fiber.Handler {
 		if isMultipartRequest(c) {
 			return s.sendMultipart(c, d, kind, key)
 		}
-		var req domains.SendRequest
-		if e = decode(c, &req); e != nil {
+		req, e := decodeSendRequest(c, kind)
+		if e != nil {
 			return e
 		}
-		req.Kind = kind
-		if kind == "message" {
-			req.Kind = "text"
-		}
-		req.RequestID = ""
 		if req.IsScheduled() {
 			v, e := s.service.CreateScheduleIdempotent(c.Context(), d.ID, req, key)
-			return result(c, v, e)
+			return result(c, scheduledSendResponse(v), e)
 		}
 		op, e := s.service.Send(c.Context(), d.ID, req, key)
 		if e != nil {
@@ -459,7 +454,7 @@ func (s *Server) awaitOperation(c fiber.Ctx, deviceID string, op domains.Operati
 	timer := time.NewTicker(50 * time.Millisecond)
 	defer timer.Stop()
 	accepted := func() error {
-		return c.Status(202).JSON(utils.ResponseData{Code: "ACCEPTED", Message: "Send accepted; inspect send_id for outcome", Results: op})
+		return c.Status(202).JSON(utils.ResponseData{Code: "ACCEPTED", Message: "Send accepted; inspect send_id for outcome", Results: operationResponse(op)})
 	}
 	for op.State == "queued" || op.State == "sending" {
 		select {
@@ -479,7 +474,7 @@ func (s *Server) awaitOperation(c fiber.Ctx, deviceID string, op domains.Operati
 		}
 	}
 	if op.State == "unknown" {
-		return c.Status(202).JSON(utils.ResponseData{Code: "SEND_UNKNOWN", Message: "Provider outcome is unknown; do not blindly resend", Results: op})
+		return c.Status(202).JSON(utils.ResponseData{Code: "SEND_UNKNOWN", Message: "Provider outcome is unknown; do not blindly resend", Results: operationResponse(op)})
 	}
 	if op.State != "succeeded" {
 		status := 422
@@ -489,7 +484,7 @@ func (s *Server) awaitOperation(c fiber.Ctx, deviceID string, op domains.Operati
 		if op.ErrorCode == "AUTH_REQUIRED" {
 			status = 409
 		}
-		return c.Status(status).JSON(utils.ResponseData{Code: op.ErrorCode, Message: op.ErrorMessage, Results: op})
+		return c.Status(status).JSON(utils.ResponseData{Code: op.ErrorCode, Message: op.ErrorMessage, Results: operationResponse(op)})
 	}
 	return success(c, op)
 }
@@ -520,11 +515,10 @@ func (s *Server) schedule(c fiber.Ctx) error {
 	if e != nil {
 		return e
 	}
-	var req domains.SendRequest
-	if e = decode(c, &req); e != nil {
+	req, e := decodeSendRequest(c, "")
+	if e != nil {
 		return e
 	}
-	req.RequestID = ""
 	v, e := s.service.CreateScheduleIdempotent(c.Context(), d.ID, req, key)
 	return result(c, v, e)
 }
@@ -624,7 +618,7 @@ func (s *Server) provider(operation string) fiber.Handler {
 		for k, v := range c.Queries() {
 			if k != "device_id" {
 				if _, ok := payload[k]; !ok {
-					if contract, ok := domains.OperationDefinition(operation); ok {
+					if contract, ok := publicOperationDefinition(operation); ok {
 						field, exists := contract.Request.Properties[k]
 						if !exists {
 							return domains.E("INVALID_REQUEST", "unsupported query field", 400)
@@ -673,6 +667,9 @@ func (s *Server) provider(operation string) fiber.Handler {
 				return domains.E("INVALID_PEER", "chat identifier must be type:id", 400)
 			}
 			payload["peer"] = domains.Peer{Type: parts[0], ID: parts[1]}
+		}
+		if err := nativeOperationArguments(operation, payload); err != nil {
+			return err
 		}
 		raw, _ := json.Marshal(payload)
 		if domains.IsExtendedMutation(operation) {

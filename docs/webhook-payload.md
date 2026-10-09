@@ -1,9 +1,11 @@
 # Webhook payloads
 
-The consumer message projection, multipart sends, receipt validity fields,
-combined status and permanent webhook-failure policy below were introduced in
+The consumer message projection, multipart sends, combined status and permanent
+webhook-failure policy below were introduced in
 2.1.0. The sender-name lookup fixes described below are included in
 [2.1.1](../CHANGELOG.md#211--2026-10-08); use a matching gateway build and contract.
+The payload-envelope alignment and receipt timestamp correction are documented under
+[Unreleased](../CHANGELOG.md#unreleased) and is not part of the published 2.1.1.
 
 This guide describes GoBale 2.0. Required machine-API instance guards,
 `webhook_filter` and new-event `instance_id` were introduced in
@@ -97,7 +99,7 @@ representative and depend on the event; some notifications carry `{}`.
 | Family | Exact event names | Representative payload fields |
 | --- | --- | --- |
 | Messages | `message`, `message.edited`, `message.deleted`, `message.accepted` | Normalized content; acceptance has `accepted:true`; deletion has `{}`. |
-| Receipts | `message.read`, `message.received`, `message.read_by_me` | `start_date`, `date`; own-read may include `end_date`, `unread_count`. |
+| Receipts | `message.read`, `message.received`, `message.read_by_me` | `start_date` with `read_date` or `received_date`; own-read may include `end_date`, `unread_count`. |
 | Pins and chats | `message.pinned`, `message.unpinned`, `chat.cleared`, `chat.deleted` | Pins may carry `message_id`, `date`, `sender_id`, `content`; chat changes carry `{}`. |
 | Users | `user.username_changed`, `user.about_changed`, `user.blocked`, `user.unblocked` | `username` or `about`; block changes carry `{}`. |
 | Presence | `presence.typing`, `presence.typing_stopped`, `presence.online`, `presence.offline`, `presence.last_seen` | Typing: `user_id`, `typing_type`; status: `device_type`, optional `device_category`; last-seen adds `date`. |
@@ -109,7 +111,7 @@ representative and depend on the event; some notifications carry `{}`.
 | Recovery and protocol | `connection.recovery`, `protocol.unsupported_update` | Recovery: `phase`, `gap_detected`; unsupported update: `supported:false`, sometimes `gap_detected:true`. |
 
 For example, `group.membership_changed` can have `{"is_member":false}`;
-`message.read` carries a provider date range rather than a message ID. Account
+`message.read` carries provider timestamps rather than individual message IDs. Account
 and recovery notifications may have no conversation peer, and their direction
 can be `unknown`.
 
@@ -129,8 +131,8 @@ Synthetic incoming-message example:
   "sender_id": "456",
   "direction": "incoming",
   "timestamp": "2026-10-06T12:00:00Z",
-  "payload": {"kind": "text", "message": "Hello"},
-  "message": {
+  "content": {"kind": "text", "message": "Hello"},
+  "payload": {
     "id": "987654321",
     "chat_id": "456",
     "from": "456",
@@ -155,8 +157,8 @@ Synthetic incoming-message example:
 | `peer` | Conversation type/ID where applicable; account-level notifications may have empty peer fields. |
 | `message_id`, `sender_id`, `direction` | Optional event-specific fields; message direction is `incoming`, `outgoing` or `unknown` when provenance is absent. |
 | `timestamp` | RFC3339 event timestamp; no universal ordering guarantee is implied. |
-| `payload` | Reviewed structured event content; not raw provider protobuf. |
-| `message` | Display-ready projection on new message/edit events, described below. Previously persisted bodies are unchanged. |
+| `payload` | Display-ready projection on message/edit events; native event-specific metadata on other families, including receipts. |
+| `content` | Reviewed structured native message/edit content, not raw provider protobuf. |
 
 Keep all IDs as strings. Message/file IDs may be negative signed 64-bit values;
 they must not pass through a JavaScript `Number`. Do not parse meaning from
@@ -192,12 +194,12 @@ not the persisted body.
 
 ## Received content
 
-New `message` and `message.edited` events include one `message` object for the
+New `message` and `message.edited` events include one `payload` object for the
 consumer. The historical-message API includes the same projection. Read
-`message.body` to display text/captions, forwarded text, poll questions/options
+`payload.body` to display text/captions, forwarded text, poll questions/options
 or explicit fallback text for special/unsupported content. Treat it as plain
 Unicode text, never trusted HTML. Structured poll, keyboard and service data
-remain in `payload`.
+remain in `content`.
 
 | Projection field | Meaning |
 | --- | --- |
@@ -244,14 +246,14 @@ completion event. History uses names available in the selected account's cache.
 
 The name and all projected content are frozen when the event commits, so later
 cache fills, retries and replay never rewrite the signed body. Previously
-persisted events are preserved byte for byte and may lack this projection.
+persisted webhook bodies are preserved byte for byte and may retain the former `message` projection and native `payload`, or lack a projection entirely. Existing retries/replay do not migrate those bytes. Local event/history reads expose the current envelope when a stored projection is available.
 
 `media.download_supported` means the selected connection accepted a private
 attachment reference in durable storage. It cannot guarantee later provider
 availability. A failed download does not remove the attachment metadata; show
 that an attachment exists and handle the download error separately.
 
-Message payloads use `kind` and optional normalized fields. Text is in `message`;
+Native message `content` uses `kind` and optional normalized fields. Text is in `message`;
 documents can include `name`, `mime_type`, `size`, `caption`, `media_type` and
 `download_supported`. Native voice arrives as `kind:"document"`,
 `media_type:"voice"`, with `duration` in milliseconds. Do not assume every media
@@ -270,17 +272,17 @@ JSON or a public URL. The requested size may fall back to an available rendition
 `AVATAR_NOT_FOUND` means no photo visible to that account, including private or
 absent photos. This user route does not imply group/channel-avatar support.
 
-Payloads may include `quoted_message`, forward context, mentions, service actions,
+Native `content` may include `quoted_message`, forward context, mentions, service actions,
 polls, stickers, contacts, locations, gifts or nested template `content`. Use
-`message.body` for display, and inspect structured fields when implementing richer
+`payload.body` for display, and inspect structured fields when implementing richer
 controls. Keyboard metadata
 does not execute a URL, callback or Mini App, and receiving a template does not
 prove ordinary-account template sending works. Anonymous poll voters and private
 gift/financial fields are not exposed. Incoming gifts do not authorize payments.
 
-Other events include edits/deletions, receipt ranges, pins, chat changes,
+Other events include edits/deletions, receipt timestamps, pins, chat changes,
 account/group metadata, membership/permissions, presence and reactions. Receipts
-can describe ranges; do not fabricate individual-message receipts from them.
+carry peer-scoped timestamps; do not fabricate individual-message receipts.
 State transitions can legitimately repeat. Undated recovery pages may yield
 duplicate state notifications; consumers should apply those states idempotently.
 Unsupported variants remain observable, including `protocol.unsupported_update`.
@@ -289,27 +291,37 @@ An event family in the schema is not proof of every provider variant working liv
 See [OpenAPI](openapi.yaml) for schemas and the [README](../readme.md) for current
 support limits. Do not log message bodies or credential-bearing Mini App results.
 
-## Receipt ranges
+## Receipt timestamps
 
-`message.read` and `message.received` preserve `start_date` and `date` as decimal
-millisecond strings. `message.read_by_me` may instead include `end_date`.
-Every receipt includes `range_status`, `range_valid` and
-`message_ids_supported:false`:
+Every receipt preserves `start_date` as a decimal millisecond string and includes
+`message_ids_supported:false`. The other timestamps depend on the event:
 
-| Bounds | range_status | range_valid |
-| --- | --- | --- |
-| Both positive, end greater than or equal to start | `valid` | `true` |
-| Zero or missing endpoint | `unknown` | `false` |
-| Positive reversed endpoints | `invalid` | `false` |
+| Event | Additional provider fields |
+| --- | --- |
+| `message.read` | `read_date` (wire field 3: `readDate`) |
+| `message.received` | `received_date` (wire field 3: `receivedDate`) |
+| `message.read_by_me` | Optional `end_date` and `unread_count` |
 
-These labels validate the shape of the observed range only. The reviewed schema
-does not establish what a zero end date means; GoBale does not treat it as an
-open-ended range, replace it with now, or infer that all messages were read.
-Preserve the receipt for inspection and do not advance message delivery/read
-state from unknown or invalid bounds. Even positive bounds do not establish exact
-endpoint inclusion or per-message identity. No message-ID list is invented and
-these receipts cannot reconcile an unknown send. The event envelope timestamp
-is not a replacement for a missing receipt bound.
+The official web client `5.7.0+173855`, inspected on 2026-10-09, uses `startDate`
+as a cumulative peer watermark for read/received updates. Its message selection
+does not use `readDate` or `receivedDate` as the upper endpoint of a closed range.
+Its reducer can also synthesize those observation dates as zero. This is static
+client evidence, not live verification of every zero timestamp from the server.
+The codec and consumers are in the public
+[protocol bundle](https://web.bale.ai/static/js/async/4825.fc21701758.js) and
+[module bundle](https://web.bale.ai/static/js/async/modulesBuilder.e7abdf3264.js).
+
+GoBale preserves zero and differently ordered timestamps without declaring a
+message range valid or invalid. An omitted own-read `end_date` remains omitted;
+an explicitly wrapped zero remains `"0"`. The envelope timestamp does not replace
+any provider field. Exact boundary inclusion, own-read semantics and per-message
+coverage still require controlled live acceptance. Do not invent an ID list,
+infer all messages were read, or reconcile an unknown send from these events.
+
+Newly accepted receipts use the fields above; the ambiguous `date` key and the
+`range_status`/`range_valid` labels have been removed. Already persisted bodies
+retain their original fields and signed bytes on retry/replay. A duplicate native
+event keeps its identity and cannot replace its original stored projection.
 
 ## Retries, changes and replay
 
@@ -397,7 +409,7 @@ Configure these environment variables privately:
 | `WEBHOOK_ACCOUNT_ID` | The authenticated Bale `account_id` (`device_id` in events) |
 
 All four are required. From a source checkout matching the gateway contract,
-with Go 1.26.6 installed, run:
+with Go 1.26.9 installed, run:
 
 ```sh
 cd src

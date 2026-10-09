@@ -35,13 +35,33 @@ func multipartRequest(t *testing.T, s *Server, device, route, key, request, data
 	w := multipart.NewWriter(&body)
 	// File first proves that invalid metadata after streaming still gets cleaned.
 	h := make(textproto.MIMEHeader)
-	h.Set("Content-Disposition", `form-data; name="file"; filename="sample.ogg"`)
+	fileField := "file"
+	for _, kind := range []string{"image", "audio", "video", "voice"} {
+		if strings.HasSuffix(route, "/"+kind) {
+			fileField = kind
+		}
+	}
+	if fileField == "voice" {
+		fileField = "audio"
+	}
+	h.Set("Content-Disposition", `form-data; name="`+fileField+`"; filename="sample.ogg"`)
 	h.Set("Content-Type", "audio/ogg")
 	p, err := w.CreatePart(h)
 	require.NoError(t, err)
 	_, err = io.WriteString(p, data)
 	require.NoError(t, err)
-	require.NoError(t, w.WriteField("request", request))
+	var metadata map[string]json.RawMessage
+	if json.Unmarshal([]byte(request), &metadata) != nil {
+		require.NoError(t, w.WriteField("peer", request))
+	} else {
+		for name, raw := range metadata {
+			var value string
+			if json.Unmarshal(raw, &value) != nil {
+				value = string(raw)
+			}
+			require.NoError(t, w.WriteField(name, value))
+		}
+	}
 	for i := 0; i < len(fields); i += 2 {
 		require.NoError(t, w.WriteField(fields[i], fields[i+1]))
 	}
@@ -112,7 +132,7 @@ func TestMultipartSendJournalsFileRIDAndRetainsConnectionIdempotency(t *testing.
 		_, err = svc.SubmitCode(ctx, id, ch.ID, "synthetic")
 		require.NoError(t, err)
 	}
-	request := `{"peer":{"type":"user","id":"42"},"message":"caption","reply_message_id":"-777"}`
+	request := `{"peer":{"type":"user","id":"42"},"caption":"synthetic caption","reply_message_id":"-777"}`
 	var first domains.Operation
 	for _, id := range []string{"one", "one", "two"} {
 		r := multipartRequest(t, srv, id, "/send/audio", "same-key", request, "synthetic bytes", "ptt", "true")
@@ -120,12 +140,17 @@ func TestMultipartSendJournalsFileRIDAndRetainsConnectionIdempotency(t *testing.
 		require.NoError(t, err)
 		require.Equal(t, 200, res.StatusCode)
 		var response struct {
-			Results domains.Operation `json:"results"`
+			Results struct {
+				domains.Operation
+				MessageID string `json:"message_id"`
+			} `json:"results"`
 		}
 		require.NoError(t, json.NewDecoder(res.Body).Decode(&response))
 		res.Body.Close()
+		require.Equal(t, response.Results.Request.RequestID, response.Results.MessageID)
+		require.Nil(t, response.Results.Result, "the public result must not retain the nested result alias")
 		if first.ID == "" {
-			first = response.Results
+			first = response.Results.Operation
 		} else if id == "one" {
 			require.Equal(t, first.ID, response.Results.ID)
 			require.Equal(t, first.Request.MediaID, response.Results.Request.MediaID)
@@ -135,7 +160,7 @@ func TestMultipartSendJournalsFileRIDAndRetainsConnectionIdempotency(t *testing.
 		}
 	}
 	require.EqualValues(t, 2, calls.Load())
-	for _, variant := range []struct{ request, body string }{{request, "changed bytes"}, {strings.Replace(request, "caption", "different", 1), "synthetic bytes"}} {
+	for _, variant := range []struct{ request, body string }{{request, "changed bytes"}, {strings.Replace(request, "synthetic caption", "different caption", 1), "synthetic bytes"}} {
 		res, err := srv.App.Test(multipartRequest(t, srv, "one", "/send/audio", "same-key", variant.request, variant.body, "ptt", "true"))
 		require.NoError(t, err)
 		require.Equal(t, 409, res.StatusCode)
@@ -173,9 +198,15 @@ func TestMultipartRejectsInvalidInputsWithoutRetainingUploads(t *testing.T) {
 		{"duplicate json", `{"peer":{"type":"user","id":"42","id":"43"}}`, "bytes", "/send/file", nil, 400},
 		{"wrong peer", `{"peer":{"type":"user","id":"bad"}}`, "bytes", "/send/file", nil, 400},
 		{"provided media", `{"peer":{"type":"user","id":"42"},"media_id":"other"}`, "bytes", "/send/file", nil, 400},
-		{"schedule", `{"peer":{"type":"user","id":"42"},"scheduled_at":"2030-01-01T00:00:00Z","timezone":"UTC"}`, "bytes", "/send/file", nil, 400},
+		{"invalid schedule", `{"peer":{"type":"user","id":"42"},"scheduled_at":"2030-01-01T00:00:00Z","timezone":"not-a-zone"}`, "bytes", "/send/file", nil, 400},
 		{"unknown part", valid, "bytes", "/send/file", []string{"unknown", "value"}, 400},
-		{"duplicate part", valid, "bytes", "/send/file", []string{"request", valid}, 400},
+		{"legacy form", valid, "bytes", "/send/file", []string{"request", valid}, 400},
+		{"duplicate part", valid, "bytes", "/send/file", []string{"peer", `{"type":"user","id":"43"}`}, 400},
+		{"whatsapp only option", valid, "bytes", "/send/file", []string{"view_once", "true"}, 400},
+		{"invalid UTF8", valid, "bytes", "/send/file", []string{"caption", string([]byte{0xff})}, 400},
+		{"metadata limit", valid, "bytes", "/send/file", []string{"caption", strings.Repeat("x", multipartRequestLimit+1)}, 400},
+		{"caller hash", `{"peer":{"type":"user","id":"42","access_hash":"17"}}`, "bytes", "/send/file", nil, 400},
+		{"mentions type", valid, "bytes", "/send/file", []string{"mentions", `[42]`}, 400},
 		{"invalid ptt", valid, "bytes", "/send/audio", []string{"ptt", "yes"}, 400},
 		{"ptt file", valid, "bytes", "/send/file", []string{"ptt", "true"}, 400},
 		{"text route", valid, "bytes", "/send/message", nil, 400},

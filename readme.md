@@ -167,7 +167,7 @@ provider revocation can require a new login.
 
 ### Build from source
 
-Requires Go **1.26.6**, Node **24.12+**, Python **3.11+**, Make and a C compiler:
+Requires Go **1.26.9**, Node **24.12+**, Python **3.11+**, Make and a C compiler:
 
 ```sh
 git clone --branch v2.1.1 --depth 1 https://github.com/mimalef70/gobale.git
@@ -275,7 +275,7 @@ gobale_api "$GOBALE_URL/send/operations?state=unknown&limit=20"
 
 Keep all provider IDs as **strings**, including signed message/file IDs. The
 response uses a `code`, `message`, `results` envelope. Save `results.send_id` to
-inspect the durable operation later.
+inspect the durable operation later. After acknowledgement, `results.message_id` contains the provider message ID directly; pending or unknown operations omit it.
 
 Choose one idempotency key per logical send, persist it before submitting, and
 reuse it with exactly the same content if the response is lost. Changed content
@@ -303,12 +303,12 @@ gobale_api -H 'Content-Type: image/jpeg' -H 'X-Filename: photo.jpg' \
 
 gobale_api -H 'Content-Type: application/json' \
   -H 'Idempotency-Key: support-photo-0001' \
-  --data '{"peer":{"type":"user","id":"REPLACE_WITH_USER_ID"},"media_id":"REPLACE_WITH_MEDIA_ID","message":"A photo from GoBale"}' \
+  --data '{"peer":{"type":"user","id":"REPLACE_WITH_USER_ID"},"media_id":"REPLACE_WITH_MEDIA_ID","caption":"A photo from GoBale"}' \
   "$GOBALE_URL/send/image"
 ```
 
 Use `/send/file`, `/send/audio`, `/send/video` or `/send/voice` for the corresponding
-media type. Use `message` for a media caption. **Voice notes require a complete
+media type. Use `caption` for media text. Multipart uploads and schedules can use a single request; see the [consumer contract](docs/consumer-integration.md#send-a-file-in-one-request). **Voice notes require a complete
 mono/stereo Ogg Opus stream**; duration
 comes from the file, and GoBale does not transcode MP3, WAV or WebM. Uploaded media
 belong to one connection and cannot be reused by another.

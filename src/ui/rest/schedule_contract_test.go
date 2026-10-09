@@ -23,7 +23,13 @@ func TestScheduleOneTimeRecurrenceRESTContract(t *testing.T) {
 				})
 				require.Equal(t, 200, status, "one-time recurrence rejected: %v", body)
 				results := body["results"].(map[string]any)
-				require.Equal(t, "active", results["status"])
+				if path == "/send/message" {
+					require.Equal(t, "Message scheduled", results["status"])
+					require.NotEmpty(t, results["schedule_id"])
+					require.NotContains(t, results, "message_id")
+				} else {
+					require.Equal(t, "active", results["status"])
+				}
 			})
 		}
 	}

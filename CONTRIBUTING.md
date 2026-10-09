@@ -9,7 +9,7 @@ when moving from 1.x. Use the matching tag's documentation when working on a
 published release. The `main` branch can advance beyond that release; use a
 separate local image tag for development instead of overwriting a release tag.
 
-Use Go **1.26.6**, Python **3.11+** and a C compiler for the default SQLite build
+Use Go **1.26.9**, Python **3.11+** and a C compiler for the default SQLite build
 and race tests. Node **24.12+** / npm builds the embedded UI; Node is not a runtime
 dependency. Docker is needed only for container checks. From the repository:
 

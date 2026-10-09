@@ -37,7 +37,10 @@ func scopedEventID(conn string, e domains.Event) string {
 		e.AccountID = ""
 		e.InstanceID = ""
 		e.Checkpoint = ""
-		b, _ := json.Marshal(e)
+		// The fallback identity predates HTTP projection changes. Preserve its
+		// representation even for synthetic events without a native source ID.
+		type identityRecord domains.Event
+		b, _ := json.Marshal(identityRecord(e))
 		source = string(b)
 	}
 	sum := sha256.Sum256([]byte(conn + "\x00" + source))

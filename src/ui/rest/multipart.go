@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 	"unicode"
+	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/mimalef70/gobale/src/domains"
@@ -24,8 +25,8 @@ func isMultipartRequest(c fiber.Ctx) bool {
 	return strings.HasPrefix(strings.ToLower(c.Get("Content-Type")), "multipart/")
 }
 
-// Multipart keeps the existing SendRequest contract in one JSON request part.
-// The independently bounded file is streamed to an owned local staging file.
+// Multipart accepts ordinary form fields and an endpoint-named media part.
+// The bounded file is streamed to owned local staging storage.
 func (s *Server) sendMultipart(c fiber.Ctx, d domains.Device, kind, key string) error {
 	switch kind {
 	case "file", "image", "audio", "video", "voice":
@@ -63,59 +64,31 @@ func (s *Server) sendMultipart(c fiber.Ctx, d domains.Device, kind, key string) 
 	var media domains.Media
 	var digest string
 	seen := make(map[string]bool)
-	ptt := false
+	fields := make(map[string]json.RawMessage)
+	metadataBytes := 0
+	fileField := kind
+	if kind == "voice" {
+		fileField = "audio"
+	}
 	for count := 0; ; count++ {
 		part, e := reader.NextRawPart()
 		if e == io.EOF {
 			break
 		}
-		if e != nil || count >= 3 {
+		if e != nil || count >= 20 {
 			return domains.E("INVALID_MULTIPART", "multipart body is malformed or contains too many parts", 400)
 		}
 		name := part.FormName()
-		if seen[name] || (name != "request" && name != "file" && name != "ptt") || part.Header.Get("Content-Transfer-Encoding") != "" {
+		if seen[name] || name == "" || part.Header.Get("Content-Transfer-Encoding") != "" {
 			return domains.E("INVALID_MULTIPART", "unknown, duplicate or encoded multipart field", 400)
 		}
 		seen[name] = true
-		if name != "file" && part.FileName() != "" {
+		if name != fileField && part.FileName() != "" {
 			return domains.E("INVALID_MULTIPART", "only the file part may have a filename", 400)
 		}
-		switch name {
-		case "request":
-			data, e := io.ReadAll(io.LimitReader(part, multipartRequestLimit+1))
-			if e != nil || len(data) > multipartRequestLimit {
-				return domains.E("INVALID_MULTIPART", "request part exceeds 128 KiB or is incomplete", 400)
-			}
-			if e = domains.ValidateJSONObject(data); e != nil {
-				return e
-			}
-			var fields map[string]json.RawMessage
-			if e = json.Unmarshal(data, &fields); e != nil {
-				return domains.E("INVALID_REQUEST", "request part must be a JSON object", 400)
-			}
-			for field := range fields {
-				switch field {
-				case "peer", "phone", "message", "mentions", "reply_message_id":
-				case "scheduled_at", "timezone", "recurrence", "cron", "interval", "schedule_id":
-					return domains.E("USE_SCHEDULE_ENDPOINT", "upload media separately and use the schedule endpoint for delayed sends", 400)
-				default:
-					return domains.E("INVALID_REQUEST", "multipart request contains an unsupported field", 400)
-				}
-			}
-			decoder := json.NewDecoder(bytes.NewReader(data))
-			decoder.DisallowUnknownFields()
-			if decoder.Decode(&req) != nil || decoder.Decode(new(any)) != io.EOF {
-				return domains.E("INVALID_REQUEST", "request part must be one JSON send request", 400)
-			}
-		case "ptt":
-			data, e := io.ReadAll(io.LimitReader(part, 6))
-			if e != nil || kind != "audio" || (string(data) != "true" && string(data) != "false") {
-				return domains.E("INVALID_REQUEST", "ptt must be true or false and is only valid for audio sends", 400)
-			}
-			ptt = string(data) == "true"
-		case "file":
+		if name == fileField {
 			filename := filepath.Base(part.FileName())
-			if filename == "" || filename == "." || len(filename) > 255 || strings.ContainsFunc(filename, unicode.IsControl) {
+			if filename == "" || filename == "." || len(filename) > 255 || !utf8.ValidString(filename) || strings.ContainsFunc(filename, unicode.IsControl) {
 				return domains.E("INVALID_MEDIA", "file part requires a valid filename of at most 255 bytes", 400)
 			}
 			fileType := part.Header.Get("Content-Type")
@@ -144,23 +117,37 @@ func (s *Server) sendMultipart(c fiber.Ctx, d domains.Device, kind, key string) 
 			}
 			digest = hex.EncodeToString(hash.Sum(nil))
 			media = domains.Media{ID: upload.ID(), ConnectionID: d.ConnectionID, Path: upload.RelativePath(), Name: filename, ContentType: mime.FormatMediaType(mediaType, mediaParams), Size: n}
+		} else {
+			data, e := io.ReadAll(io.LimitReader(part, int64(multipartRequestLimit-metadataBytes+1)))
+			metadataBytes += len(data)
+			if e != nil || metadataBytes > multipartRequestLimit || !utf8.Valid(data) {
+				return domains.E("INVALID_MULTIPART", "form fields must be valid UTF-8 within 128 KiB", 400)
+			}
+			switch name {
+			case "peer", "mentions", "weekdays", "ptt", "day_of_month", "occurrence_limit":
+				// Structured fields and scalar booleans/numbers use JSON spelling.
+				if domains.ValidateJSONObject(append(append([]byte(`{"value":`), data...), '}')) != nil {
+					return domains.E("INVALID_MULTIPART", "form field contains invalid or duplicate JSON values", 400)
+				}
+				fields[name] = data
+			default:
+				fields[name], _ = json.Marshal(string(data))
+			}
+
 		}
 		if e := part.Close(); e != nil {
 			return domains.E("INVALID_MULTIPART", "multipart body is incomplete", 400)
 		}
 	}
-	if limited.N <= 0 || !seen["request"] || !seen["file"] {
-		return domains.E("INVALID_MULTIPART", "one request part and one bounded file part are required", 400)
+	if limited.N <= 0 || !seen[fileField] {
+		return domains.E("INVALID_MULTIPART", "one endpoint-named media part and destination fields are required", 400)
 	}
-	if req.MediaID != "" || req.RequestID != "" || req.Operation != "" || len(req.Payload) > 0 {
-		return domains.E("INVALID_REQUEST", "multipart sends assign media_id and request_id inside the gateway", 400)
+	if _, ok := fields["media_id"]; ok {
+		return domains.E("INVALID_REQUEST", "multipart assigns media_id inside the gateway", 400)
 	}
-	if req.IsScheduled() {
-		return domains.E("USE_SCHEDULE_ENDPOINT", "upload media separately and use the schedule endpoint for delayed sends", 400)
-	}
-	req.Kind = kind
-	if ptt {
-		req.Kind = "voice"
+	req, err = sendRequestFields(fields, kind)
+	if err != nil {
+		return err
 	}
 	req.MediaID = media.ID
 	if err = req.Validate(); err != nil {
@@ -173,6 +160,14 @@ func (s *Server) sendMultipart(c fiber.Ctx, d domains.Device, kind, key string) 
 	// before making work visible, including when only one media slot is configured.
 	<-s.mediaSlots
 	slotHeld = false
+	if req.IsScheduled() {
+		job, err := s.service.ScheduleUpload(c.Context(), d.ID, req, key, media, digest)
+		if err != nil {
+			return err
+		}
+		upload.Release()
+		return success(c, scheduledSendResponse(job))
+	}
 	op, err := s.service.SendUpload(c.Context(), d.ID, req, key, media, digest)
 	if err != nil {
 		return err

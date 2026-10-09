@@ -31,11 +31,15 @@ func TestScheduledSendIdempotencySharedAcrossRESTEntryPoints(t *testing.T) {
 		require.Equal(t, 200, res.StatusCode)
 		var response struct {
 			Results struct {
-				ID string `json:"id"`
+				ID         string `json:"id"`
+				ScheduleID string `json:"schedule_id"`
 			} `json:"results"`
 		}
 		require.NoError(t, json.NewDecoder(res.Body).Decode(&response))
 		res.Body.Close()
+		if path != "/send/schedules" {
+			response.Results.ID = response.Results.ScheduleID
+		}
 		require.NotEmpty(t, response.Results.ID)
 		if id != "" {
 			require.Equal(t, id, response.Results.ID)

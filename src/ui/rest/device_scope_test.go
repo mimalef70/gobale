@@ -78,7 +78,7 @@ func (c *bodyReadConn) Read(p []byte) (int, error) {
 
 func TestHTTPAccountSelectionSurvivesAliasReuse(t *testing.T) {
 	future := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
-	scheduled := fmt.Sprintf(`{"kind":"text","peer":{"type":"user","id":"42"},"message":"scheduled","scheduled_at":%q,"timezone":"UTC"}`, future)
+	scheduled := fmt.Sprintf(`{"peer":{"type":"user","id":"42"},"message":"scheduled","scheduled_at":%q,"timezone":"UTC"}`, future)
 	for _, tc := range []struct {
 		name, method, path, body string
 		header                   bool
@@ -89,13 +89,13 @@ func TestHTTPAccountSelectionSurvivesAliasReuse(t *testing.T) {
 		{"scheduled-send", "POST", "/send/message", scheduled, true},
 		{"provider-read", "GET", "/user/info", `{}`, true},
 		{"provider-mutation", "POST", "/group", `{"title":"Synthetic group","users":[{"type":"user","id":"42"}]}`, true},
-		{"generic-operation", "POST", "/operations/account.name", `{"name":"Synthetic name"}`, true},
+		{"generic-operation", "POST", "/operations/account.name", `{"push_name":"Synthetic name"}`, true},
 		{"login", "POST", "/devices/shared/login", `{"phone":"+10000000000"}`, false},
 		{"login-code", "POST", "/devices/shared/login/code", `{"challenge_id":"synthetic","code":"synthetic"}`, false},
 		{"login-password", "POST", "/devices/shared/login/password", `{"challenge_id":"synthetic","password":"synthetic"}`, false},
 		{"webhook", "PATCH", "/devices/shared/webhook", `{"webhook_url":"https://example.invalid/events","webhook_secret":"synthetic"}`, false},
 		{"media-upload", "POST", "/media", `synthetic media`, true},
-		{"multipart-send", "POST", "/send/file", "--scope\r\nContent-Disposition: form-data; name=\"request\"\r\n\r\n{\"peer\":{\"type\":\"user\",\"id\":\"42\"}}\r\n--scope\r\nContent-Disposition: form-data; name=\"file\"; filename=\"synthetic.txt\"\r\nContent-Type: text/plain\r\n\r\nsynthetic media\r\n--scope--\r\n", true},
+		{"multipart-send", "POST", "/send/file", "--scope\r\nContent-Disposition: form-data; name=\"peer\"\r\n\r\n{\"type\":\"user\",\"id\":\"42\"}\r\n--scope\r\nContent-Disposition: form-data; name=\"file\"; filename=\"synthetic.txt\"\r\nContent-Type: text/plain\r\n\r\nsynthetic media\r\n--scope--\r\n", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			var identities, calls atomic.Int64

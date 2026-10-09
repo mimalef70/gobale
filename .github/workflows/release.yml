@@ -19,7 +19,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  GO_VERSION: '1.26.6'
+  GO_VERSION: '1.26.9'
   GOTOOLCHAIN: local
   # Public image names must not cross job outputs: Actions can suppress an
   # output containing the Docker Hub username when that username is a secret.

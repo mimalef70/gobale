@@ -90,6 +90,11 @@ source, binaries or containers.
   Unknown variants remain explicit, not empty successful messages.
 - State notifications can recur legitimately. Use actual route/time/sequence
   provenance; undated diff-page positions cannot invent per-update sequence IDs.
+- Receipt field 3 is `readDate`/`receivedDate`, not a range end. The reviewed web
+  client uses `startDate` as a cumulative peer watermark and may synthesize zero
+  observation dates. Preserve provider timestamps without range-validity labels;
+  own-read has distinct optional `endDate`. Exact boundary inclusion and per-message
+  coverage remain live-unverified. Receipts cannot reconcile unknown sends.
 - Group permission patches preserve omitted and unknown fields. Replacement
   requires all known fields; read/merge/write has no provider compare-and-swap.
 - Poll creation plus send is compound: an orphan poll or uncertain second step
@@ -172,7 +177,7 @@ Update this ledger only with recorded evidence, preserving date, scope and limit
 
 ## Development checks
 
-Use Go 1.26.6, Python 3.11+ and a C compiler for default SQLite/race tests.
+Use Go 1.26.9, Python 3.11+ and a C compiler for default SQLite/race tests.
 Activate the project virtual environment and install `scripts/requirements.txt`
 as shown in [CONTRIBUTING.md](CONTRIBUTING.md).
 From the root run `make check`, `make race`, `make fuzz`, `make vuln`.

@@ -1,5 +1,35 @@
 # Changelog
 
+## Unreleased
+
+- Align shared HTTP fields with GOWA: `push_name` for account name changes,
+  `caption` for media text, ordinary multipart fields with endpoint-named
+  `file`/`image`/`video`/`audio` parts, and `ptt` for existing Ogg Opus audio.
+  Unsupported options and old input aliases are rejected. No transcoder is added.
+- Expose acknowledged `message_id` directly in operation results while preserving
+  `send_id`, durable state and pending/unknown error semantics. Scheduled sends
+  return `status`, `schedule_id`, `scheduled_at` and `next_run_at`; schedule detail
+  and occurrence endpoints retain their durable administrative records.
+- Accept scheduled multipart media in one request. Register the media and schedule
+  atomically, bind idempotency to bytes/metadata/schedule content and retain the
+  original asset on concurrent retries, restart and completed-schedule retries.
+- Put newly serialized message/edit projections in webhook `payload`, with
+  reviewed native content in `content`. Preserve old signed bodies, identities,
+  historical decoding, local search and reconciliation evidence. Real Bale peer
+  IDs, receipt semantics and unavailable author information remain explicit.
+- Correct new receipt payloads: expose `read_date` and `received_date` according
+  to the provider fields, and remove `date`, `range_status` and `range_valid`
+  from those projections. The reviewed web client uses `startDate` as a peer
+  watermark, not the lower endpoint of a range ending at the observation date.
+  Own-read retains its distinct optional `end_date` without range-validity labels.
+  Preserve zero timestamps, native event identities and all previously persisted
+  webhook bytes on duplicate acceptance, restart and replay. No exact receipt
+  message IDs or reconciliation of unknown sends is introduced; boundary behavior
+  and per-message coverage remain live-unverified.
+- Build and test with Go 1.26.9 and update `golang.org/x/net` to v0.60.0 for the
+  security advisories reported against Go 1.26.6 and x/net v0.57.0. Pin the official
+  Go container image by its verified digest and align CI and contributor setup.
+
 ## 2.1.1 — 2026-10-08
 
 - Resolve first-message sender names through the reviewed bounded recent-dialog

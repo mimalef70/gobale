@@ -30,17 +30,19 @@ func additionalEvents(account string, data []byte, u *wire.UpdateContainer) ([]d
 		}
 	}
 	for _, x := range []struct {
-		k string
-		v *wire.MessageReceipt
-	}{{"message.read", u.Read}, {"message.received", u.Received}} {
-		if v := x.v; v != nil {
+		kind, dateKey string
+		value         *wire.MessageReceipt
+	}{{"message.read", "read_date", u.Read}, {"message.received", "received_date", u.Received}} {
+		if v := x.value; v != nil {
 			p, e := decodePeer(v.Peer)
 			if e != nil || v.StartDate < 0 || v.Date < 0 {
 				return nil, protocolError()
 			}
-			b := receiptRangePayload(v.StartDate, v.Date)
-			b["date"] = sid(v.Date)
-			add(x.k, p, "", v.Date, b)
+			// Field 3 is readDate/receivedDate, not the end of a message range.
+			// Keep zero and the provider's own timestamp ordering unchanged.
+			b := receiptPayload(v.StartDate)
+			b[x.dateKey] = sid(v.Date)
+			add(x.kind, p, "", v.Date, b)
 		}
 	}
 	if v := u.ReadByMe; v != nil {
@@ -48,7 +50,7 @@ func additionalEvents(account string, data []byte, u *wire.UpdateContainer) ([]d
 		if e != nil || v.StartDate < 0 || v.GetUnreadCount().GetValue() < 0 || v.GetEndDate().GetValue() < 0 {
 			return nil, protocolError()
 		}
-		b := receiptRangePayload(v.StartDate, v.GetEndDate().GetValue())
+		b := receiptPayload(v.StartDate)
 		if v.UnreadCount != nil {
 			b["unread_count"] = v.UnreadCount.Value
 		}
@@ -126,21 +128,14 @@ func additionalEvents(account string, data []byte, u *wire.UpdateContainer) ([]d
 	return out, nil
 }
 
-// Receipt bounds are observations, not per-message reconciliation evidence.
-// In particular, a zero bound has no reviewed provider meaning; it must never
-// become an unbounded range or use the event's local timestamp as an endpoint.
-func receiptRangePayload(start, end int64) map[string]any {
-	status := "unknown"
-	if start > 0 && end > 0 {
-		status = "valid"
-		if end < start {
-			status = "invalid"
-		}
-	}
+// The official web client uses startDate as a cumulative peer watermark for
+// read/received updates, independently of readDate/receivedDate. Its reducer
+// can set those observation dates to zero. Own-read has separate endDate
+// metadata. None of these timestamps establishes exact message-ID coverage or
+// reconciles an unknown send; do not classify them as a validated closed range.
+func receiptPayload(start int64) map[string]any {
 	return map[string]any{
 		"start_date":            sid(start),
-		"range_status":          status,
-		"range_valid":           status == "valid",
 		"message_ids_supported": false,
 	}
 }
