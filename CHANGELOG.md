@@ -1,6 +1,13 @@
 # Changelog
 
-## Unreleased
+## 3.0.0 — 2026-10-09
+
+**Breaking public API and webhook changes.** Update send/name inputs, operation
+response readers and webhook consumers with this release. Storage remains at
+schema 7; existing sessions, accepted operations, schedules and signed webhook
+bodies are retained. Previously stored events keep their original delivery format.
+This release aligns selected shared contracts with GOWA; it is not a drop-in
+WhatsApp API replacement and does not add unsupported Bale capabilities.
 
 - Align shared HTTP fields with GOWA: `push_name` for account name changes,
   `caption` for media text, ordinary multipart fields with endpoint-named
@@ -29,6 +36,21 @@
 - Build and test with Go 1.26.9 and update `golang.org/x/net` to v0.60.0 for the
   security advisories reported against Go 1.26.6 and x/net v0.57.0. Pin the official
   Go container image by its verified digest and align CI and contributor setup.
+
+### Verified scope and remaining limits
+
+- Contract, storage, retry and parser changes have synthetic regression coverage,
+  including concurrent multipart scheduling, restart, idempotency conflicts and
+  byte-identical historical webhook retry/replay. No new live-account or consumer
+  application acceptance is claimed. Voice still requires complete Ogg Opus;
+  there is no runtime conversion. Receipts retain Bale's timestamp semantics,
+  and history remains an event-oriented API rather than GOWA's message records.
+- Ordinary-user keyboard-template sends remain rejected in live tests. Long-gap
+  recovery, exhaustive history export, long-duration Linux capacity and deployment
+  retention remain acceptance gates. Mentions, scheduled forwarding, WebP sends,
+  account-security/report/story writes and Mini App credential interoperability
+  retain their documented live-verification limits. No financial mutation support
+  is claimed.
 
 ## 2.1.1 — 2026-10-08
 

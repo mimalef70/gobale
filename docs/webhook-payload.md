@@ -1,17 +1,15 @@
 # Webhook payloads
 
-The consumer message projection, multipart sends, combined status and permanent
-webhook-failure policy below were introduced in
-2.1.0. The sender-name lookup fixes described below are included in
-[2.1.1](../CHANGELOG.md#211--2026-10-08); use a matching gateway build and contract.
-The payload-envelope alignment and receipt timestamp correction are documented under
-[Unreleased](../CHANGELOG.md#unreleased) and is not part of the published 2.1.1.
-
-This guide describes GoBale 2.0. Required machine-API instance guards,
-`webhook_filter` and new-event `instance_id` were introduced in
-[2.0.1](../CHANGELOG.md#201--2026-10-07). Use the documentation from the same tag
-as your installed release; the hosted API reference follows `main`. Previously
-stored webhook bodies retain their original bytes and may lack `instance_id`.
+This guide describes GoBale [3.0.0](../CHANGELOG.md#300--2026-10-09).
+Update consumers with the gateway: account name uses `push_name`, media text uses
+`caption`, multipart requests use ordinary fields and endpoint-named file parts,
+and acknowledged operation IDs appear directly at `results.message_id`.
+New message/edit events put their display-ready projection in `payload` and
+reviewed native content in `content`; receipt fields expose distinct provider
+timestamps. Previously persisted signed webhook bodies retain their original
+bytes and format for retry/replay, including older events without `instance_id`.
+Use documentation and OpenAPI from the installed release tag; the hosted API
+reference follows `main` and can advance beyond a release.
 
 GoBale stores events before delivery and sends a signed JSON **event**, without
 REST's `code/message/results` wrapper. Delivery is **at least once**: verify the
