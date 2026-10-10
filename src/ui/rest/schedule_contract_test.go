@@ -2,6 +2,7 @@ package rest
 
 import (
 	"context"
+	"github.com/mimalef70/goomni/src/domains"
 	"testing"
 	"time"
 
@@ -10,10 +11,10 @@ import (
 
 func TestScheduleOneTimeRecurrenceRESTContract(t *testing.T) {
 	s, svc := setupAPI(t, "")
-	_, err := svc.CreateDevice(context.Background(), "one")
+	_, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
 	for _, path := range []string{"/send/schedules", "/send/message"} {
-		for _, recurrence := range []string{"none", "once", ""} {
+		for _, recurrence := range []string{"none", ""} {
 			t.Run(path+"/"+recurrence, func(t *testing.T) {
 				status, body := apiRequest(t, s, "POST", path, "one", map[string]any{
 					"peer":    map[string]string{"type": "user", "id": "42"},
@@ -32,5 +33,12 @@ func TestScheduleOneTimeRecurrenceRESTContract(t *testing.T) {
 				}
 			})
 		}
+		status, body := apiRequest(t, s, "POST", path, "one", map[string]any{
+			"peer":    map[string]string{"type": "user", "id": "42"},
+			"message": "synthetic scheduled once", "timezone": "UTC",
+			"scheduled_at": time.Now().Add(time.Hour).UTC().Format(time.RFC3339),
+			"recurrence":   "once",
+		})
+		require.Equal(t, 400, status, "legacy recurrence admitted: %v", body)
 	}
 }

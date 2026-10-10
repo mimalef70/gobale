@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"time"
 )
 
@@ -149,13 +149,21 @@ func (r *prefixScanner) Scan(dest ...any) error { return r.scanner.Scan(append(r
 // retain that same reviewed content in content. Search never includes quotes.
 const eventContent = `CASE WHEN json_type(body,'$.content') IS NOT NULL THEN json_extract(body,'$.content') ELSE json_extract(body,'$.payload') END`
 const eventSearchText = `CASE json_extract((` + eventContent + `),'$.kind') WHEN 'text' THEN COALESCE(json_extract((` + eventContent + `),'$.message'),'') WHEN 'document' THEN COALESCE(json_extract((` + eventContent + `),'$.caption'),'') ELSE '' END`
+
+// New adapters expose the reviewed text/caption through Message.Body. Never
+// search arbitrary native payloads, quoted content or unsupported variants.
+const projectedMessage = `type IN ('message','message.edited') AND json_type(body,'$.content')='object' AND json_extract(body,'$.payload.supported')=1`
+const projectedSearchText = `CASE WHEN ` + projectedMessage + ` THEN COALESCE(json_extract(body,'$.payload.body'),'') ELSE '' END`
+const projectedMedia = `(` + projectedMessage + ` AND json_type(body,'$.payload.media')='object')`
 const eventDirection = `CASE WHEN type IN ('message','message.edited') AND (json_type(body,'$.sender_id') IS NOT 'text' OR CAST(json_extract(body,'$.sender_id') AS INTEGER) NOT BETWEEN 1 AND 4294967295 OR CAST(CAST(json_extract(body,'$.sender_id') AS INTEGER) AS TEXT)<>json_extract(body,'$.sender_id')) THEN 'unknown' WHEN json_extract(body,'$.direction') IN ('incoming','outgoing') THEN json_extract(body,'$.direction') ELSE 'unknown' END`
+const opaqueEventDirection = `CASE WHEN type IN ('message','message.edited') AND (json_type(body,'$.sender_id') IS NOT 'text' OR length(CAST(json_extract(body,'$.sender_id') AS BLOB)) NOT BETWEEN 1 AND 256 OR trim(json_extract(body,'$.sender_id'))<>json_extract(body,'$.sender_id')) THEN 'unknown' WHEN json_extract(body,'$.direction') IN ('incoming','outgoing') THEN json_extract(body,'$.direction') ELSE 'unknown' END`
 
 func (s *Store) ListEventsFiltered(ctx context.Context, conn string, f domains.EventFilter) ([]domains.Event, error) {
 	if err := f.Validate(); err != nil {
 		return nil, err
 	}
-	if err := s.active(ctx, conn); err != nil {
+	provider, err := s.connectionProvider(ctx, conn)
+	if err != nil {
 		return nil, err
 	}
 	q := `SELECT body FROM events WHERE connection_id=?`
@@ -165,13 +173,21 @@ func (s *Store) ListEventsFiltered(ctx context.Context, conn string, f domains.E
 		add("peer_key=?", f.Peer)
 	}
 	if f.Search != "" {
-		add("instr(("+eventSearchText+"),?)>0", f.Search)
+		text := eventSearchText
+		if provider != domains.ProviderBale {
+			text = projectedSearchText
+		}
+		add("instr(("+text+"),?)>0", f.Search)
 	}
 	if f.Event != "" {
 		add("type=?", f.Event)
 	}
 	if f.Direction != "" {
-		add("("+eventDirection+")=?", f.Direction)
+		direction := eventDirection
+		if provider != domains.ProviderBale {
+			direction = opaqueEventDirection
+		}
+		add("("+direction+")=?", f.Direction)
 	}
 	if f.SenderID != "" {
 		add("json_extract(body,'$.sender_id')=?", f.SenderID)
@@ -183,7 +199,11 @@ func (s *Store) ListEventsFiltered(ctx context.Context, conn string, f domains.E
 		add("event_time<?", filterMillis(*f.EndTime))
 	}
 	if f.MediaOnly {
-		q += ` AND json_extract((` + eventContent + `),'$.kind')='document'`
+		if provider == domains.ProviderBale {
+			q += ` AND json_extract((` + eventContent + `),'$.kind')='document'`
+		} else {
+			q += ` AND ` + projectedMedia
+		}
 	}
 	limit, offset := page(f.Limit, f.Offset)
 	q += ` ORDER BY event_time DESC,id LIMIT ? OFFSET ?`
@@ -202,6 +222,9 @@ func (s *Store) ListEventsFiltered(ctx context.Context, conn string, f domains.E
 		var v domains.Event
 		if err = json.Unmarshal([]byte(body), &v); err != nil {
 			return nil, err
+		}
+		if v.Provider == "" {
+			v.Provider = provider
 		}
 		result = append(result, v)
 	}

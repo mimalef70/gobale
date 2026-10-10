@@ -17,12 +17,12 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/pkg/utils"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/pkg/utils"
 )
 
 const (
-	adminSessionCookie   = "gobale_admin"
+	adminSessionCookie   = "goomni_admin"
 	adminSessionIdle     = 30 * time.Minute
 	adminSessionAbsolute = 8 * time.Hour
 	adminSessionLimit    = 100

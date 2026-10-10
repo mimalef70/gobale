@@ -92,7 +92,10 @@ export function AccountLogin({ device }: { device: Device }) {
           </div>
           <div>
             <h2>{t('login')}</h2>
-            <p>{t('loginStep', { number: connected || isPassword ? 3 : isCode ? 2 : 1 })}</p>
+            <p>
+              {t(`providerName.${device.provider}`)} ·{' '}
+              {t(`status.${state}`, { defaultValue: state })}
+            </p>
           </div>
         </div>
         <ErrorNotice error={login.error} />
@@ -109,6 +112,15 @@ export function AccountLogin({ device }: { device: Device }) {
             {(isCode || isPassword) && (
               <div className="challenge-meta">
                 <strong>{t('sentTo', { phone: challenge?.masked_phone })}</strong>
+                {challenge?.delivery && (
+                  <span>
+                    {t('codeDelivery', {
+                      delivery: t(`deliveryMethod.${challenge.delivery}`, {
+                        defaultValue: challenge.delivery,
+                      }),
+                    })}
+                  </span>
+                )}
                 <span>{t('expiresIn', { seconds: expires })}</span>
               </div>
             )}
@@ -134,16 +146,16 @@ export function AccountLogin({ device }: { device: Device }) {
             )}
             {isPassword && (
               <form onSubmit={(event) => void perform(event, 'password')}>
-                <Field id="bale-password" label={t('twoFactor')} hint={t('twoFactorHint')}>
+                <Field id="account-password" label={t('twoFactor')} hint={t('twoFactorHint')}>
                   <input
-                    id="bale-password"
+                    id="account-password"
                     type="password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="off"
                     required
                     disabled={busy}
-                    aria-describedby="bale-password-hint"
+                    aria-describedby="account-password-hint"
                   />
                 </Field>
                 <Button type="submit" busy={busy}>

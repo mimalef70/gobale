@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 	"encoding/json"
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"github.com/stretchr/testify/require"
 	"testing"
 	"time"

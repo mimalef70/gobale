@@ -7,7 +7,7 @@ import (
 	"math"
 	"unicode/utf8"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 // Legacy JSON union7 is not an arbitrary JSON passthrough. Only the official

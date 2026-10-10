@@ -2160,7 +2160,7 @@ const file_wire_groups_extended_proto_rawDesc = "" +
 	"\x17GroupRemovePhotoRequest\x124\n" +
 	"\x05group\x18\x01 \x01(\v2\x1e.gobale.bale.reference.PeerRefR\x05group\x12\x10\n" +
 	"\x03rid\x18\x04 \x01(\x03R\x03rid\x12>\n" +
-	"\tavatar_id\x18\x06 \x01(\v2!.gobale.bale.reference.Int64ValueR\bavatarIdB8Z6github.com/mimalef70/gobale/src/internal/balemeow/wireb\x06proto3"
+	"\tavatar_id\x18\x06 \x01(\v2!.gobale.bale.reference.Int64ValueR\bavatarIdB8Z6github.com/mimalef70/goomni/src/internal/balemeow/wireb\x06proto3"
 
 var (
 	file_wire_groups_extended_proto_rawDescOnce sync.Once

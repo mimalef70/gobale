@@ -21,8 +21,8 @@ var testAPIDigest = strings.Repeat("a", 64)
 func testBundleFS(t *testing.T) (fstest.MapFS, Manifest) {
 	t.Helper()
 	files := fstest.MapFS{
-		"index.html":                 {Data: []byte(`<!doctype html><html><head><base href="__GOBALE_UI_BASE__/"><script type="module" src="assets/index-12345678.js"></script></head><body>Admin</body></html>`)},
-		"assets/index-12345678.js":   {Data: []byte(`document.title = "GoBale";`)},
+		"index.html":                 {Data: []byte(`<!doctype html><html><head><base href="__GOOMNI_UI_BASE__/"><script type="module" src="assets/index-12345678.js"></script></head><body>Admin</body></html>`)},
+		"assets/index-12345678.js":   {Data: []byte(`document.title = "GoOmni";`)},
 		"assets/font-12345678.woff2": {Data: []byte("synthetic-font")},
 		"assets/font-CkhJZR-_.woff2": {Data: []byte("synthetic-font-with-url-safe-hash")},
 		"icon.svg":                   {Data: []byte(`<svg xmlns="http://www.w3.org/2000/svg"/>`)},
@@ -95,7 +95,7 @@ func TestValidateAdminBundleRejectsUnsafePathsAndIndex(t *testing.T) {
 			require.Error(t, err)
 		})
 	}
-	for _, index := range []string{`<html>missing base</html>`, `<base href="__GOBALE_UI_BASE__/"><div>__GOBALE_UI_BASE__</div>`} {
+	for _, index := range []string{`<html>missing base</html>`, `<base href="__GOOMNI_UI_BASE__/"><div>__GOOMNI_UI_BASE__</div>`} {
 		files, m := testBundleFS(t)
 		files["index.html"].Data = []byte(index)
 		sum := sha256.Sum256([]byte(index))

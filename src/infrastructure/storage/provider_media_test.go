@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"github.com/stretchr/testify/require"
 )
 
 func privateMedia() domains.ProviderMedia {
-	return domains.ProviderMedia{FileID: "777", AccessHash: "-872345678901234567", Size: 1234, Name: "sample.jpg", ContentType: "image/jpeg"}
+	return domains.ProviderMedia{Provider: domains.ProviderBale, Version: 1, FileID: "777", AccessHash: "-872345678901234567", Size: 1234, Name: "sample.jpg", ContentType: "image/jpeg"}
 }
 func documentEvent(id string, at int64, m *domains.ProviderMedia) domains.Event {
 	return domains.Event{ID: id, Type: "message", Peer: domains.Peer{Type: "user", ID: "42"}, MessageID: "123", Time: time.UnixMilli(at).UTC(), Payload: json.RawMessage(`{"kind":"document","file_id":"777"}`), Checkpoint: "cp-" + id, Media: m}

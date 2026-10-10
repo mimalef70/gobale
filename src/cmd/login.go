@@ -7,8 +7,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/google/uuid"
-	"github.com/mimalef70/gobale/src/config"
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/config"
+	"github.com/mimalef70/goomni/src/domains"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"golang.org/x/term"
@@ -31,8 +31,13 @@ func loginCommandWithSecretReader(v *viper.Viper, secretReader func(string) (str
 			return e
 		}
 		id, _ := cmd.Flags().GetString("device")
+		providerName, _ := cmd.Flags().GetString("provider")
+		provider := domains.Provider(providerName)
+		if err := provider.Validate(); err != nil {
+			return err
+		}
 		phone, _ := cmd.Flags().GetString("phone")
-		if (domains.ProvisionDeviceRequest{DeviceID: id}).Validate() != nil {
+		if (domains.ProvisionDeviceRequest{Provider: provider, DeviceID: id}).Validate() != nil {
 			return fmt.Errorf("--device must be a device alias")
 		}
 		if phone == "" {
@@ -112,12 +117,15 @@ func loginCommandWithSecretReader(v *viper.Viper, secretReader func(string) (str
 				break
 			}
 		}
+		if selected.ID != "" && selected.Provider != provider {
+			return fmt.Errorf("selected device belongs to another provider")
+		}
 		if selected.ID == "" {
 			key, err := uuid.NewRandom()
 			if err != nil {
 				return err
 			}
-			request := domains.ProvisionDeviceRequest{DeviceID: id}
+			request := domains.ProvisionDeviceRequest{Provider: provider, DeviceID: id}
 			out, e = call(http.MethodPost, "/devices", request, key.String(), "")
 			if errors.Is(e, errLoginAPIUnavailable) && cmd.Context().Err() == nil {
 				// Only provisioning can be retried safely after a lost response.
@@ -147,30 +155,57 @@ func loginCommandWithSecretReader(v *viper.Viper, secretReader func(string) (str
 		if challenge == "" {
 			return fmt.Errorf("login response lacked challenge_id")
 		}
-		code, e := secretReader("Code: ")
-		if e != nil {
-			return e
-		}
-		code = strings.TrimSpace(code)
-		out, e = authCall("/login/code", map[string]any{"challenge_id": challenge, "code": code})
-		code = ""
-		var status domains.ConnectionStatus
-		_ = json.Unmarshal(out.Results, &status)
-		needPassword := out.Code == "PASSWORD_REQUIRED" || status.Auth == "awaiting_password"
-		if needPassword {
-			password, pe := secretReader("Two-step password: ")
-			if pe != nil {
-				return pe
+		state := response.State
+		authenticated := false
+		// Providers own the order: some request the password before sending OTP.
+		// Follow explicit states; never replay an authentication write after loss.
+		for step := 0; step < 4; step++ {
+			var value, path, field string
+			switch state {
+			case "awaiting_code":
+				value, e = secretReader("Code: ")
+				value = strings.TrimSpace(value)
+				path, field = "/login/code", "code"
+			case "awaiting_password":
+				value, e = secretReader("Two-step password: ")
+				path, field = "/login/password", "password"
+			default:
+				return fmt.Errorf("unsupported authentication state from local API")
 			}
-			_, e = authCall("/login/password", map[string]any{"challenge_id": challenge, "password": password})
-			password = ""
+			if e != nil {
+				return e
+			}
+			out, e = authCall(path, map[string]any{"challenge_id": challenge, field: value})
+			value = ""
+			var status domains.ConnectionStatus
+			_ = json.Unmarshal(out.Results, &status)
+			if e != nil && out.Code != "PASSWORD_REQUIRED" {
+				return e
+			}
+			if e == nil && status.Auth == "authenticated" {
+				authenticated = true
+				break
+			}
+			// Read only current local challenge metadata under the same immutable
+			// instance guard. A provider may rotate its local challenge at a step.
+			out, e = call(http.MethodGet, "/devices/"+id+"/login", nil, "", selected.InstanceID)
+			if e != nil {
+				return e
+			}
+			var current domains.LoginState
+			if json.Unmarshal(out.Results, &current) != nil || current.Challenge == nil || current.Challenge.ID == "" {
+				return fmt.Errorf("authentication continuation lacked a challenge")
+			}
+			state, challenge = current.State, current.Challenge.ID
 		}
-		if e != nil {
-			return e
+		if !authenticated {
+			return fmt.Errorf("authentication did not complete within the supported steps")
 		}
+
 		fmt.Println("Account authenticated. Inspect device status for connection/recovery state.")
 		return nil
 	}}
+	c.Flags().String("provider", "", "Required messenger: bale, eitaa or rubika")
 	c.Flags().String("device", "", "Device alias")
 	c.Flags().String("phone", "", "Phone number (omit to prompt)")
 	return c

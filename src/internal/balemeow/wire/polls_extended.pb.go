@@ -563,7 +563,7 @@ const file_wire_polls_extended_proto_rawDesc = "" +
 	"votesCount\x128\n" +
 	"\x06voters\x18\x03 \x03(\v2 .gobale.bale.reference.PollVoterR\x06voters\"p\n" +
 	"\x17PollFullResultsResponse\x12U\n" +
-	"\x10full_poll_result\x18\x01 \x03(\v2+.gobale.bale.reference.PollFullOptionResultR\x0efullPollResultB8Z6github.com/mimalef70/gobale/src/internal/balemeow/wireb\x06proto3"
+	"\x10full_poll_result\x18\x01 \x03(\v2+.gobale.bale.reference.PollFullOptionResultR\x0efullPollResultB8Z6github.com/mimalef70/goomni/src/internal/balemeow/wireb\x06proto3"
 
 var (
 	file_wire_polls_extended_proto_rawDescOnce sync.Once

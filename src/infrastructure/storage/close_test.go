@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"github.com/mimalef70/goomni/src/domains"
 	"os"
 	"path/filepath"
 	"sync"
@@ -80,7 +81,7 @@ func TestCloseRetainsOwnershipThroughCancelledRollbackAndDriverClose(t *testing.
 	key := bytes.Repeat([]byte{17}, 32)
 	s, err := Open(path, key)
 	require.NoError(t, err)
-	device, err := s.CreateDevice(ctx, "retained")
+	device, err := s.CreateDevice(ctx, "retained", domains.ProviderBale)
 	require.NoError(t, err)
 	barrier := &closeBarrierConnector{driver: s.db.Driver(), path: path,
 		rollbackStarted: make(chan struct{}), retired: make(chan struct{}),
@@ -212,7 +213,7 @@ func TestFailedOpenReleasesOwnershipAfterWrongKeyAndCorruptDatabase(t *testing.T
 	key := bytes.Repeat([]byte{29}, 32)
 	s, err := Open(path, key)
 	require.NoError(t, err)
-	device, err := s.CreateDevice(context.Background(), "preserved")
+	device, err := s.CreateDevice(context.Background(), "preserved", domains.ProviderBale)
 	require.NoError(t, err)
 	require.NoError(t, s.Close())
 	_, err = Open(path, bytes.Repeat([]byte{31}, 32))

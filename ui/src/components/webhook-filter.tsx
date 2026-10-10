@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import type { WebhookFilter } from '../lib/types'
+import type { ProviderID, WebhookFilter } from '../lib/types'
 import { eventDirections, filterDraft, peerTypes, type FilterDraft } from '../lib/webhook-filter'
 import { Field } from './ui'
 
@@ -12,9 +12,11 @@ const textFields = [
 
 export function WebhookFilterFields({
   draft,
+  provider,
   onChange,
 }: {
   draft: FilterDraft
+  provider: ProviderID
   onChange(draft: FilterDraft): void
 }) {
   const { t } = useTranslation()
@@ -38,7 +40,7 @@ export function WebhookFilterFields({
       ))}
       <fieldset className="webhook-filter-options">
         <legend>{t('peerTypes')}</legend>
-        {peerTypes.map((value) => (
+        {peerTypes.filter((value) => provider === 'rubika' || (value !== 'bot' && value !== 'service')).map((value) => (
           <label key={value}>
             <input
               type="checkbox"

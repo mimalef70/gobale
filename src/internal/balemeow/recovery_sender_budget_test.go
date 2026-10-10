@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 	"github.com/stretchr/testify/require"
 )
 
@@ -25,6 +25,9 @@ func TestRecoverySenderLookupsKeepIndependentCommitBudgets(t *testing.T) {
 	var fake *fakeWS
 	fake = newFakeWS(t, func(ws *websocket.Conn, m *wire.ClientMessage) {
 		if m.Request == nil {
+			return
+		}
+		if recoveryInventoryFixture(t, fake, ws, m.Request) {
 			return
 		}
 		r := m.Request
@@ -111,6 +114,9 @@ func TestRecoverySinkTimeoutDoesNotAdvanceCheckpoint(t *testing.T) {
 	var fake *fakeWS
 	fake = newFakeWS(t, func(ws *websocket.Conn, m *wire.ClientMessage) {
 		if m.Request == nil {
+			return
+		}
+		if recoveryInventoryFixture(t, fake, ws, m.Request) {
 			return
 		}
 		require.Equal(t, "GetDiff", m.Request.Method)

@@ -2,7 +2,7 @@ package balemeow
 
 import (
 	"encoding/json"
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 func prepareExtendedCall(operation string, raw json.RawMessage) (json.RawMessage, error) {

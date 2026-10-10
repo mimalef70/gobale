@@ -14,8 +14,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/mediafile"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/mediafile"
 )
 
 const multipartRequestLimit = 128 << 10
@@ -37,17 +37,11 @@ func (s *Server) sendMultipart(c fiber.Ctx, d domains.Device, kind, key string) 
 	if err != nil || contentType != "multipart/form-data" || params["boundary"] == "" || len(params["boundary"]) > 70 {
 		return domains.E("INVALID_MULTIPART", "a valid multipart/form-data boundary is required", 400)
 	}
-	select {
-	case s.mediaSlots <- struct{}{}:
-	default:
-		return domains.E("MEDIA_BUSY", "media transfer capacity reached", 503)
+	release, err := s.acquireMedia(c.Context(), d)
+	if err != nil {
+		return err
 	}
-	slotHeld := true
-	defer func() {
-		if slotHeld {
-			<-s.mediaSlots
-		}
-	}()
+	defer release()
 	var body io.Reader = c.Request().BodyStream()
 	if body == nil {
 		body = bytes.NewReader(c.Body())
@@ -150,7 +144,7 @@ func (s *Server) sendMultipart(c fiber.Ctx, d domains.Device, kind, key string) 
 		return err
 	}
 	req.MediaID = media.ID
-	if err = req.Validate(); err != nil {
+	if err = s.service.ValidateSend(c.Context(), d.ID, req); err != nil {
 		return err
 	}
 	if err = upload.Publish(); err != nil {
@@ -158,8 +152,7 @@ func (s *Server) sendMultipart(c fiber.Ctx, d domains.Device, kind, key string) 
 	}
 	// Provider uploads share these slots. Release our completed local transfer
 	// before making work visible, including when only one media slot is configured.
-	<-s.mediaSlots
-	slotHeld = false
+	release()
 	if req.IsScheduled() {
 		job, err := s.service.ScheduleUpload(c.Context(), d.ID, req, key, media, digest)
 		if err != nil {

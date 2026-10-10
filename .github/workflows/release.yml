@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: Existing version tag whose GoBale CI has passed (for example v1.0.0 or v1.1.0-rc.1)
+        description: Existing version tag whose GoOmni CI has passed (for example v2.3.0 or v2.3.1-rc.1)
         required: true
         type: string
 
@@ -23,8 +23,8 @@ env:
   GOTOOLCHAIN: local
   # Public image names must not cross job outputs: Actions can suppress an
   # output containing the Docker Hub username when that username is a secret.
-  GHCR_IMAGE: ghcr.io/mimalef70/gobale
-  DOCKERHUB_IMAGE: docker.io/mimalef70/gobale
+  GHCR_IMAGE: ghcr.io/mimalef70/goomni
+  DOCKERHUB_IMAGE: docker.io/mimalef70/goomni
 
 jobs:
   prepare:
@@ -98,9 +98,9 @@ jobs:
           cache-dependency-path: src/go.sum
       - name: Install pinned documentation tooling
         run: |
-          python3 -m venv "$RUNNER_TEMP/gobale-docs-venv"
-          "$RUNNER_TEMP/gobale-docs-venv/bin/python" -m pip install --requirement scripts/requirements.txt
-          echo "$RUNNER_TEMP/gobale-docs-venv/bin" >> "$GITHUB_PATH"
+          python3 -m venv "$RUNNER_TEMP/goomni-docs-venv"
+          "$RUNNER_TEMP/goomni-docs-venv/bin/python" -m pip install --requirement scripts/requirements.txt
+          echo "$RUNNER_TEMP/goomni-docs-venv/bin" >> "$GITHUB_PATH"
       - name: Verify contracts and dependencies
         run: |
           make contracts
@@ -173,7 +173,7 @@ jobs:
             VERSION=${{ needs.prepare.outputs.version }}
             REVISION=${{ needs.prepare.outputs.sha }}
           labels: |
-            org.opencontainers.image.title=GoBale
+            org.opencontainers.image.title=GoOmni
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.revision=${{ needs.prepare.outputs.sha }}
             org.opencontainers.image.version=${{ needs.prepare.outputs.version }}
@@ -229,14 +229,14 @@ jobs:
           body = notes + '\n\nContainer images (same multi-platform build):\n'
           for image in (os.environ['IMAGE'], os.environ['DOCKERHUB_IMAGE']):
               body += '\n- `' + image + ':' + tag + '` — immutable reference: `' + image + '@' + digest + '`\n'
-          notes_file = pathlib.Path(os.environ['RUNNER_TEMP']) / 'gobale-release-notes.md'
+          notes_file = pathlib.Path(os.environ['RUNNER_TEMP']) / 'goomni-release-notes.md'
           notes_file.write_text(body)
           archives = sorted(str(p) for p in pathlib.Path('dist').glob('*.tar.gz'))
           assert len(archives) == 4, 'Expected four platform archives'
           remote_sha = subprocess.check_output(['gh', 'api', 'repos/' + os.environ['GITHUB_REPOSITORY'] + '/commits/' + tag, '--jq', '.sha'], text=True).strip()
           assert remote_sha == os.environ['EXPECTED_SHA'], 'Version tag moved after verification; publication aborted'
           # No --clobber: a published release must never be silently replaced.
-          subprocess.run(['gh', 'release', 'create', tag, '--verify-tag', '--draft', *draft_flags, '--title', 'GoBale ' + tag, '--notes-file', str(notes_file)], check=True)
+          subprocess.run(['gh', 'release', 'create', tag, '--verify-tag', '--draft', *draft_flags, '--title', 'GoOmni ' + tag, '--notes-file', str(notes_file)], check=True)
           subprocess.run(['gh', 'release', 'upload', tag, *archives, 'dist/SHA256SUMS', 'dist/manifest.json'], check=True)
           subprocess.run(['gh', 'release', 'edit', tag, '--draft=false', *publication_flags], check=True)
           PY
@@ -271,7 +271,7 @@ jobs:
       - name: Pull anonymously and verify clean-storage restart on the native architecture
         env:
           IMAGE_DIGEST: ${{ needs.image.outputs.digest }}
-          DOCKER_CONFIG: ${{ runner.temp }}/gobale-anonymous-docker
+          DOCKER_CONFIG: ${{ runner.temp }}/goomni-anonymous-docker
         run: |
           mkdir -p "$DOCKER_CONFIG"
           for image in "$GHCR_IMAGE" "$DOCKERHUB_IMAGE"; do

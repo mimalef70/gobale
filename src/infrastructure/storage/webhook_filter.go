@@ -1,6 +1,6 @@
 package storage
 
-import "github.com/mimalef70/gobale/src/domains"
+import "github.com/mimalef70/goomni/src/domains"
 
 // Configuration is read under the same transaction as event/delivery acceptance.
 // A device URL overrides global routes even when its filter rejects the event.
@@ -21,7 +21,7 @@ func resolveWebhookTargets(cfg domains.WebhookConfig, event domains.Event, targe
 			if t.URL == "" || !domains.EventAllowed(event.Type, cfg.Events) || !cfg.Filter.Matches(event) {
 				continue
 			}
-		} else if !globalAllowed {
+		} else if !globalAllowed || !domains.EventAllowed(event.Type, t.Events) {
 			continue
 		}
 		result = append(result, t)

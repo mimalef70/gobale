@@ -13,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/pkg/sqlite"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/pkg/sqlite"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +22,7 @@ var testKey = bytes.Repeat([]byte{42}, 32)
 
 func testStore(t *testing.T) (*Store, string) {
 	t.Helper()
-	p := filepath.Join(t.TempDir(), "gobale.db")
+	p := filepath.Join(t.TempDir(), "goomni.db")
 	s, e := Open(p, testKey)
 	require.NoError(t, e)
 	t.Cleanup(func() { s.Close() })
@@ -30,7 +30,7 @@ func testStore(t *testing.T) (*Store, string) {
 }
 func device(t *testing.T, s *Store, id string) domains.Device {
 	t.Helper()
-	d, e := s.CreateDevice(context.Background(), id)
+	d, e := s.CreateDevice(context.Background(), id, domains.ProviderBale)
 	require.NoError(t, e)
 	return d
 }
@@ -84,11 +84,11 @@ func TestDeviceAndSessionIsolationAndEncryption(t *testing.T) {
 	a := device(t, s, "alpha")
 	b := device(t, s, "beta")
 	require.NotEqual(t, a.ConnectionID, b.ConnectionID)
-	_, e := s.CreateDevice(ctx, "alpha")
+	_, e := s.CreateDevice(ctx, "alpha", domains.ProviderBale)
 	errorCode(t, e, "DEVICE_EXISTS")
 	_, e = s.GetDevice(ctx, "missing")
 	errorCode(t, e, "NOT_FOUND")
-	session := &domains.Session{UserID: "123", Token: "PRIVATE-SESSION-TOKEN", DeviceHash: "PRIVATE-DEVICE-HASH"}
+	session := &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "123", Token: "PRIVATE-SESSION-TOKEN", DeviceHash: "PRIVATE-DEVICE-HASH"}
 	require.NoError(t, s.SaveSession(ctx, a.ConnectionID, session))
 	got, e := s.LoadSession(ctx, a.ConnectionID)
 	require.NoError(t, e)
@@ -97,7 +97,7 @@ func TestDeviceAndSessionIsolationAndEncryption(t *testing.T) {
 	require.NoError(t, e)
 	require.Nil(t, got)
 	require.NoError(t, s.ClearSession(ctx, a.ConnectionID))
-	errorCode(t, s.SaveSession(ctx, a.ConnectionID, &domains.Session{UserID: "456", Token: "other"}), "ACCOUNT_CONFLICT")
+	errorCode(t, s.SaveSession(ctx, a.ConnectionID, &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "456", Token: "other"}), "ACCOUNT_CONFLICT")
 	require.NoError(t, s.SaveSession(ctx, a.ConnectionID, session))
 	_, e = s.PatchWebhook(ctx, a.ConnectionID, domains.WebhookPatch{URL: ptr("https://example.test/hook"), Secret: ptr("PRIVATE-WEBHOOK-SECRET")})
 	require.NoError(t, e)
@@ -450,7 +450,7 @@ func TestWebhookURLAndAliasValidation(t *testing.T) {
 	}
 	s, _ := testStore(t)
 	for _, bad := range []string{"", "..", "/../../", "contains space", strings.Repeat("a", 65)} {
-		_, e := s.CreateDevice(context.Background(), bad)
+		_, e := s.CreateDevice(context.Background(), bad, domains.ProviderBale)
 		errorCode(t, e, "INVALID_DEVICE_ID")
 	}
 }
@@ -519,7 +519,7 @@ func TestColdBackupRestore(t *testing.T) {
 	s, path := testStore(t)
 	ctx := context.Background()
 	a := device(t, s, "alpha")
-	session := &domains.Session{UserID: "789", Token: "restore-token"}
+	session := &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "789", Token: "restore-token"}
 	require.NoError(t, s.SaveSession(ctx, a.ConnectionID, session))
 	_, e := s.AppendEvent(ctx, a.ConnectionID, event("first", "durable-cursor"), nil)
 	require.NoError(t, e)
@@ -552,7 +552,7 @@ func TestLogoutStopsAcceptedWorkButKeepsBinding(t *testing.T) {
 	s, _ := testStore(t)
 	ctx := context.Background()
 	d := device(t, s, "alpha")
-	require.NoError(t, s.SaveSession(ctx, d.ConnectionID, &domains.Session{UserID: "123", Token: "session"}))
+	require.NoError(t, s.SaveSession(ctx, d.ConnectionID, &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "123", Token: "session"}))
 	first, _, e := s.Enqueue(ctx, d.ConnectionID, textRequest("first"), "first", AdmissionLimits{Global: 100})
 	require.NoError(t, e)
 	claimed, e := s.ClaimOperations(ctx, 1)
@@ -577,14 +577,14 @@ func TestLogoutStopsAcceptedWorkButKeepsBinding(t *testing.T) {
 	require.NoError(t, e)
 	require.Equal(t, "cancelled", c.State)
 	errorCode(t, s.FinishOperation(ctx, d.ConnectionID, first.ID, "queued", nil, "", ""), "OPERATION_CONFLICT")
-	errorCode(t, s.SaveSession(ctx, d.ConnectionID, &domains.Session{UserID: "different", Token: "new-session"}), "ACCOUNT_CONFLICT")
+	errorCode(t, s.SaveSession(ctx, d.ConnectionID, &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "different", Token: "new-session"}), "ACCOUNT_CONFLICT")
 }
 
 func TestOnlineBackupIsRestorableAndNeverOverwrites(t *testing.T) {
 	s, _ := testStore(t)
 	ctx := context.Background()
 	d := device(t, s, "alpha")
-	require.NoError(t, s.SaveSession(ctx, d.ConnectionID, &domains.Session{UserID: "123", Token: "backup-secret"}))
+	require.NoError(t, s.SaveSession(ctx, d.ConnectionID, &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "123", Token: "backup-secret"}))
 	_, e := s.AppendEvent(ctx, d.ConnectionID, event("first", "cp1"), []WebhookTarget{{URL: "http://internal/hook", Secret: "hook-secret"}})
 	require.NoError(t, e)
 	pending, _, e := s.Enqueue(ctx, d.ConnectionID, textRequest("durable"), "key", AdmissionLimits{Global: 100})

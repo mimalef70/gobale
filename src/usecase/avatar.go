@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 // DownloadAvatar selects an immutable account client before resolving the
@@ -17,7 +17,14 @@ func (s *Service) DownloadAvatar(ctx context.Context, id string, user domains.Pe
 	if user.AccessHash != "" {
 		return nil, domains.AvatarInfo{}, domains.E("INVALID_PEER", "caller-supplied access hashes are not accepted", 400)
 	}
-	if err = validMutationPeer(user, "user", false); err != nil {
+	contract, err := s.provider(d.Provider)
+	if err != nil {
+		return nil, domains.AvatarInfo{}, err
+	}
+	if user.Type != "user" {
+		return nil, domains.AvatarInfo{}, domains.E("INVALID_PEER", "avatar requires a user peer", 400)
+	}
+	if err = contract.ValidatePeer(user); err != nil {
 		return nil, domains.AvatarInfo{}, err
 	}
 	if size == "" {

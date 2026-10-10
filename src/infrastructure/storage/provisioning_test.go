@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -14,18 +15,29 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"github.com/stretchr/testify/require"
 )
 
 func restoreV6ProvisioningSchema(t *testing.T, s *Store) {
 	t.Helper()
+	restoreV7ProviderSchema(t, s)
 	_, err := s.db.Exec(`DROP TABLE device_provisioning`)
 	require.NoError(t, err)
 }
 
 func provisioningRequest(alias string) domains.ProvisionDeviceRequest {
-	return domains.ProvisionDeviceRequest{DeviceID: alias, WebhookURL: "https://example.test/hook", WebhookSecret: "synthetic-provisioning-secret", WebhookEvents: []string{"message"}, WebhookFilter: domains.WebhookFilter{Directions: []string{"incoming"}, Peers: []domains.Peer{{Type: "user", ID: "123"}}}}
+	return domains.ProvisionDeviceRequest{Provider: domains.ProviderBale, DeviceID: alias, WebhookURL: "https://example.test/hook", WebhookSecret: "synthetic-provisioning-secret", WebhookEvents: []string{"message"}, WebhookFilter: domains.WebhookFilter{Directions: []string{"incoming"}, Peers: []domains.Peer{{Type: "user", ID: "123"}}}}
+}
+
+// Literals bind the schema-7 GoBale fingerprint, independently of the current
+// serializer/derivation. Renaming must not silently break accepted provisioning.
+func TestProvisioningFingerprintSurvivesProductRename(t *testing.T) {
+	s, _ := testStore(t)
+	require.Equal(t, "42c48c1e659ce2ffcb9fb92335808640c1867a8998e9789d20ed7e22189c4f0d", hex.EncodeToString(s.provisioningKey))
+	hash, err := s.provisioningHashVersion(provisioningRequest("preserved"), 1)
+	require.NoError(t, err)
+	require.Equal(t, "7ba30d75df75927d5ae80dd0648f18fb77da5fcbec525044add2bd09590ffe87", hex.EncodeToString(hash))
 }
 
 func TestProvisioningReplayPrivacyAndChangedRequest(t *testing.T) {
@@ -195,7 +207,7 @@ func TestProvisioningValidationAndTransactionFailuresLeaveNoDevice(t *testing.T)
 func TestProvisioningEmptyConfigAndNamespace(t *testing.T) {
 	ctx := context.Background()
 	s, _ := testStore(t)
-	request := domains.ProvisionDeviceRequest{DeviceID: "empty"}
+	request := domains.ProvisionDeviceRequest{Provider: domains.ProviderBale, DeviceID: "empty"}
 	_, _, err := s.ProvisionDevice(ctx, request, " ")
 	errorCode(t, err, "IDEMPOTENCY_KEY_REQUIRED")
 	d, _, err := s.ProvisionDevice(ctx, request, "shared-key")
@@ -214,8 +226,8 @@ func TestProvisioningEmptyConfigAndNamespace(t *testing.T) {
 }
 
 func TestProvisioningSurvivesProcessExitAfterCommit(t *testing.T) {
-	if os.Getenv("GOBALE_TEST_PROVISION_EXIT") == "1" {
-		s, err := Open(os.Getenv("GOBALE_TEST_PROVISION_DB"), testKey)
+	if os.Getenv("GOOMNI_TEST_PROVISION_EXIT") == "1" {
+		s, err := Open(os.Getenv("GOOMNI_TEST_PROVISION_DB"), testKey)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -232,7 +244,7 @@ func TestProvisioningSurvivesProcessExitAfterCommit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, os.Args[0], "-test.run=^TestProvisioningSurvivesProcessExitAfterCommit$")
-	cmd.Env = append(os.Environ(), "GOBALE_TEST_PROVISION_EXIT=1", "GOBALE_TEST_PROVISION_DB="+path)
+	cmd.Env = append(os.Environ(), "GOOMNI_TEST_PROVISION_EXIT=1", "GOOMNI_TEST_PROVISION_DB="+path)
 	output, err := cmd.CombinedOutput()
 	require.NoError(t, err, "%s", output)
 	connection := strings.TrimSpace(string(output))
@@ -253,7 +265,7 @@ func TestProvisioningMigrationPreservesV5AndV6Data(t *testing.T) {
 		t.Run(fmt.Sprint(version), func(t *testing.T) {
 			s, path := testStore(t)
 			d := device(t, s, "existing")
-			require.NoError(t, s.SaveSession(ctx, d.ConnectionID, &domains.Session{UserID: "123", Token: "synthetic-session"}))
+			require.NoError(t, s.SaveSession(ctx, d.ConnectionID, &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "123", Token: "synthetic-session"}))
 			_, err := s.AppendEvent(ctx, d.ConnectionID, event("preserved", "checkpoint"), []WebhookTarget{{URL: "https://example.test/old", Secret: "old-secret"}})
 			require.NoError(t, err)
 			if version == 5 {

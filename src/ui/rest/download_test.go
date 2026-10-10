@@ -11,9 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
-	"github.com/mimalef70/gobale/src/usecase"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/infrastructure/workpool"
+	"github.com/mimalef70/goomni/src/usecase"
 	"github.com/stretchr/testify/require"
 )
 
@@ -40,15 +41,15 @@ func TestRemoteDownloadUsesScopedReferenceAndReleasesSlot(t *testing.T) {
 		require.NoError(t, svc.Close(ctx))
 		require.NoError(t, st.Close())
 	})
-	one, err := svc.CreateDevice(context.Background(), "one")
+	one, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
-	_, err = svc.CreateDevice(context.Background(), "two")
+	_, err = svc.CreateDevice(context.Background(), "two", domains.ProviderBale)
 	require.NoError(t, err)
 	peer := domains.Peer{Type: "user", ID: "123"}
-	available, err := st.SaveProviderMedia(context.Background(), one.ConnectionID, peer, "456", domains.ProviderMedia{FileID: "-789", AccessHash: "7987654321", Size: 7, Name: "test.txt", ContentType: "text/plain"})
+	available, err := st.SaveProviderMedia(context.Background(), one.ConnectionID, peer, "456", domains.ProviderMedia{Provider: domains.ProviderBale, Version: 1, FileID: "-789", AccessHash: "7987654321", Size: 7, Name: "test.txt", ContentType: "text/plain"})
 	require.NoError(t, err)
 	require.True(t, available)
-	srv, err := New(svc, st, Options{BasicAuth: "test:password", MediaSlots: make(chan struct{}, 1), MaxMediaBytes: 1024})
+	srv, err := New(svc, st, Options{BasicAuth: "test:password", MediaPool: workpool.New(1), MaxMediaBytes: 1024})
 	require.NoError(t, err)
 	for _, device := range []string{"two", "one", "one"} {
 		r := httptest.NewRequest("GET", "/message/456/download?peer=user:123", nil)

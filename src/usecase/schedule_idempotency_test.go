@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 func TestScheduleIdempotencyBeforeExpiredTimeValidation(t *testing.T) {

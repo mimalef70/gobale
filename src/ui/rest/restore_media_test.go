@@ -10,16 +10,16 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/mediafile"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
-	"github.com/mimalef70/gobale/src/usecase"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/mediafile"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/usecase"
 	"github.com/stretchr/testify/require"
 )
 
 func TestUploadedMediaSurvivesBackupRestoreToDifferentRoot(t *testing.T) {
 	s, svc := setupAPI(t, "")
-	d, err := svc.CreateDevice(context.Background(), "one")
+	d, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
 	fixture := []byte("portable media fixture")
 	r := httptest.NewRequest("POST", "/media", bytes.NewReader(fixture))

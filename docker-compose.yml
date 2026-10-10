@@ -1,11 +1,11 @@
 services:
-  gobale:
+  goomni:
     logging:
       driver: json-file
       options:
         max-size: "10m"
         max-file: "5"
-    image: ${GOBALE_IMAGE:-ghcr.io/mimalef70/gobale:v2.2.0}
+    image: ${APP_IMAGE:-docker.io/mimalef70/goomni:v2.3.0}
     build:
       context: .
       dockerfile: docker/golang.Dockerfile
@@ -18,11 +18,11 @@ services:
       APP_BASE_PATH: ${APP_BASE_PATH:-}
       APP_UI_ENABLED: ${APP_UI_ENABLED:-true}
       APP_UI_PUBLIC_ORIGIN: ${APP_UI_PUBLIC_ORIGIN:-}
-      APP_BASIC_AUTH: ${APP_BASIC_AUTH:?Run gobale init first}
+      APP_BASIC_AUTH: ${APP_BASIC_AUTH:?Run goomni init first}
       APP_MASTER_KEY: ${APP_MASTER_KEY:?Export APP_MASTER_KEY from master.key}
       APP_MASTER_KEY_FILE: ""
-      APP_DATABASE: /app/storages/gobale.db
-      APP_MEDIA_ROOT: /app/storages/media
+      APP_DATABASE: ${APP_DATABASE:-/app/storages/goomni.db}
+      APP_MEDIA_ROOT: ${APP_MEDIA_ROOT:-/app/storages/media}
       APP_MAX_MEDIA_BYTES: ${APP_MAX_MEDIA_BYTES:-67108864}
       APP_SEND_WORKERS: ${APP_SEND_WORKERS:-4}
       APP_WEBHOOK_WORKERS: ${APP_WEBHOOK_WORKERS:-8}
@@ -35,14 +35,25 @@ services:
       BALE_APP_ID: ${BALE_APP_ID:-0}
       BALE_API_KEY: ${BALE_API_KEY:-}
       BALE_API_VERSION: ${BALE_API_VERSION:-173855}
-      BALE_WEBHOOK: ${BALE_WEBHOOK:-}
-      BALE_WEBHOOK_SECRET: ${BALE_WEBHOOK_SECRET:-}
-      BALE_WEBHOOK_DEVICE_MERGE_GLOBAL: ${BALE_WEBHOOK_DEVICE_MERGE_GLOBAL:-false}
+      EITAA_ENABLED: ${EITAA_ENABLED:-false}
+      EITAA_ENDPOINT: ${EITAA_ENDPOINT:-https://hasan.eitaa.ir/eitaa/}
+      EITAA_UPLOAD_ENDPOINT: ${EITAA_UPLOAD_ENDPOINT:-https://alzheimer.eitaa.com/eitaa/}
+      EITAA_DOWNLOAD_ENDPOINT: ${EITAA_DOWNLOAD_ENDPOINT:-https://mohsen.eitaa.com/eitaa/}
+      EITAA_API_ID: ${EITAA_API_ID:-2496}
+      EITAA_API_HASH: ${EITAA_API_HASH:-8da85b0d5bfe62527e5b244c209159c3}
+      EITAA_POLL_INTERVAL: ${EITAA_POLL_INTERVAL:-5s}
+      RUBIKA_ENABLED: ${RUBIKA_ENABLED:-false}
+      RUBIKA_DISCOVERY_ENDPOINT: ${RUBIKA_DISCOVERY_ENDPOINT:-https://getdcmess.iranlms.ir/}
+      RUBIKA_API_ENDPOINT: ${RUBIKA_API_ENDPOINT:-}
+      RUBIKA_SOCKET_ENDPOINT: ${RUBIKA_SOCKET_ENDPOINT:-}
+      APP_WEBHOOK: ${APP_WEBHOOK:-}
+      APP_WEBHOOK_SECRET: ${APP_WEBHOOK_SECRET:-}
+      APP_WEBHOOK_DEVICE_MERGE_GLOBAL: ${APP_WEBHOOK_DEVICE_MERGE_GLOBAL:-false}
       HTTP_PROXY: ${HTTP_PROXY:-}
       HTTPS_PROXY: ${HTTPS_PROXY:-}
       NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,::1,host.docker.internal}
     volumes:
-      - gobale-data:/app/storages
+      - gateway-data:/app/storages
     extra_hosts:
       - "host.docker.internal:host-gateway"
     read_only: true
@@ -54,4 +65,5 @@ services:
       - ALL
     stop_grace_period: 30s
 volumes:
-  gobale-data:
+  gateway-data:
+    name: ${APP_DATA_VOLUME:-goomni-data}

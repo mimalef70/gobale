@@ -27,7 +27,7 @@ func (s *Store) Backup(ctx context.Context, destination string) (err error) {
 	}
 	// The caller chooses an existing directory; do not create a directory tree
 	// unexpectedly when a backup path contains a typo.
-	tmp, err := os.CreateTemp(filepath.Dir(dst), ".gobale-backup-*")
+	tmp, err := os.CreateTemp(filepath.Dir(dst), ".goomni-backup-*")
 	if err != nil {
 		return err
 	}

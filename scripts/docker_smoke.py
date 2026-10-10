@@ -17,7 +17,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-image = sys.argv[1] if len(sys.argv) > 1 else "gobale:dev"
+image = sys.argv[1] if len(sys.argv) > 1 else "goomni:dev"
 
 
 def wait_mapped_port(docker, name):
@@ -37,7 +37,7 @@ def wait_mapped_port(docker, name):
 
 
 def scenario(base_path="", ui_enabled=True):
-    name = "gobale-smoke-" + secrets.token_hex(5)
+    name = "goomni-smoke-" + secrets.token_hex(5)
     volume = name + "-data"
     password = secrets.token_urlsafe(24)
     env = dict(os.environ, APP_BASIC_AUTH="test:" + password,
@@ -98,7 +98,7 @@ def scenario(base_path="", ui_enabled=True):
         csrf = result["results"]["csrf_token"]
         assert csrf and result["results"]["expires_at"] and result["results"]["absolute_expires_at"]
         assert "WWW-Authenticate" not in headers
-        cookie = next(cookie for cookie in jar if cookie.name == "gobale_admin")
+        cookie = next(cookie for cookie in jar if cookie.name == "goomni_admin")
         assert cookie.path == base_path + "/ui/"
         assert cookie.has_nonstandard_attr("HttpOnly")
         assert cookie.get_nonstandard_attr("SameSite").lower() == "strict"
@@ -114,13 +114,18 @@ def scenario(base_path="", ui_enabled=True):
         port = wait_mapped_port(docker, name)
         origin = "http://127.0.0.1:" + port
         ready()
-        created = request("/devices", {"device_id": "smoke"}, expected=201)[0]["results"]
+        providers = request("/app/providers")[0]["results"]
+        assert {item["id"] for item in providers} == {"bale", "eitaa", "rubika"}
+        assert next(item for item in providers if item["id"] == "bale")["enabled"]
+        request("/app/capabilities", expected=400)
+        assert request("/app/capabilities?provider=bale")[0]["results"]
+        created = request("/devices", {"device_id": "smoke", "provider": "bale"}, expected=201)[0]["results"]
         assert created["id"] == "smoke" and created["instance_id"]
         if ui_enabled:
             html, headers = request("/ui/", basic=False)
             assert isinstance(html, bytes) and b"<html" in html
             assert (base_path + "/ui/").encode() in html
-            assert b"__GOBALE_UI_BASE__" not in html
+            assert b"__GOOMNI_UI_BASE__" not in html
             csp = headers["Content-Security-Policy"]
             assert "script-src 'self'" in csp and "frame-ancestors 'none'" in csp
             assert "unsafe-eval" not in csp
@@ -143,7 +148,7 @@ def scenario(base_path="", ui_enabled=True):
             # Force the path-scoped browser cookie onto the public API: even then
             # it cannot replace administrative Basic authentication.
             _, denied = request("/devices", basic=False,
-                                headers={"Cookie": "gobale_admin=" + cookie_value}, expected=401)
+                                headers={"Cookie": "goomni_admin=" + cookie_value}, expected=401)
             assert "Basic" in denied.get("WWW-Authenticate", "")
             request("/ui/api/devices/smoke/status", basic=False, session=True, expected=400)
             request("/ui/api/devices/smoke/status", basic=False, session=True,
@@ -156,7 +161,7 @@ def scenario(base_path="", ui_enabled=True):
                     instance=created["instance_id"], expected=403)
             request("/ui/api/send/message", {}, basic=False, session=True, csrf=csrf, expected=404)
             request("/devices/smoke", method="DELETE", instance=created["instance_id"])
-            replaced = request("/devices", {"device_id": "smoke"}, expected=201)[0]["results"]
+            replaced = request("/devices", {"device_id": "smoke", "provider": "bale"}, expected=201)[0]["results"]
             assert replaced["instance_id"] != created["instance_id"]
             request("/ui/api/devices/smoke/status", basic=False, session=True,
                     instance=created["instance_id"], expected=409)
@@ -179,7 +184,7 @@ def scenario(base_path="", ui_enabled=True):
         assert restored == created, "device changed or disappeared after restart"
         if ui_enabled:
             request("/ui/auth/session", method="GET", basic=False, session=True,
-                    headers={"Cookie": "gobale_admin=" + cookie_value}, expected=401)
+                    headers={"Cookie": "goomni_admin=" + cookie_value}, expected=401)
             login()
         user = docker("inspect", "--format={{.Config.User}}", name)
         assert user == "65532:65532", "image must run as non-root"

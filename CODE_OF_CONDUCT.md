@@ -1,6 +1,6 @@
-# GoBale community code of conduct
+# GoOmni community code of conduct
 
-GoBale's community should be a useful, respectful place to collaborate. This
+GoOmni's community should be a useful, respectful place to collaborate. This
 applies to issues, pull requests, reviews, discussions, and other spaces maintained
 for the project.
 
@@ -21,7 +21,7 @@ a concern. Criticism of a proposal is welcome; abuse of its author is not.
 ## Reporting and enforcement
 
 Report concerns privately to [the maintainer](mailto:mostafa.a.aut@gmail.com),
-using “GoBale community” in the subject. Include only the context necessary to
+using “GoOmni community” in the subject. Include only the context necessary to
 understand the incident. Do not post a report containing private information in a
 public issue.
 

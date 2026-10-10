@@ -1,4 +1,4 @@
-name: GoBale CI
+name: GoOmni CI
 
 on:
   push:
@@ -64,27 +64,28 @@ jobs:
           cache-dependency-path: src/go.sum
       - name: Install pinned documentation tooling
         run: |
-          python3 -m venv "$RUNNER_TEMP/gobale-docs-venv"
-          "$RUNNER_TEMP/gobale-docs-venv/bin/python" -m pip install --requirement scripts/requirements.txt
-          echo "$RUNNER_TEMP/gobale-docs-venv/bin" >> "$GITHUB_PATH"
+          python3 -m venv "$RUNNER_TEMP/goomni-docs-venv"
+          "$RUNNER_TEMP/goomni-docs-venv/bin/python" -m pip install --requirement scripts/requirements.txt
+          echo "$RUNNER_TEMP/goomni-docs-venv/bin" >> "$GITHUB_PATH"
       - run: make fmt-check vet contracts
       - name: Verify the static API reference and compatibility output
-        run: python3 scripts/build_docs.py --output "$RUNNER_TEMP/gobale-api-reference"
+        run: python3 scripts/build_docs.py --output "$RUNNER_TEMP/goomni-api-reference"
       - name: Verify module checksums
         run: |
           cd src
           go mod download
           go mod verify
-      - name: Ensure native protocol package stays independent
+      - name: Ensure native protocol packages stay independent
         run: |
           python3 - <<'PY'
           import json, subprocess
           module = subprocess.check_output(['go', 'list', '-m'], cwd='src', text=True).strip()
-          raw = subprocess.check_output(['go', 'list', '-json', './internal/balemeow'], cwd='src', text=True)
-          imports = json.loads(raw)['Deps']
           forbidden = ('github.com/gofiber/', 'database/sql', module + '/infrastructure/', module + '/ui/')
-          invalid = [name for name in imports if any(name == prefix or name.startswith(prefix) for prefix in forbidden)]
-          assert not invalid, 'balemeow acquired gateway dependencies: ' + ', '.join(invalid)
+          for package in ('balemeow', 'eitaameow', 'rubikameow'):
+              raw = subprocess.check_output(['go', 'list', '-json', './internal/' + package], cwd='src', text=True)
+              imports = json.loads(raw)['Deps']
+              invalid = [name for name in imports if any(name == prefix or name.startswith(prefix) for prefix in forbidden)]
+              assert not invalid, package + ' acquired gateway dependencies: ' + ', '.join(invalid)
           PY
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
@@ -95,13 +96,16 @@ jobs:
       - name: Store verified Linux build
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: gobale-linux-amd64-ci
+          name: goomni-linux-amd64-ci
           retention-days: 7
           if-no-files-found: error
           path: |
-            bin/gobale
+            bin/goomni
             LICENCE.txt
-            readme.md
+            THIRD_PARTY_NOTICES.md
+            README.md
+            src/internal/eitaameow/schema/LICENSE
+            src/internal/rubikameow/LICENSE.reference
             src/ui/web/dist/THIRD_PARTY_NOTICES.txt
 
   security:
@@ -149,9 +153,9 @@ jobs:
           platforms: linux/amd64
           load: true
           push: false
-          tags: gobale:ci
+          tags: goomni:ci
       - name: Verify authenticated readiness, non-root execution, and restart persistence
-        run: python3 scripts/docker_smoke.py gobale:ci
+        run: python3 scripts/docker_smoke.py goomni:ci
       - name: Cross-build the ARM64 image without publishing
         uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:

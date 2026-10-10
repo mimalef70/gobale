@@ -42,12 +42,14 @@ docs/superpowers/
 
 .mcp.json
 
-# GoBale local credentials and artifacts
+# GoOmni local credentials and artifacts
 master.key
 *.key
 *.db-*
 *.db.lock
 src/gobale
+src/peykbridge
+src/goomni
 coverage.out
 artifacts/
 *.har

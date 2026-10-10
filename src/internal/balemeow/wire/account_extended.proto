@@ -2,7 +2,7 @@
 // Hand-written reviewed schema: do not regenerate from an unverified RPC catalog.
 syntax = "proto3";
 package gobale.bale.reference;
-option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+option go_package = "github.com/mimalef70/goomni/src/internal/balemeow/wire";
 import "wire/bale.proto";
 
 message AccountStringRequest { string value = 1; }

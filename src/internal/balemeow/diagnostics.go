@@ -2,7 +2,7 @@ package balemeow
 
 import (
 	"errors"
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 // protocolFault identifies a local schema/coverage rejection without exposing

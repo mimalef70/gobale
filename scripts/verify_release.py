@@ -14,14 +14,14 @@ import urllib.request
 from release_notes import release_metadata
 from release_registry import RegistryError, read_manifest
 
-REPOSITORY = 'mimalef70/gobale'
+REPOSITORY = 'mimalef70/goomni'
 PLATFORMS = {'linux/amd64', 'linux/arm64', 'darwin/amd64', 'darwin/arm64'}
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def public_bytes(url, maximum=2 * 1024 * 1024):
     # No gh, Docker config, cookies, Authorization, or private environment inputs.
-    request = urllib.request.Request(url, headers={'User-Agent': 'GoBale-release-verifier'})
+    request = urllib.request.Request(url, headers={'User-Agent': 'GoOmni-release-verifier'})
     # Only idempotent anonymous reads retry. Validation failures, absent assets
     # and denied access remain failures; publication is never retried here.
     for attempt in range(3):
@@ -87,7 +87,7 @@ def validate_manifest(manifest, checksums, version, revision):
         raise ValueError('Expected exactly four platform packages')
     expected = {'manifest.json'}
     for item in packages:
-        name = 'gobale_' + version + '_' + item['platform'].replace('/', '_') + '.tar.gz'
+        name = 'goomni_' + version + '_' + item['platform'].replace('/', '_') + '.tar.gz'
         if item.get('file') != name or not re.fullmatch('[a-f0-9]{64}', item.get('sha256', '')):
             raise ValueError('Invalid package name or checksum')
         if checksums.get(name) != item['sha256'] or not 0 < item.get('bytes', 0) <= 128 * 1024 * 1024:
@@ -126,7 +126,7 @@ def verify_assets(tag, revision):
     assets = release.get('assets', [])
     if len(assets) != 6 or {row['name'] for row in assets} != set(sums) | {'SHA256SUMS'}:
         raise ValueError('Public release assets are incomplete or unexpected')
-    with tempfile.TemporaryDirectory(prefix='gobale-public-release-') as directory:
+    with tempfile.TemporaryDirectory(prefix='goomni-public-release-') as directory:
         for item in packages:
             data = public_bytes(base + item['file'], item['bytes'])
             if len(data) != item['bytes'] or hashlib.sha256(data).hexdigest() != item['sha256']:
@@ -140,7 +140,7 @@ def verify_assets(tag, revision):
                     raise ValueError('Unsafe archive inventory')
                 if sum(m.size for m in members) > 256 * 1024 * 1024:
                     raise ValueError('Archive expands beyond the distribution limit')
-                for required in ('gobale', 'LICENCE.txt', 'docs/openapi.yaml', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.txt'):
+                for required in ('goomni', 'LICENCE.txt', 'docs/openapi.yaml', 'CHANGELOG.md', 'THIRD_PARTY_NOTICES.txt'):
                     if required not in names:
                         raise ValueError('Archive lacks ' + required)
                 for relative in ('LICENCE.txt', 'docs/openapi.yaml', 'CHANGELOG.md'):

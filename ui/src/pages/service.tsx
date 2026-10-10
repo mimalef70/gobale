@@ -3,13 +3,17 @@ import { useTranslation } from 'react-i18next'
 import { BookOpen, ExternalLink, ShieldCheck } from 'lucide-react'
 import { formatDate } from '../lib/query'
 import { request } from '../lib/api'
-import type { Info } from '../lib/types'
+import type { Info, Provider } from '../lib/types'
 import { ErrorNotice, Spinner, Status } from '../components/ui'
 export function ServicePage({ serverTime }: { serverTime: string }) {
   const { t, i18n } = useTranslation()
   const info = useQuery({
     queryKey: ['info'],
     queryFn: ({ signal }) => request<Info>('app/info', { signal }),
+  })
+  const providers = useQuery({
+    queryKey: ['providers'],
+    queryFn: ({ signal }) => request<Provider[]>('app/providers', { signal }),
   })
   const ready = useQuery({
     queryKey: ['ready'],
@@ -19,7 +23,7 @@ export function ServicePage({ serverTime }: { serverTime: string }) {
     <>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">GoBale</p>
+          <p className="eyebrow">GoOmni</p>
           <h1>{t('service')}</h1>
           <p>{t('serviceHint')}</p>
         </div>
@@ -74,7 +78,7 @@ export function ServicePage({ serverTime }: { serverTime: string }) {
           <p>{t('apiDocsHint')}</p>
           <a
             className="button secondary"
-            href="https://mimalef70.github.io/gobale/"
+            href="https://mimalef70.github.io/goomni/"
             target="_blank"
             rel="noreferrer"
           >
@@ -83,6 +87,25 @@ export function ServicePage({ serverTime }: { serverTime: string }) {
           </a>
         </aside>
       </div>
+      <section className="panel form-panel">
+        <h2>{t('providers')}</h2>
+        <ErrorNotice error={providers.error} />
+        {providers.isPending ? (
+          <Spinner />
+        ) : (
+          <dl className="details-list">
+            {providers.data?.map((provider) => (
+              <div key={provider.id}>
+                <dt>{t(`providerName.${provider.id}`)}</dt>
+                <dd>
+                  {provider.enabled ? t('available') : t('providerUnavailable')}
+                  <small className="cell-hint">{provider.verification}</small>
+                </dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </section>
       <p className="session-note">{t('sessionHint')}</p>
     </>
   )

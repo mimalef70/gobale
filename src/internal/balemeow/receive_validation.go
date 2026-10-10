@@ -1,6 +1,6 @@
 package balemeow
 
-import "github.com/mimalef70/gobale/src/internal/balemeow/wire"
+import "github.com/mimalef70/goomni/src/internal/balemeow/wire"
 
 func validateMessage(m *wire.Message) error { budget := 2048; return validateContent(m, 0, &budget) }
 func validateContent(m *wire.Message, depth int, budget *int) error {

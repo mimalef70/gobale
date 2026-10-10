@@ -22,11 +22,11 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/mimalef70/gobale/src/config"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
-	"github.com/mimalef70/gobale/src/ui/web"
-	"github.com/mimalef70/gobale/src/usecase"
+	"github.com/mimalef70/goomni/src/config"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/ui/web"
+	"github.com/mimalef70/goomni/src/usecase"
 	"github.com/stretchr/testify/require"
 	"go.yaml.in/yaml/v3"
 )
@@ -34,7 +34,7 @@ import (
 func integrationUIAssets(t *testing.T) *web.Bundle {
 	t.Helper()
 	// A validated synthetic base element keeps Go tests independent of Node.
-	files := fstest.MapFS{"index.html": {Data: []byte(`<html><head><base href="__GOBALE_UI_BASE__/"></head><body>synthetic UI</body></html>`)}}
+	files := fstest.MapFS{"index.html": {Data: []byte(`<html><head><base href="__GOOMNI_UI_BASE__/"></head><body>synthetic UI</body></html>`)}}
 	inventory := make(map[string]string)
 	for name, file := range files {
 		sum := sha256.Sum256(file.Data)
@@ -164,7 +164,7 @@ func TestBrowserIntegrationInstanceGuardRejectsReplacedAlias(t *testing.T) {
 	f := &browserIntegrationClient{testClient: &testClient{}}
 	srv, svc, _ := integrationBrowserServer(t, "", true, func(domains.Device) domains.Client { return f })
 	ctx := context.Background()
-	original, err := svc.CreateDevice(ctx, "same")
+	original, err := svc.CreateDevice(ctx, "same", domains.ProviderBale)
 	require.NoError(t, err)
 	session := integrationLogin(t, srv)
 	for _, test := range []struct{ method, path string }{{"GET", "/ui/api/devices/same/status"}, {"PATCH", "/ui/api/devices/same/webhook"}, {"POST", "/ui/api/devices/same/logout"}, {"GET", "/ui/api/deliveries"}} {
@@ -173,7 +173,7 @@ func TestBrowserIntegrationInstanceGuardRejectsReplacedAlias(t *testing.T) {
 		require.Equal(t, "DEVICE_INSTANCE_REQUIRED", out["code"])
 	}
 	require.NoError(t, svc.DeleteDevice(ctx, original.ID))
-	replacement, err := svc.CreateDevice(ctx, original.ID)
+	replacement, err := svc.CreateDevice(ctx, original.ID, domains.ProviderBale)
 	require.NoError(t, err)
 	for _, test := range []struct{ method, path string }{{"DELETE", "/ui/api/devices/same"}, {"POST", "/ui/api/devices/same/logout"}, {"POST", "/ui/api/devices/same/login"}, {"PATCH", "/ui/api/devices/same/webhook"}, {"POST", "/ui/api/deliveries/anything/retry"}} {
 		res, out := browserIntegrationRequest(t, srv, session, test.method, test.path, map[string]string{"phone": "+15550000123", "webhook_url": "https://new.test/hook"}, browserInstance(original), false)
@@ -204,7 +204,7 @@ func TestBrowserIntegrationFiftyAccountSnapshotIsLocal(t *testing.T) {
 		}}
 	})
 	for n := range 50 {
-		_, err := svc.CreateDevice(context.Background(), fmt.Sprintf("account-%02d", n))
+		_, err := svc.CreateDevice(context.Background(), fmt.Sprintf("account-%02d", n), domains.ProviderBale)
 		require.NoError(t, err)
 	}
 	session := integrationLogin(t, srv)
@@ -219,7 +219,7 @@ func TestBrowserIntegrationFiftyAccountSnapshotIsLocal(t *testing.T) {
 func TestBrowserIntegrationLoginRefreshCooldownAndWebhookPreview(t *testing.T) {
 	srv, svc, st := integrationBrowserServer(t, "", true, nil)
 	ctx := context.Background()
-	d, err := svc.CreateDevice(ctx, "login")
+	d, err := svc.CreateDevice(ctx, "login", domains.ProviderBale)
 	require.NoError(t, err)
 	session := integrationLogin(t, srv)
 	headers := browserInstance(d)
@@ -283,7 +283,7 @@ func TestBrowserIntegrationBasePathAndDisabledUI(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, 200, raw.StatusCode)
 	require.Contains(t, string(body), `<base href="/gateway/ui/">`)
-	require.NotContains(t, string(body), "__GOBALE")
+	require.NotContains(t, string(body), "__GOOMNI")
 	off, _, _ := integrationBrowserServer(t, "/gateway", false, nil)
 	for _, path := range []string{"/ui/", "/ui/auth/session", "/ui/api/devices"} {
 		res, out := browserIntegrationRequest(t, off, browserIntegrationSession{}, "GET", path, nil, nil, true)
@@ -297,7 +297,7 @@ func TestBrowserIntegrationInFlightAliasReuseCannotPatchReplacement(t *testing.T
 	srv, svc, _ := integrationBrowserServer(t, "", true, nil)
 	session := integrationLogin(t, srv)
 	ctx := context.Background()
-	original, err := svc.CreateDevice(ctx, "shared")
+	original, err := svc.CreateDevice(ctx, "shared", domains.ProviderBale)
 	require.NoError(t, err)
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -317,9 +317,9 @@ func TestBrowserIntegrationInFlightAliasReuseCannotPatchReplacement(t *testing.T
 		t.Fatal("handler did not start reading body")
 	}
 	require.NoError(t, svc.DeleteDevice(ctx, original.ID))
-	replacement, err := svc.CreateDevice(ctx, original.ID)
+	replacement, err := svc.CreateDevice(ctx, original.ID, domains.ProviderBale)
 	require.NoError(t, err)
-	body := `{"webhook_url":"https://example.test/hook","webhook_secret":"synthetic"}`
+	body := `{"provider":"bale","webhook_url":"https://example.test/hook","webhook_secret":"synthetic"}`
 	_, err = fmt.Fprintf(conn, "%x\r\n%s\r\n0\r\n\r\n", len(body), body)
 	require.NoError(t, err)
 	response, err := http.ReadResponse(bufio.NewReader(conn), nil)

@@ -2,7 +2,7 @@
 // This schema is a protocol reference, NOT a claim of live interoperability.
 syntax = "proto3";
 package gobale.bale.reference;
-option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+option go_package = "github.com/mimalef70/goomni/src/internal/balemeow/wire";
 
 message Empty {}
 message StringValue { string value = 1; }

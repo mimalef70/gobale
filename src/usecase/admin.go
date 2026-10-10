@@ -5,7 +5,7 @@ import (
 	"time"
 	"unicode"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 // DevicesOverview is a local-only snapshot. Polling it must not instantiate a
@@ -86,7 +86,10 @@ func (s *Service) Status(ctx context.Context, id string) (domains.DeviceStatus, 
 		return domains.DeviceStatus{}, err
 	}
 	now := time.Now().UTC()
-	result := domains.DeviceStatus{ConnectionStatus: domains.ConnectionStatus{Auth: "auth_required", Transport: "disconnected", Recovery: "degraded"}, ServerTime: now}
+	result := domains.DeviceStatus{Provider: d.Provider, ConnectionStatus: domains.ConnectionStatus{Auth: "auth_required", Transport: "disconnected", Recovery: "degraded"}, ServerTime: now}
+	if !s.providerEnabled(d.Provider) {
+		result.LastError = "PROVIDER_DISABLED"
+	}
 	s.mu.RLock()
 	e := s.clients[d.ConnectionID]
 	s.mu.RUnlock()
@@ -113,6 +116,7 @@ func (e *clientEntry) publicChallenge(now time.Time) *domains.PublicChallenge {
 		return nil
 	}
 	copy := *e.challenge
+	copy.AvailableDeliveries = append([]string{}, copy.AvailableDeliveries...)
 	copy.AvailableSendCodeTypes = append([]int32{}, copy.AvailableSendCodeTypes...)
 	return &copy
 }

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 func validateMediaReferencesTx(ctx context.Context, tx *sql.Tx, conn string, request domains.SendRequest) error {

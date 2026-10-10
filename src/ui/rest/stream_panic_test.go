@@ -9,7 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/workpool"
 	"github.com/stretchr/testify/require"
 )
 
@@ -53,11 +54,11 @@ func TestMediaProviderPanicReleasesSlotAndContextBeforeNextTransfer(t *testing.T
 		t.Run(path, func(t *testing.T) {
 			client := &panicTransferClient{contexts: make(chan context.Context, 3)}
 			s, svc := setupAPIWithFactory(t, "/gateway", func(domains.Device) domains.Client { return client })
-			s.mediaSlots = make(chan struct{}, 1)
+			s.mediaPool = workpool.New(1)
 			s.opts.RequestTimeout = time.Nanosecond // Streams must own their lifetime.
-			d, err := svc.CreateDevice(context.Background(), "synthetic")
+			d, err := svc.CreateDevice(context.Background(), "synthetic", domains.ProviderBale)
 			require.NoError(t, err)
-			available, err := s.store.SaveProviderMedia(context.Background(), d.ConnectionID, domains.Peer{Type: "user", ID: "123"}, "456", domains.ProviderMedia{FileID: "-789", AccessHash: "-987", Size: 7, Name: "fixture.png", ContentType: "image/png"})
+			available, err := s.store.SaveProviderMedia(context.Background(), d.ConnectionID, domains.Peer{Type: "user", ID: "123"}, "456", domains.ProviderMedia{Provider: domains.ProviderBale, Version: 1, FileID: "-789", AccessHash: "-987", Size: 7, Name: "fixture.png", ContentType: "image/png"})
 			require.NoError(t, err)
 			require.True(t, available)
 			for index := 0; index < 3; index++ {
@@ -79,7 +80,7 @@ func TestMediaProviderPanicReleasesSlotAndContextBeforeNextTransfer(t *testing.T
 					require.Equal(t, 200, res.StatusCode)
 					require.Equal(t, "fixture", string(body))
 				}
-				require.Empty(t, s.mediaSlots)
+				require.Zero(t, s.mediaPool.Active())
 				providerContext := <-client.contexts
 				_, deadline := providerContext.Deadline()
 				require.False(t, deadline)

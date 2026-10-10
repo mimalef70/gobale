@@ -1,8 +1,8 @@
 blank_issues_enabled: true
 contact_links:
   - name: Security vulnerability
-    url: https://github.com/mimalef70/gobale/security/advisories/new
+    url: https://github.com/mimalef70/goomni/security/advisories/new
     about: Report sensitive issues privately. See SECURITY.md if this form is unavailable.
   - name: Integration and support guide
-    url: https://github.com/mimalef70/gobale/blob/main/SUPPORT.md
+    url: https://github.com/mimalef70/goomni/blob/main/SUPPORT.md
     about: Documentation, diagnostics, and the project's support scope.

@@ -9,8 +9,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
 )
 
 type fixtureRoundTripper func(*http.Request) (*http.Response, error)

@@ -12,8 +12,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 )
 
 // Exercise the regular WS consumer and restore a fresh client from an independent
@@ -61,6 +61,9 @@ func TestRecoveryStreamGapSurvivesRestart(t *testing.T) {
 			var fake *fakeWS
 			fake = newFakeWS(t, func(ws *websocket.Conn, m *wire.ClientMessage) {
 				if m.Request == nil {
+					return
+				}
+				if recoveryInventoryFixture(t, fake, ws, m.Request) {
 					return
 				}
 				if m.Request.Method != "GetDiff" {
@@ -122,6 +125,9 @@ func TestRecoveryCompletedStreamCatchupFinishesStatus(t *testing.T) {
 			var fake *fakeWS
 			fake = newFakeWS(t, func(ws *websocket.Conn, m *wire.ClientMessage) {
 				if m.Request == nil {
+					return
+				}
+				if recoveryInventoryFixture(t, fake, ws, m.Request) {
 					return
 				}
 				seq := int32(5)
@@ -194,6 +200,9 @@ func TestRecoveryCheckpointFailureDoesNotAdvertiseCurrent(t *testing.T) {
 				if m.Request == nil {
 					return
 				}
+				if recoveryInventoryFixture(t, fake, ws, m.Request) {
+					return
+				}
 				seq := int32(5)
 				var updates [][]byte
 				if requests.Add(1) > 1 && !gap {
@@ -252,6 +261,9 @@ func TestRecoveryCoveredStreamDoesNotHideAnotherRouteGap(t *testing.T) {
 	var fake *fakeWS
 	fake = newFakeWS(t, func(ws *websocket.Conn, m *wire.ClientMessage) {
 		if m.Request == nil {
+			return
+		}
+		if recoveryInventoryFixture(t, fake, ws, m.Request) {
 			return
 		}
 		response := &wire.DiffResponse{Routes: []*wire.RouteDiff{

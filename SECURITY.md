@@ -2,9 +2,9 @@
 
 ## Reporting a vulnerability
 
-Use [GitHub private vulnerability reporting](https://github.com/mimalef70/gobale/security/advisories/new).
+Use [GitHub private vulnerability reporting](https://github.com/mimalef70/goomni/security/advisories/new).
 If that form is unavailable, email the repository maintainer at
-[mostafa.a.aut@gmail.com](mailto:mostafa.a.aut@gmail.com) with “GoBale security” in
+[mostafa.a.aut@gmail.com](mailto:mostafa.a.aut@gmail.com) with “GoOmni security” in
 the subject. Do not open a public issue containing an exploitable vulnerability.
 
 Include the affected version, deployment conditions, impact, and a minimal
@@ -20,7 +20,7 @@ problem and prepare a fix before public details are released.
 
 Security fixes target the latest published release. Older releases and
 prereleases do not receive separate maintenance branches. See
-[releases](https://github.com/mimalef70/gobale/releases) for current versions and
+[releases](https://github.com/mimalef70/goomni/releases) for current versions and
 release-specific limitations. A stable version does not imply a security audit
 or a long-term support commitment.
 

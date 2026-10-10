@@ -1,23 +1,27 @@
-# GoBale development
+# GoOmni development
 
 ## Scope and architecture
 
-GoBale is an independent Go gateway for Bale accounts, with REST, CLI and signed
-webhooks. Keep one module in `src` and the `cmd / ui/rest / usecase / domains /
+GoOmni is an independent Go gateway for Bale, Eitaa and Rubika accounts, with
+REST, CLI and signed webhooks. Keep one module in `src` and the `cmd / ui/rest / usecase / domains /
 infrastructure` layers. The embedded administrative UI lives in `ui/` and is served
 from `src/ui/web`; there is no browser or Node runtime. Keep its scope to account
 lifecycle, status and webhook administration; no chat or sending console. Consumers own
 their users and permissions; do not depend on any consumer's models. Keep implementation,
 tests and integration documentation independent of any specific consumer application.
 
-`internal/balemeow` owns transport, authentication, RPC and updates. It must not
-import Fiber, SQL or webhook dispatchers. Use domain interfaces at the boundary.
+`internal/balemeow`, `internal/eitaameow` and `internal/rubikameow` own each
+provider's transport, authentication, RPC and updates. They must not import Fiber,
+SQL or webhook dispatchers. Provider identities are immutable per connection;
+capabilities and validation come from the selected provider contract. Eitaa and
+Rubika are explicit opt-ins until operator-controlled live acceptance. Offline
+fixtures do not establish live compatibility or account capacity. Use domain interfaces at the boundary.
 REST handles HTTP contracts; usecases coordinate account lifecycle; storage owns
 transactions and durable work.
 
 Backward compatibility is not a product requirement. Maintain one current API
 and configuration contract; do not add legacy aliases, parallel implementations
-or fallback formats solely to support older GoBale clients. Update current
+or fallback formats solely to support older clients. Update current
 consumers, documentation and tests together when contracts change. Application
 and storage schema version identifiers remain useful for identifying builds and
 rejecting incompatible databases. This policy does not authorize discarding
@@ -28,11 +32,13 @@ The reviewed public Bale Web schema is `5.7.0+173855`. Protocol observations
 are evidence, not runtime dependencies or a guarantee of current compatibility.
 
 The project license is MIT in `LICENCE.txt`. Include that file when distributing
-source, binaries or containers.
+source, binaries or containers, together with the native reference notices in
+`THIRD_PARTY_NOTICES.md` and the original provider license files.
 
 ## Data, lifecycle and delivery invariants
 
-- Scope sessions, peers, media, jobs and checkpoints to immutable connection IDs.
+- Scope sessions, peers, media, jobs and checkpoints to immutable connection IDs
+  and providers. Never reinterpret an existing connection as another provider.
   Reusing a deleted alias must not inherit its old work. Reject account changes
   on a bound device; never fall back from an invalid explicit selector.
 - Persist outbox work and request IDs before contacting the provider. Idempotency
@@ -130,7 +136,7 @@ and message content; map free-form provider errors to reviewed public diagnostic
 
 Normal tests use fake servers and temporary databases. Live tests require identified
 accounts and recipients under the operator's control; never use customer chats.
-Distinguish schema observation, offline tests and live GoBale results. A source
+Distinguish schema observation, offline tests and live GoOmni results. A source
 method count or existing route is not a compatibility percentage.
 
 ## Verification and release gates
@@ -174,6 +180,31 @@ application integration, customer authorization or live-account capacity.
 Keep native capability coverage and known limitations in
 [`capabilities.json`](src/internal/balemeow/testdata/coverage/capabilities.json).
 Update this ledger only with recorded evidence, preserving date, scope and limits.
+
+Additional controlled evidence on **2026-10-10**: two operator-controlled native
+accounts per provider exercised direct messages, private test groups/channels,
+recipient media downloads and one-time text/forward occurrences. Real SIGKILL
+outages exposed and corrected Bale route discovery and Rubika sparse-edit/new-
+message recovery. A subsequent message per provider reached one durable recipient
+event and a valid signed webhook; twelve existing unknown operations stayed
+unknown. This is short-outage evidence, not complete historical synchronization
+or real-account capacity. Initial Eitaa location/video and Rubika contact trials
+failed; later fixes and limited successful trials are recorded separately below.
+See `docs/providers/acceptance.md` and `live-20261010.json` for scope, unsuccessful
+attempts and operations not run. Do not turn response-only evidence into full
+semantic verification.
+
+Additional controlled evidence on **2026-10-10**: Eitaa static location passed in
+both directions with correlated request IDs. Two- and five-second MP4 samples
+arrived as videos; two-second official-Web playback advanced. Tested one-second
+clips remained ordinary files, including an official-Web send. Rubika sender
+contact cards passed in both directions; other card variants remain unverified.
+A real 3,600.030-second process outage recovered all 75 Eitaa/Rubika test texts
+(150 sender/recipient event copies), delivered all 98 subscribed signed webhooks
+and preserved all 18 unknown operations without resend. Same-day history matched
+across tested page sizes. Months-old archives, multi-day expiry and full capacity
+remain unverified. Checksums and exact scopes belong to the dated provider ledger,
+not automatically to later branded or published binaries.
 
 ## Development checks
 

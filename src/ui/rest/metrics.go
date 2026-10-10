@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
 	"golang.org/x/sys/unix"
 )
 
@@ -109,20 +109,20 @@ func (s *Server) metricSnapshot() metricsSnapshot {
 }
 
 func metric(b *strings.Builder, name, kind string, value any) {
-	fmt.Fprintf(b, "# TYPE gobale_%s %s\ngobale_%s %v\n", name, kind, name, value)
+	fmt.Fprintf(b, "# TYPE goomni_%s %s\ngoomni_%s %v\n", name, kind, name, value)
 }
 
 func latencyMetric(b *strings.Builder, name, labels string, h storage.Latency) {
 	if labels == "" {
-		fmt.Fprintf(b, "# TYPE gobale_%s histogram\n", name)
+		fmt.Fprintf(b, "# TYPE goomni_%s histogram\n", name)
 	}
 	for i, bound := range []string{"0.001", "0.005", "0.01", "0.05", "0.1", "0.5", "1", "5", "+Inf"} {
-		fmt.Fprintf(b, "gobale_%s_bucket{%sle=%q} %d\n", name, labels, bound, h.Buckets[i])
+		fmt.Fprintf(b, "goomni_%s_bucket{%sle=%q} %d\n", name, labels, bound, h.Buckets[i])
 	}
 	if labels != "" {
 		labels = "{" + strings.TrimSuffix(labels, ",") + "}"
 	}
-	fmt.Fprintf(b, "gobale_%s_sum%s %g\ngobale_%s_count%s %d\n", name, labels, h.Seconds, name, labels, h.Count)
+	fmt.Fprintf(b, "goomni_%s_sum%s %g\ngoomni_%s_count%s %d\n", name, labels, h.Seconds, name, labels, h.Count)
 }
 
 func sortedKeys[V any](m map[string]V) []string {
@@ -152,7 +152,7 @@ func (s *Server) metrics(c fiber.Ctx) error {
 		if item.at.IsZero() || item.failed || time.Since(item.at) > metricsMaxAge {
 			stale = 1
 		}
-		fmt.Fprintf(&b, "gobale_metrics_snapshot_timestamp_seconds{component=%q} %d\ngobale_metrics_snapshot_stale{component=%q} %d\n", item.name, stamp, item.name, stale)
+		fmt.Fprintf(&b, "goomni_metrics_snapshot_timestamp_seconds{component=%q} %d\ngoomni_metrics_snapshot_stale{component=%q} %d\n", item.name, stamp, item.name, stale)
 	}
 	metric(&b, "database_bytes", "gauge", v.disk.DatabaseBytes)
 	metric(&b, "database_wal_bytes", "gauge", v.disk.WALBytes)
@@ -176,12 +176,12 @@ func (s *Server) metrics(c fiber.Ctx) error {
 	latencyMetric(&b, "db_begin_duration_seconds", "", db.Begin)
 	latencyMetric(&b, "db_transaction_duration_seconds", "", db.Transaction)
 	latencyMetric(&b, "db_commit_duration_seconds", "", db.Commit)
-	fmt.Fprint(&b, "# TYPE gobale_persistence_duration_seconds histogram\n# TYPE gobale_storage_errors_total counter\n")
+	fmt.Fprint(&b, "# TYPE goomni_persistence_duration_seconds histogram\n# TYPE goomni_storage_errors_total counter\n")
 	for _, name := range sortedKeys(db.Operations) {
 		latencyMetric(&b, "persistence_duration_seconds", fmt.Sprintf("operation=%q,", name), db.Operations[name])
 	}
 	for _, category := range sortedKeys(db.Errors) {
-		fmt.Fprintf(&b, "gobale_storage_errors_total{category=%q} %d\n", category, db.Errors[category])
+		fmt.Fprintf(&b, "goomni_storage_errors_total{category=%q} %d\n", category, db.Errors[category])
 	}
 	m := s.service.WorkerMetrics()
 	metric(&b, "send_attempts_total", "counter", m.SendAttempts)
@@ -204,11 +204,11 @@ func (s *Server) metrics(c fiber.Ctx) error {
 		{"webhook_duration_seconds", m.WebhookDurationBuckets, m.WebhookDurationSeconds, m.WebhookAttempts},
 		{"reconnect_duration_seconds", m.ReconnectDurationBuckets, m.ReconnectDurationSeconds, m.ReconnectAttempts},
 	} {
-		fmt.Fprintf(&b, "# TYPE gobale_%s histogram\n", h.name)
+		fmt.Fprintf(&b, "# TYPE goomni_%s histogram\n", h.name)
 		for _, bound := range []string{"0.01", "0.1", "1", "5", "10", "40", "+Inf"} {
-			fmt.Fprintf(&b, "gobale_%s_bucket{le=%q} %d\n", h.name, bound, h.buckets[bound])
+			fmt.Fprintf(&b, "goomni_%s_bucket{le=%q} %d\n", h.name, bound, h.buckets[bound])
 		}
-		fmt.Fprintf(&b, "gobale_%s_sum %g\ngobale_%s_count %d\n", h.name, h.sum, h.name, h.count)
+		fmt.Fprintf(&b, "goomni_%s_sum %g\ngoomni_%s_count %d\n", h.name, h.sum, h.name, h.count)
 	}
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)

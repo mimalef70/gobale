@@ -25,21 +25,32 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/mediafile"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
-	"github.com/mimalef70/gobale/src/pkg/sqlite"
-	"github.com/mimalef70/gobale/src/usecase"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/mediafile"
+	"github.com/mimalef70/goomni/src/infrastructure/providers/bale"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/pkg/sqlite"
+	"github.com/mimalef70/goomni/src/usecase"
 	"golang.org/x/sys/unix"
 )
 
 // Optional mixed workload through real REST handlers and durable storage. Only
 // the provider is fake. No customer accounts, network endpoints or data are used.
 func TestOptionalCapacity(t *testing.T) {
-	if os.Getenv("GOBALE_SOAK_DURATION") == "" {
-		t.Skip("set GOBALE_SOAK_DURATION for the isolated mixed capacity workload")
+	if os.Getenv("GOOMNI_SOAK_DURATION") == "" {
+		t.Skip("set GOOMNI_SOAK_DURATION for the isolated mixed capacity workload")
 	}
 	cfg := readCapacityConfig(t)
+	providers := []domains.Provider{domains.ProviderBale}
+	if raw := os.Getenv("GOOMNI_CAPACITY_PROVIDERS"); raw != "" {
+		if raw != "bale,eitaa,rubika" {
+			t.Fatal("GOOMNI_CAPACITY_PROVIDERS must be bale,eitaa,rubika")
+		}
+		providers = []domains.Provider{domains.ProviderBale, domains.ProviderEitaa, domains.ProviderRubika}
+		if cfg.accounts%3 != 0 {
+			t.Fatal("mixed capacity accounts must be divisible by three")
+		}
+	}
 	ctx := context.Background()
 	runCtx, cancelRun := context.WithCancel(ctx)
 	defer cancelRun()
@@ -82,7 +93,7 @@ func TestOptionalCapacity(t *testing.T) {
 			Created  int64 `json:"created_ns"`
 			Healthy  bool  `json:"healthy"`
 		}
-		if r.Header.Get("X-Hub-Signature-256") != "sha256="+hex.EncodeToString(mac.Sum(nil)) || json.Unmarshal(body, &ev) != nil || json.Unmarshal(ev.Payload, &p) != nil || p.Account < 0 || p.Account >= cfg.accounts || ev.SessionID != fmt.Sprintf("capacity-%d", p.Account) || ev.AccountID != strconv.Itoa(100000+p.Account) || p.Sequence < 1 {
+		if r.Header.Get("X-Hub-Signature-256") != "sha256="+hex.EncodeToString(mac.Sum(nil)) || json.Unmarshal(body, &ev) != nil || json.Unmarshal(ev.Payload, &p) != nil || p.Account < 0 || p.Account >= cfg.accounts || ev.SessionID != fmt.Sprintf("capacity-%d", p.Account) || ev.AccountID != strconv.Itoa(100000+p.Account) || ev.Provider != providers[p.Account%len(providers)] || p.Sequence < 1 {
 			bad.Add(1)
 			w.WriteHeader(400)
 			return
@@ -182,12 +193,12 @@ func TestOptionalCapacity(t *testing.T) {
 	}()
 	devices := make([]domains.Device, cfg.accounts)
 	for i := range devices {
-		d, e := st.CreateDevice(ctx, fmt.Sprintf("capacity-%d", i))
+		d, e := st.CreateDevice(ctx, fmt.Sprintf("capacity-%d", i), providers[i%len(providers)])
 		if e != nil {
 			t.Fatal(e)
 		}
 		devices[i] = d
-		if e = st.SaveSession(ctx, d.ConnectionID, &domains.Session{UserID: strconv.Itoa(100000 + i), Token: "synthetic-capacity-session"}); e != nil {
+		if e = st.SaveSession(ctx, d.ConnectionID, &domains.Session{Provider: d.Provider, Version: 1, UserID: strconv.Itoa(100000 + i), Token: "synthetic-capacity-session"}); e != nil {
 			t.Fatal(e)
 		}
 		if i%10 < 2 {
@@ -203,7 +214,7 @@ func TestOptionalCapacity(t *testing.T) {
 	}
 	var clientsMu sync.Mutex
 	clients := make(map[string]*capacityClient, cfg.accounts)
-	svc := usecase.New(st, usecase.Options{MergeGlobal: true, SendWorkers: 4, WebhookWorkers: 8, ReconnectWorkers: 4, QueueLimit: capacityQueueLimit, ConnectionQueueLimit: capacityConnectionQueueLimit, PollInterval: 500 * time.Millisecond, GlobalWebhooks: []storage.WebhookTarget{{URL: sink.URL + "/fast", Secret: "synthetic-capacity-secret"}}}, func(d domains.Device) domains.Client {
+	factory := func(d domains.Device) domains.Client {
 		c := &capacityClient{account: d.AccountID}
 		c.sendFn = func(r domains.SendRequest) (domains.SendResult, error) {
 			_, e := receiver.Exec(`INSERT INTO sends(rid,account) VALUES(?,?)`, r.RequestID, d.AccountID)
@@ -217,7 +228,16 @@ func TestOptionalCapacity(t *testing.T) {
 		clients[d.ID] = c
 		clientsMu.Unlock()
 		return c
-	})
+	}
+	registrations := []domains.ProviderRegistration{}
+	for _, p := range providers {
+		registrations = append(registrations, domains.ProviderRegistration{Contract: capacityProviderContract{provider: p}, Factory: factory})
+	}
+	registry, err := domains.NewProviderRegistry(registrations...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	svc := usecase.New(st, usecase.Options{Providers: registry, MergeGlobal: true, SendWorkers: 4, WebhookWorkers: 8, ReconnectWorkers: 4, QueueLimit: capacityQueueLimit, ConnectionQueueLimit: capacityConnectionQueueLimit, PollInterval: 500 * time.Millisecond, GlobalWebhooks: []storage.WebhookTarget{{URL: sink.URL + "/fast", Secret: "synthetic-capacity-secret"}}}, factory)
 	if err = svc.Start(ctx); err != nil {
 		t.Fatal(err)
 	}
@@ -549,17 +569,36 @@ func TestOptionalCapacity(t *testing.T) {
 	if sampledBaseline && fdSupported && finalFD-initialFD > max(10, initialFD/20) {
 		t.Error("file descriptor drift target exceeded")
 	}
-	report := map[string]any{"fd_measurement_supported": fdSupported, "measurement_scope": "synthetic provider, real REST/storage/webhook; process includes bounded harness", "accounts": cfg.accounts, "seed": cfg.seed, "duration_seconds": cfg.duration.Seconds(), "warmup_seconds": cfg.warmup.Seconds(), "elapsed_seconds": time.Since(start).Seconds(), "drain_seconds": time.Since(drainStart).Seconds(), "event_rate": cfg.events, "send_rate": cfg.sends, "workers": map[string]int{"send": 4, "webhook": 8, "reconnect": 4, "media": 4}, "poll_ms": 500, "queue_limit": capacityQueueLimit, "connection_queue_limit": capacityConnectionQueueLimit, "offered": capacityCounts(counters, "offered"), "admitted": capacityCounts(counters, "accepted"), "rejected": capacityCounts(counters, "rejected"), "missed": capacityCounts(counters, "missed"), "completed_events": receiptCount, "completed_sends": sendCount, "duplicate_deliveries": duplicates.Load(), "p95_persistence_ms": admissionLatency.percentile(.95), "p99_persistence_ms": admissionLatency.percentile(.99), "p95_healthy_webhook_ms": fastLatency.percentile(.95), "p99_healthy_webhook_ms": fastLatency.percentile(.99), "max_rss_bytes": maxRSS, "disk_bytes": maxDisk, "measured_disk_growth_bytes": max(0, maxDisk-diskAtWarm), "initial_heap_bytes": baseline.HeapAlloc, "final_heap_bytes": final.HeapAlloc, "initial_goroutines": initialGoroutines, "final_goroutines": finalGoroutines, "initial_fd": initialFD, "final_fd": finalFD, "passed": !t.Failed()}
+	report := map[string]any{"fd_measurement_supported": fdSupported, "measurement_scope": "synthetic provider, real REST/storage/webhook; process includes bounded harness", "accounts": cfg.accounts, "providers": providers, "accounts_per_provider": cfg.accounts / len(providers), "seed": cfg.seed, "duration_seconds": cfg.duration.Seconds(), "warmup_seconds": cfg.warmup.Seconds(), "elapsed_seconds": time.Since(start).Seconds(), "drain_seconds": time.Since(drainStart).Seconds(), "event_rate": cfg.events, "send_rate": cfg.sends, "workers": map[string]int{"send": 4, "webhook": 8, "reconnect": 4, "media": 4}, "poll_ms": 500, "queue_limit": capacityQueueLimit, "connection_queue_limit": capacityConnectionQueueLimit, "offered": capacityCounts(counters, "offered"), "admitted": capacityCounts(counters, "accepted"), "rejected": capacityCounts(counters, "rejected"), "missed": capacityCounts(counters, "missed"), "completed_events": receiptCount, "completed_sends": sendCount, "duplicate_deliveries": duplicates.Load(), "p95_persistence_ms": admissionLatency.percentile(.95), "p99_persistence_ms": admissionLatency.percentile(.99), "p95_healthy_webhook_ms": fastLatency.percentile(.95), "p99_healthy_webhook_ms": fastLatency.percentile(.99), "max_rss_bytes": maxRSS, "disk_bytes": maxDisk, "measured_disk_growth_bytes": max(0, maxDisk-diskAtWarm), "initial_heap_bytes": baseline.HeapAlloc, "final_heap_bytes": final.HeapAlloc, "initial_goroutines": initialGoroutines, "final_goroutines": finalGoroutines, "initial_fd": initialFD, "final_fd": finalFD, "passed": !t.Failed()}
 	if e := firstError.Load(); e != nil {
 		report["first_synthetic_error"] = *e
 	}
 	data, _ := json.Marshal(report)
 	t.Log(string(data))
-	if path := os.Getenv("GOBALE_SOAK_RESULT"); path != "" {
+	if path := os.Getenv("GOOMNI_SOAK_RESULT"); path != "" {
 		if err = os.WriteFile(path, append(data, '\n'), 0600); err != nil {
 			t.Error(err)
 		}
 	}
+}
+
+// This contract deliberately uses synthetic numeric IDs for every messenger.
+// It measures gateway isolation/scheduling only; native protocol fixtures are separate.
+type capacityProviderContract struct {
+	bale.Contract
+	provider domains.Provider
+}
+
+func (c capacityProviderContract) Descriptor() domains.ProviderDescriptor {
+	return domains.ProviderDescriptor{ID: c.provider, Name: string(c.provider), Enabled: true, Verification: "synthetic-only"}
+}
+func (c capacityProviderContract) ValidateSession(session *domains.Session) error {
+	if session == nil || session.Provider != c.provider {
+		return domains.E("INVALID_SESSION", "wrong fixture provider", 500)
+	}
+	copy := *session
+	copy.Provider = domains.ProviderBale
+	return c.Contract.ValidateSession(&copy)
 }
 
 type capacityClient struct {
@@ -684,7 +723,7 @@ func readCapacityConfig(t *testing.T) capacityConfig {
 		}
 		return d
 	}
-	cfg := capacityConfig{accounts: integer("GOBALE_SOAK_ACCOUNTS", 300, 1, 1000), events: integer("GOBALE_SOAK_RATE", 60, 1, 10000), sends: integer("GOBALE_SOAK_SEND_RATE", 10, 5, 1000), seed: integer("GOBALE_SOAK_SEED", 1, 0, 1000000), duration: duration("GOBALE_SOAK_DURATION", time.Hour), warmup: duration("GOBALE_SOAK_WARMUP", 10*time.Minute), burstDuration: duration("GOBALE_SOAK_BURST_DURATION", time.Minute), maxDisk: int64(integer("GOBALE_SOAK_MAX_DISK_BYTES", 16<<30, 1<<20, 1<<40))}
+	cfg := capacityConfig{accounts: integer("GOOMNI_SOAK_ACCOUNTS", 300, 1, 1000), events: integer("GOOMNI_SOAK_RATE", 60, 1, 10000), sends: integer("GOOMNI_SOAK_SEND_RATE", 10, 5, 1000), seed: integer("GOOMNI_SOAK_SEED", 1, 0, 1000000), duration: duration("GOOMNI_SOAK_DURATION", time.Hour), warmup: duration("GOOMNI_SOAK_WARMUP", 10*time.Minute), burstDuration: duration("GOOMNI_SOAK_BURST_DURATION", time.Minute), maxDisk: int64(integer("GOOMNI_SOAK_MAX_DISK_BYTES", 16<<30, 1<<20, 1<<40))}
 	if cfg.duration < time.Second {
 		t.Fatal("duration must be at least one second")
 	}

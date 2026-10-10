@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"github.com/mimalef70/gobale/src/config"
+	"github.com/mimalef70/goomni/src/config"
 	"github.com/stretchr/testify/require"
 	"os"
 	"path/filepath"

@@ -46,6 +46,7 @@ type OperationContract struct {
 	Mode         string      `json:"mode"` // read, mutation or ephemeral
 	Description  string      `json:"description"`
 	Verification string      `json:"verification"`
+	Schedulable  bool        `json:"schedulable"`
 	Request      FieldSchema `json:"request"`
 }
 
@@ -352,4 +353,39 @@ func validateField(s FieldSchema, v any, path string, depth int) error {
 		return bad("has an unsupported schema")
 	}
 	return nil
+}
+
+// NormalizeOperationContract validates a provider-owned finite contract without Bale semantics.
+func NormalizeOperationContract(c OperationContract, raw json.RawMessage) (json.RawMessage, Peer, error) {
+	if len(raw) == 0 {
+		raw = json.RawMessage(`{}`)
+	}
+	if len(raw) > 128<<10 || !utf8.Valid(raw) {
+		return nil, Peer{}, E("INVALID_REQUEST", "operation body must be UTF-8 JSON up to 128 KiB", 400)
+	}
+	d := json.NewDecoder(bytes.NewReader(raw))
+	d.UseNumber()
+	var value any
+	if err := decodeUniqueJSON(d, &value, 0); err != nil {
+		return nil, Peer{}, E("INVALID_REQUEST", "operation body must contain one JSON object without duplicate fields", 400)
+	}
+	if _, err := d.Token(); err != io.EOF {
+		return nil, Peer{}, E("INVALID_REQUEST", "operation body must contain one JSON object", 400)
+	}
+	if err := validateField(c.Request, value, "body", 0); err != nil {
+		return nil, Peer{}, E("INVALID_REQUEST", err.Error(), 400)
+	}
+	fields, ok := value.(map[string]any)
+	if !ok {
+		return nil, Peer{}, E("INVALID_REQUEST", "operation body must be an object", 400)
+	}
+	encoded, err := json.Marshal(fields)
+	if err != nil {
+		return nil, Peer{}, err
+	}
+	var p struct {
+		Peer Peer `json:"peer"`
+	}
+	_ = json.Unmarshal(encoded, &p)
+	return encoded, p.Peer, nil
 }

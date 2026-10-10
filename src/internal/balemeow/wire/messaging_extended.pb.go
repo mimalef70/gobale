@@ -790,7 +790,7 @@ const file_wire_messaging_extended_proto_rawDesc = "" +
 	"addedPeers\x12@\n" +
 	"\rdeleted_peers\x18\x04 \x03(\v2\x1b.gobale.bale.reference.PeerR\fdeletedPeers\"T\n" +
 	"\x12FolderEditResponse\x12>\n" +
-	"\funread_peers\x18\x01 \x03(\v2\x1b.gobale.bale.reference.PeerR\vunreadPeersB8Z6github.com/mimalef70/gobale/src/internal/balemeow/wireb\x06proto3"
+	"\funread_peers\x18\x01 \x03(\v2\x1b.gobale.bale.reference.PeerR\vunreadPeersB8Z6github.com/mimalef70/goomni/src/internal/balemeow/wireb\x06proto3"
 
 var (
 	file_wire_messaging_extended_proto_rawDescOnce sync.Once

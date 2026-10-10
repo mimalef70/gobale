@@ -1,17 +1,19 @@
 # Webhook payloads
 
-This guide describes GoBale [2.2.0](../CHANGELOG.md#220--2026-10-09).
+This guide describes the GoOmni 2.3.0 contract. Update existing consumers using
+the [GoBale upgrade guide](upgrade-goomni.md). New event envelopes
+include `provider`; already accepted signed bodies keep their exact bytes.
 Update consumers with the gateway: account name uses `push_name`, media text uses
 `caption`, multipart requests use ordinary fields and endpoint-named file parts,
 and acknowledged operation IDs appear directly at `results.message_id`.
 New message/edit events put their display-ready projection in `payload` and
-reviewed native content in `content`; receipt fields expose distinct provider
-timestamps. Previously persisted signed webhook bodies retain their original
+reviewed native content in `content`; receipt fields retain their provider-specific
+meaning. Use the envelope `provider` to interpret native event payloads. Previously persisted signed webhook bodies retain their original
 bytes and format for retry/replay, including older events without `instance_id`.
 Use documentation and OpenAPI from the installed release tag; the hosted API
 reference follows `main` and can advance beyond a release.
 
-GoBale stores events before delivery and sends a signed JSON **event**, without
+GoOmni stores events before delivery and sends a signed JSON **event**, without
 REST's `code/message/results` wrapper. Delivery is **at least once**: verify the
 signature, persist the event and deduplicate its `event_id` before returning a
 2xx response. Process business work from that durable inbox.
@@ -19,8 +21,8 @@ signature, persist the event and deduplicate its `event_id` before returning a
 ## Routing and filters
 
 Configure a device through `PATCH /devices/{device_id}/webhook`. Set
-`GOBALE_URL` to your gateway URL, including `APP_BASE_PATH` if configured;
-`GOBALE_DEVICE` to its local alias; and `GOBALE_INSTANCE` to the saved
+`GATEWAY_URL` to your gateway URL, including `APP_BASE_PATH` if configured;
+`GATEWAY_DEVICE` to its local alias; and `GATEWAY_INSTANCE` to the saved
 `instance_id` returned at creation or by `GET /devices`. Keep the instance in
 your account mapping instead of automatically refreshing it after a conflict.
 The alias in this route selects the account, so an additional `X-Device-Id`
@@ -30,10 +32,10 @@ Use a privately stored random webhook secret in place of the sample placeholder:
 
 ```sh
 curl --fail-with-body --user "$APP_BASIC_AUTH" \
-  -H "X-Device-Instance: $GOBALE_INSTANCE" \
+  -H "X-Device-Instance: $GATEWAY_INSTANCE" \
   -X PATCH -H 'Content-Type: application/json' \
   --data '{"webhook_url":"https://your-app.example/bale/events","webhook_secret":"REPLACE_WITH_A_RANDOM_SECRET","webhook_events":["message","message.edited","message.deleted"]}' \
-  "$GOBALE_URL/devices/$GOBALE_DEVICE/webhook"
+  "$GATEWAY_URL/devices/$GATEWAY_DEVICE/webhook"
 ```
 
 An enabled device URL requires a nonempty secret. This patch does not require
@@ -41,10 +43,10 @@ an `Idempotency-Key`; atomic initial provisioning through `POST /devices` does.
 Use `GET /devices/{device_id}/webhook` with the same instance header to inspect
 `routing_mode`, `routing_rules` and `secret_configured` without retrieving secrets.
 
-The device URL overrides global `BALE_WEBHOOK` destinations by default. An empty
-URL restores global fallback; `BALE_WEBHOOK_DEVICE_MERGE_GLOBAL=true` adds globals
+The device URL overrides global `APP_WEBHOOK` destinations by default. An empty
+URL restores global fallback; `APP_WEBHOOK_DEVICE_MERGE_GLOBAL=true` adds globals
 alongside an override. Identical destination URLs receive one delivery. Global
-destinations share `BALE_WEBHOOK_SECRET`; the device secret is separate and
+destinations share `APP_WEBHOOK_SECRET`; the device secret is separate and
 write-only. Configuration reads never return secrets.
 
 `webhook_events` applies to the device destination: names match exactly, `[]` or
@@ -68,7 +70,12 @@ filter global deliveries. Global settings are loaded at process startup.
 Supported fields are `peers`, `exclude_peers` (arrays of `{type,id}`),
 `peer_types`, `sender_ids`, `exclude_sender_ids` and `directions`. Each list accepts
 at most 100 unique values. Peer types are `user`, `group` and `channel`; peer and
-sender IDs must be canonical positive uint32 strings, without leading zeros.
+sender IDs are opaque strings validated by the selected adapter. Bale uses
+canonical positive uint32 strings. Eitaa user/sender IDs are positive decimal
+strings; classic groups use `{"type":"group","id":"91"}` and supergroups use
+`{"type":"group","id":"channel_91"}`. Broadcast channels use `{"type":"channel","id":"91"}`.
+Keep these identities distinct in include/exclude filters; a `channel_` group ID
+is not a sender ID. Rubika uses typed GUIDs. Do not coerce IDs to JavaScript numbers.
 Directions are `incoming`, `outgoing` and `unknown`. Values within one list are
 ORed; different fields are ANDed; exclusions win. Empty lists impose no restriction.
 Missing peer/sender metadata cannot satisfy the corresponding include rule.
@@ -87,7 +94,48 @@ stable event identities are unchanged. Global destinations retain existing merge
 semantics. An absent sender is omitted and its direction is `unknown`; an edit's
 updater is not guessed to be the original message author.
 
-### Event names
+New complete message projections have `partial: false`, `chat_id == peer.id`
+and `id == message_id` in all three providers. Complete edits additionally have
+`original_message_id == message_id`. Route with the immutable connection and
+full `{type,id}` peer; `chat_id` alone is not globally unique. Historical accepted
+bodies keep their original projection and signature bytes.
+
+Rubika can return a partial `message.edited` update. Its `payload` uses the common
+`MessagePatch` shape, without inventing a sender, direction, original timestamp,
+attachment or reply:
+
+```json
+{
+  "id": "42",
+  "chat_id": "u0synthetic",
+  "original_message_id": "42",
+  "partial": true,
+  "body": "Edited text",
+  "supported": true
+}
+```
+
+Apply only fields actually present to the known message selected by connection,
+peer and `original_message_id`. Absent `body` means leave text unchanged; `"body":""`
+explicitly clears text. A metadata-only patch has `supported:false` and no `body`;
+keep the existing display content. Do not create an incoming chat message, infer
+operator takeover, clear media/reply or replace a full transcript from a patch.
+
+Reviewed native metadata stays in `content`: `timestamp_source: observed`, opaque
+`provider_update_timestamp`, optional `is_edited` and `unprojected_fields`.
+The envelope timestamp on such a patch is an observation time, not the original
+message time or a comparable provider revision. Refresh current history if the
+local target is absent or omitted changes matter. Ambiguous attachment changes
+invalidate the gateway's private media reference conservatively; a patch never
+advertises download support. A fresh authenticated history read may still leave
+ambiguous media unavailable. Already persisted native-only patches retain their
+original layout during retry/replay; they are not silently converted.
+
+### Bale event names
+
+The table below describes Bale. Other adapters expose only their reviewed
+projections, described separately below; matching event names do not guarantee
+matching native payload fields.
 
 Use these exact strings in `webhook_events`. The catalog describes decoded
 variants, not a promise that every event has been observed live or that the
@@ -115,13 +163,14 @@ can be `unknown`.
 
 ## Envelope and signature
 
-Synthetic incoming-message example:
+Synthetic Bale incoming-message example:
 
 ```json
 {
   "event_id": "6ab408125819e603307557854273d663470da881d2cfbb71c68354ce1bc3f1fa9",
   "event": "message",
   "device_id": "123",
+  "provider": "bale",
   "session_id": "support",
   "instance_id": "1111111111111111111111111111111111111111111111111111111111111111",
   "peer": {"type": "user", "id": "456"},
@@ -151,7 +200,8 @@ Synthetic incoming-message example:
 | `event` | Event name, such as `message` or `message.edited`. |
 | `session_id` | Local device alias used by `X-Device-Id`, such as `support`. |
 | `instance_id` | Immutable connection identity, matching the saved device instance; present on newly persisted events. |
-| `device_id` | Connected Bale account ID, not the local alias. |
+| `provider` | Messenger (`bale`, `eitaa` or `rubika`) on newly accepted events; historical signed bodies may omit it. |
+| `device_id` | Connected provider account ID, not the local alias. |
 | `peer` | Conversation type/ID where applicable; account-level notifications may have empty peer fields. |
 | `message_id`, `sender_id`, `direction` | Optional event-specific fields; message direction is `incoming`, `outgoing` or `unknown` when provenance is absent. |
 | `timestamp` | RFC3339 event timestamp; no universal ordering guarantee is implied. |
@@ -163,7 +213,7 @@ they must not pass through a JavaScript `Number`. Do not parse meaning from
 `event_id` or infer tenant permission from the device alias alone.
 
 After verifying the raw-body signature, match `session_id`, `instance_id` and
-`device_id` to the consumer's saved alias, instance and Bale account binding.
+`device_id` to the consumer's saved alias, instance, provider and account binding.
 The gateway sets these fields from storage, never from untrusted provider metadata. A channel
 with no authenticated account binding must defer business processing until it
 has confirmed that binding through the authenticated device API. Return 503
@@ -178,13 +228,13 @@ Every delivery includes:
 
 - `Content-Type: application/json`
 - `X-Hub-Signature-256: sha256=<lowercase HMAC-SHA256 hex>`
-- `X-GoBale-Event-Id` and `X-GoBale-Delivery-Id`
+- `X-GoOmni-Event-Id` and `X-GoOmni-Delivery-Id`
 - `X-Webhook-Id` (the same event ID, for compatibility)
 
 Compute the HMAC over the **exact body bytes**, using the selected destination's
 secret. Compare in constant time before accepting parsed content. Parsing and
 re-serializing JSON changes the bytes. Reject duplicate JSON fields and ambiguous
-identity fields, and require `X-GoBale-Event-Id` to match the body's `event_id`.
+identity fields, and require `X-GoOmni-Event-Id` to match the body's `event_id`.
 Retries/replay preserve the event body and identity, but a new ledger entry can
 have another delivery ID. Deduplicate by `(gateway, instance_id, event_id)` when
 consuming more than one gateway/account. A secret rotation changes the signature,
@@ -201,18 +251,19 @@ remain in `content`.
 
 | Projection field | Meaning |
 | --- | --- |
-| `id`, `chat_id`, `from` | Real Bale message, chat and sender IDs as strings. `chat_id` is disambiguated by envelope `peer.type` and connection; `from` is empty when the original author is unknown, including edits. |
-| `sender_display_name`, `sender_name_status` | Account-scoped contact/local display name or an empty string with `unavailable`. Incoming events resolve names internally before durable acceptance, with bounded reads and rate-limit waits. Consumers do not need to orchestrate profile reads; inaccessible or missing names remain explicit. |
+| `id`, `chat_id`, `from` | Message and sender IDs remain strings. Treat `chat_id` as an adapter-defined display key; use the envelope `peer` and immutable connection for routing. `from` is empty when the original author is unknown. |
+| `sender_display_name`, `sender_name_status` | Account-scoped display name or an empty string with `unavailable`. Bale performs bounded name enrichment before durable acceptance. Eitaa/Rubika currently retain `unavailable`; no cross-provider enrichment guarantee is implied. |
 | `is_from_me` | True/false only for established outgoing/incoming direction; null when unknown. |
 | `timestamp` | RFC3339 message/event time, retaining the provider semantics of that event. |
 | `body`, `kind`, `supported` | Display text and content kind. Unknown variants remain visible with fallback text and `supported:false`. |
 | `replied_to_id`, `quoted_body` | Optional replied-to message identity and display text. Quote media never replaces the current message attachment. |
-| `original_message_id`, `editor_id` | Target message ID on edits, plus updater ID only when supplied by the provider. The original sender remains unknown; an editor does not populate `from`, `sender_display_name` or `is_from_me`. |
+| `original_message_id`, `editor_id` | Full edits carry the verified original_message_id, equal to envelope message_id; editor_id is optional when the adapter can establish it. Bale edit notifications do not establish the original sender: their updater never populates `from` or `is_from_me`. Other adapters preserve original-author data only when the reviewed message object supplies it. |
 | `forwarded_from` | Separate original message/sender/peer/date provenance when present. Forwarded content is projected as normal text/media; `from` stays the forwarding sender. |
 | `media` | Optional attachment with fixed `type`, `file_id`, `name`, `mime_type`, `size`, `download_supported` fields. Unknown string metadata stays empty. Voice has type `voice`, separate from `audio`. |
 
 A name is a cached display label, not verified identity or a consumer permission.
-The gateway never substitutes another account's contacts. For incoming events,
+The gateway never substitutes another account's contacts. The following lookup
+policy describes Bale only. For its incoming events,
 including recovered updates, a cold sender lookup uses the selected account's
 contacts and, if no trusted user reference is available, the same bounded recent
 conversation scan used by other user reads (`LoadDialogs`, at most ten pages of
@@ -251,8 +302,17 @@ attachment reference in durable storage. It cannot guarantee later provider
 availability. A failed download does not remove the attachment metadata; show
 that an attachment exists and handle the download error separately.
 
-Native message `content` uses `kind` and optional normalized fields. Text is in `message`;
-documents can include `name`, `mime_type`, `size`, `caption`, `media_type` and
+For Rubika, successful native media calls do not establish a monotonic order for
+attachment edits. If conflicting references cannot be ordered, the gateway
+withholds `download_supported` and download access rather than exposing stale
+attachment bytes. New-message references remain supported. Retain the displayed
+attachment metadata and handle unavailable downloads; do not assume an edit can
+always replace a prior reference. See the [provider evidence and known limits](providers/sources.md).
+
+
+Native `content` fields are provider-specific. Bale uses `kind` and text in `message`;
+Eitaa/Rubika use reviewed `text`/structured projections. Prefer `payload.body` for
+a shared display field. Bale documents can include `name`, `mime_type`, `size`, `caption`, `media_type` and
 `download_supported`. Native voice arrives as `kind:"document"`,
 `media_type:"voice"`, with `duration` in milliseconds. Do not assume every media
 variant uses the same duration unit.
@@ -270,7 +330,7 @@ JSON or a public URL. The requested size may fall back to an available rendition
 `AVATAR_NOT_FOUND` means no photo visible to that account, including private or
 absent photos. This user route does not imply group/channel-avatar support.
 
-Native `content` may include `quoted_message`, forward context, mentions, service actions,
+Bale native `content` may include `quoted_message`, forward context, mentions, service actions,
 polls, stickers, contacts, locations, gifts or nested template `content`. Use
 `payload.body` for display, and inspect structured fields when implementing richer
 controls. Keyboard metadata
@@ -279,19 +339,20 @@ prove ordinary-account template sending works. Anonymous poll voters and private
 gift/financial fields are not exposed. Incoming gifts do not authorize payments.
 
 Other events include edits/deletions, receipt timestamps, pins, chat changes,
-account/group metadata, membership/permissions, presence and reactions. Receipts
-carry peer-scoped timestamps; do not fabricate individual-message receipts.
+account/group metadata, membership/permissions, presence and reactions, according
+to each adapter’s documented scope. Do not infer individual-message receipt
+coverage from a cumulative watermark or synthesize provider timestamps.
 State transitions can legitimately repeat. Undated recovery pages may yield
 duplicate state notifications; consumers should apply those states idempotently.
 Unsupported variants remain observable, including `protocol.unsupported_update`.
 An event family in the schema is not proof of every provider variant working live.
 
-See [OpenAPI](openapi.yaml) for schemas and the [README](../readme.md) for current
+See [OpenAPI](openapi.yaml) for schemas and the [README](../README.md) for current
 support limits. Do not log message bodies or credential-bearing Mini App results.
 
 ## Receipt timestamps
 
-Every receipt preserves `start_date` as a decimal millisecond string and includes
+This section describes Bale only. Every Bale receipt preserves `start_date` as a decimal millisecond string and includes
 `message_ids_supported:false`. The other timestamps depend on the event:
 
 | Event | Additional provider fields |
@@ -309,17 +370,42 @@ The codec and consumers are in the public
 [protocol bundle](https://web.bale.ai/static/js/async/4825.fc21701758.js) and
 [module bundle](https://web.bale.ai/static/js/async/modulesBuilder.e7abdf3264.js).
 
-GoBale preserves zero and differently ordered timestamps without declaring a
+GoOmni preserves zero and differently ordered timestamps without declaring a
 message range valid or invalid. An omitted own-read `end_date` remains omitted;
 an explicitly wrapped zero remains `"0"`. The envelope timestamp does not replace
 any provider field. Exact boundary inclusion, own-read semantics and per-message
 coverage still require controlled live acceptance. Do not invent an ID list,
 infer all messages were read, or reconcile an unknown send from these events.
 
-Newly accepted receipts use the fields above; the ambiguous `date` key and the
+Newly accepted Bale receipts use the fields above; the ambiguous `date` key and the
 `range_status`/`range_valid` labels have been removed. Already persisted bodies
 retain their original fields and signed bytes on retry/replay. A duplicate native
 event keeps its identity and cannot replace its original stored projection.
+
+## Eitaa and Rubika state events
+
+Eitaa currently projects incoming messages, edits and these reviewed state
+updates. This is offline implementation evidence; live acceptance is pending.
+
+| Event | Meaning and payload |
+| --- | --- |
+| `message.deleted` | A known channel-bound deletion. The envelope contains the explicit `message_id` and resolved peer. |
+| `message.read`, `message.read_by_me` | A peer-bound cumulative `max_message_id` string, with `read_scope: "outbox"` or `"inbox"`, `cumulative: true` and `message_ids_supported: false`. Inbox state also carries `unread_count`. |
+| `message.content_read` | Explicit `message_ids` strings and `content_state: "read"` for a resolved channel. This describes content state, not a reader identity or a general message-read receipt. |
+| `message.deleted.unresolved`, `message.content_read.unresolved` | The provider supplied IDs without a peer. `message_ids`, `peer_resolved: false` and `reason: "provider_omitted_peer"` preserve the evidence without assigning it to a guessed conversation; recovery remains incomplete. |
+
+These Eitaa state payloads include `provider_update`, `timestamp_source: "observed"`
+and `peer_resolved`. `pts` and `pts_count` are decimal strings only when present
+in the native update. Their envelope time is the gateway observation time; it is
+not a provider action timestamp. A cumulative ID watermark does not prove a
+specific reader or the read state of every message. These events cannot resolve
+an `unknown` send.
+
+Rubika currently projects New/Edit/Delete messages and reviewed chat changes.
+Delete events preserve the opaque `provider_update_timestamp` and explicitly
+label `timestamp_source: "observed"`; the envelope time is observation time.
+Rubika does not currently advertise incoming read-receipt projection. Do not
+apply Bale timestamp fields or Eitaa watermark fields to Rubika events.
 
 ## Retries, changes and replay
 
@@ -354,21 +440,21 @@ then choose either retry or replay as appropriate:
 
 ```sh
 curl --fail-with-body --user "$APP_BASIC_AUTH" \
-  -H "X-Device-Id: $GOBALE_DEVICE" -H "X-Device-Instance: $GOBALE_INSTANCE" \
-  "$GOBALE_URL/deliveries?limit=20&include_payload=false"
+  -H "X-Device-Id: $GATEWAY_DEVICE" -H "X-Device-Instance: $GATEWAY_INSTANCE" \
+  "$GATEWAY_URL/deliveries?limit=20&include_payload=false"
 curl --fail-with-body --user "$APP_BASIC_AUTH" \
-  -H "X-Device-Id: $GOBALE_DEVICE" -H "X-Device-Instance: $GOBALE_INSTANCE" \
-  "$GOBALE_URL/deliveries/$DELIVERY_ID"
+  -H "X-Device-Id: $GATEWAY_DEVICE" -H "X-Device-Instance: $GATEWAY_INSTANCE" \
+  "$GATEWAY_URL/deliveries/$DELIVERY_ID"
 
 # Retry only this unchanged destination:
 curl --fail-with-body --user "$APP_BASIC_AUTH" \
-  -H "X-Device-Id: $GOBALE_DEVICE" -H "X-Device-Instance: $GOBALE_INSTANCE" -X POST \
-  "$GOBALE_URL/deliveries/$DELIVERY_ID/retry"
+  -H "X-Device-Id: $GATEWAY_DEVICE" -H "X-Device-Instance: $GATEWAY_INSTANCE" -X POST \
+  "$GATEWAY_URL/deliveries/$DELIVERY_ID/retry"
 
 # Or explicitly replay to the targets accepted by the current routing rules:
 curl --fail-with-body --user "$APP_BASIC_AUTH" \
-  -H "X-Device-Id: $GOBALE_DEVICE" -H "X-Device-Instance: $GOBALE_INSTANCE" -X POST \
-  "$GOBALE_URL/deliveries/$DELIVERY_ID/replay"
+  -H "X-Device-Id: $GATEWAY_DEVICE" -H "X-Device-Instance: $GATEWAY_INSTANCE" -X POST \
+  "$GATEWAY_URL/deliveries/$DELIVERY_ID/replay"
 ```
 
 Retry replaces a `failed` or `retry` delivery for its unchanged destination with a
@@ -404,7 +490,7 @@ Configure these environment variables privately:
 | `WEBHOOK_SECRET` | The secret configured for this delivery destination |
 | `WEBHOOK_DEVICE_ID` | The saved local alias (`session_id` in events) |
 | `WEBHOOK_INSTANCE_ID` | The saved device `instance_id` |
-| `WEBHOOK_ACCOUNT_ID` | The authenticated Bale `account_id` (`device_id` in events) |
+| `WEBHOOK_ACCOUNT_ID` | The authenticated provider `account_id` (`device_id` in events) |
 
 All four are required. From a source checkout matching the gateway contract,
 with Go 1.26.9 installed, run:
@@ -429,3 +515,12 @@ with processing state, or use a durable outbox. The example does not implement
 multi-account routing, application authorization, retention or a business worker.
 See the [consumer integration contract](consumer-integration.md) for those
 application responsibilities.
+
+### Eitaa migration notices
+
+An Eitaa channel-side `messageActionChannelMigrateFrom` service notice with a
+provider message ID of zero is emitted as `chat.migrated`. Its payload contains
+`provider_action`, string `source_chat_id` and `message_id_available: false`.
+The peer and timestamp come from that notice; no addressable message ID or
+message body is invented. It is accepted atomically with its difference page
+and checkpoint, so a migration notice cannot block later personal messages.

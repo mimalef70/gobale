@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +30,7 @@ func TestReconnectMetricsTrackActualFailureAndReleaseWorker(t *testing.T) {
 	f := &fakeClient{}
 	s, st := testService(t, Options{ReconnectWorkers: 1}, func(domains.Device) domains.Client { return f })
 	d := mustDevice(t, s, "synthetic")
-	require.NoError(t, st.SaveSession(context.Background(), d.ConnectionID, &domains.Session{UserID: "123", Token: "synthetic-token"}))
+	require.NoError(t, st.SaveSession(context.Background(), d.ConnectionID, &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "123", Token: "synthetic-token"}))
 	e, err := s.entry(d)
 	require.NoError(t, err)
 	f.connectFn = func(context.Context, *domains.Session, domains.Sink) error {
@@ -38,9 +38,11 @@ func TestReconnectMetricsTrackActualFailureAndReleaseWorker(t *testing.T) {
 		return errors.New("synthetic failure")
 	}
 	e.mu.Lock()
-	s.reconnectSlots <- struct{}{}
+	s.reconnectPool.SetProviders([]domains.Provider{d.Provider})
+	release, acquired := s.reconnectPool.TryAcquireFor(d.Provider, d.ConnectionID)
+	require.True(t, acquired)
 	s.wg.Add(1)
-	s.connectEntry(d.ConnectionID, e)
+	s.connectEntry(d.ConnectionID, e, release)
 	m := s.WorkerMetrics()
 	require.Zero(t, m.ReconnectBusy)
 	require.EqualValues(t, 1, m.ReconnectAttempts)

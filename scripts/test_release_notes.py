@@ -69,8 +69,8 @@ class PublicationWorkflowTest(unittest.TestCase):
         publisher = textwrap.dedent(re.findall(r"          python3 - <<'PY'\n(.*?)\n          PY", source, re.DOTALL)[-1])
         with tempfile.TemporaryDirectory() as temporary:
             environment = {"RELEASE_TAG": tag, "IMAGE_DIGEST": "sha256:" + "b" * 64,
-                           "IMAGE": "ghcr.io/example/gobale", "GITHUB_REPOSITORY": "example/gobale",
-                           "DOCKERHUB_IMAGE": "docker.io/mimalef70/gobale",
+                           "IMAGE": "ghcr.io/example/goomni", "GITHUB_REPOSITORY": "example/goomni",
+                           "DOCKERHUB_IMAGE": "docker.io/mimalef70/goomni",
                            "RUNNER_TEMP": temporary, "EXPECTED_SHA": "a" * 40}
             with patch.dict(os.environ, environment), \
                  patch("pathlib.Path.glob", return_value=[Path(f"dist/archive-{index}.tar.gz") for index in range(4)]), \
@@ -81,7 +81,7 @@ class PublicationWorkflowTest(unittest.TestCase):
                 except AssertionError:
                     run.assert_not_called()
                     raise
-                self.notes = (Path(temporary) / 'gobale-release-notes.md').read_text()
+                self.notes = (Path(temporary) / 'goomni-release-notes.md').read_text()
                 return [call.args[0] for call in run.call_args_list]
 
     def test_stable_publisher_marks_release_not_prerelease(self):
@@ -95,7 +95,7 @@ class PublicationWorkflowTest(unittest.TestCase):
         self.assertIn("--draft", commands[0])
         self.assertIn("--draft=false", commands[-1])
         self.assertFalse(any("--clobber" in command for command in commands))
-        for image in ("ghcr.io/example/gobale", "docker.io/mimalef70/gobale"):
+        for image in ("ghcr.io/example/goomni", "docker.io/mimalef70/goomni"):
             self.assertIn(image + ":v1.0.0", self.notes)
             self.assertIn(image + "@sha256:" + "b" * 64, self.notes)
 
@@ -151,14 +151,14 @@ class PublicationWorkflowTest(unittest.TestCase):
         self.assertEqual(set(jobs["prepare"]["outputs"]), {"sha", "version"})
         self.assertNotIn("needs.prepare.outputs.image", source)
         self.assertNotIn("needs.prepare.outputs.dockerhub_image", source)
-        self.assertEqual(workflow["env"]["GHCR_IMAGE"], "ghcr.io/mimalef70/gobale")
-        self.assertEqual(workflow["env"]["DOCKERHUB_IMAGE"], "docker.io/mimalef70/gobale")
+        self.assertEqual(workflow["env"]["GHCR_IMAGE"], "ghcr.io/mimalef70/goomni")
+        self.assertEqual(workflow["env"]["DOCKERHUB_IMAGE"], "docker.io/mimalef70/goomni")
         build = next(step for step in jobs["image"]["steps"] if step.get("id") == "build")
         tags = build["with"]["tags"].replace("${{ inputs.tag }}", "v2.0.0")
         for key in ("GHCR_IMAGE", "DOCKERHUB_IMAGE"):
             tags = tags.replace("${{ env." + key + " }}", workflow["env"][key])
-        self.assertEqual(tags.strip().splitlines(), ["ghcr.io/mimalef70/gobale:v2.0.0",
-                                                  "docker.io/mimalef70/gobale:v2.0.0"])
+        self.assertEqual(tags.strip().splitlines(), ["ghcr.io/mimalef70/goomni:v2.0.0",
+                                                  "docker.io/mimalef70/goomni:v2.0.0"])
         publisher = jobs["release"]["steps"][-1]["env"]
         self.assertEqual(publisher["IMAGE"], "${{ env.GHCR_IMAGE }}")
         self.assertEqual(publisher["DOCKERHUB_IMAGE"], "${{ env.DOCKERHUB_IMAGE }}")
@@ -166,7 +166,7 @@ class PublicationWorkflowTest(unittest.TestCase):
 
 class RegistryPublicationTest(unittest.TestCase):
     def setUp(self):
-        self.environment = {"GITHUB_REPOSITORY": "example/gobale", "GITHUB_ACTOR": "fixture",
+        self.environment = {"GITHUB_REPOSITORY": "example/goomni", "GITHUB_ACTOR": "fixture",
                             "GH_TOKEN": "github-secret", "DOCKERHUB_USERNAME": "fixture",
                             "DOCKERHUB_TOKEN": "docker-secret"}
         self.token = (200, {}, b'{"token":"synthetic-registry-token"}')
@@ -178,9 +178,9 @@ class RegistryPublicationTest(unittest.TestCase):
         calls = request.call_args_list
         self.assertEqual(len(calls), 4)
         self.assertTrue(calls[0].args[0].startswith("https://ghcr.io/token?"))
-        self.assertEqual(calls[1].args[0], "https://ghcr.io/v2/example/gobale/manifests/v2.0.0")
+        self.assertEqual(calls[1].args[0], "https://ghcr.io/v2/example/goomni/manifests/v2.0.0")
         self.assertTrue(calls[2].args[0].startswith("https://auth.docker.io/token?"))
-        self.assertEqual(calls[3].args[0], "https://registry-1.docker.io/v2/mimalef70/gobale/manifests/v2.0.0")
+        self.assertEqual(calls[3].args[0], "https://registry-1.docker.io/v2/mimalef70/goomni/manifests/v2.0.0")
         for call in calls:
             self.assertNotIn("secret", call.args[0])
 
@@ -247,7 +247,10 @@ class ReleasePackageDocumentationTest(unittest.TestCase):
         from package_release import ROOT, approved_files
         files = approved_files()
         names = {path.relative_to(ROOT).as_posix() for path in files}
-        self.assertTrue({"AGENTS.md", "ui/README.md",
+        self.assertTrue({"README.md", "AGENTS.md", "ui/README.md", "THIRD_PARTY_NOTICES.md",
+                         "docs/upgrade-goomni.md", "docs/providers/live-20261010.json",
+                         "src/internal/eitaameow/schema/LICENSE", "src/internal/rubikameow/LICENSE.reference",
+                         "docs/providers/sources.md", "docs/providers/eitaa-inventory.json", "docs/providers/rubika-inventory.json",
                          "src/internal/balemeow/testdata/coverage/capabilities.json"} <= names)
         for path in files:
             if path.suffix != ".md":

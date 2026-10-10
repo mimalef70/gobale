@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"github.com/stretchr/testify/require"
 )
 
@@ -33,7 +33,7 @@ func TestSendHTTPProjectionKeepsAcknowledgementDistinctFromPending(t *testing.T)
 func TestMediaJSONContractUsesCaptionAndRejectsUnsupportedOptions(t *testing.T) {
 	s, svc := setupAPI(t, "")
 	s.opts.SendWait = 10 * time.Millisecond
-	d, err := svc.CreateDevice(context.Background(), "one")
+	d, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
 	require.NoError(t, s.store.SaveMedia(context.Background(), domains.Media{ID: "media-one", ConnectionID: d.ConnectionID, Name: "one.ogg", Path: "synthetic", ContentType: "audio/ogg", Size: 12}))
 	status, body := apiRequest(t, s, "POST", "/send/audio", "one", map[string]any{"phone": "+10000000000", "media_id": "media-one", "caption": "متن 🙂", "ptt": true})
@@ -55,7 +55,7 @@ func TestMediaJSONContractUsesCaptionAndRejectsUnsupportedOptions(t *testing.T) 
 func TestAccountNameHTTPContractPreservesStoredArguments(t *testing.T) {
 	s, svc := setupAPI(t, "")
 	s.opts.SendWait = 10 * time.Millisecond
-	d, err := svc.CreateDevice(context.Background(), "one")
+	d, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
 	for _, path := range []string{"/user/name", "/operations/account.name"} {
 		r := httptest.NewRequest("POST", path, bytes.NewBufferString(`{"push_name":"نام آزمایشی"}`))
@@ -77,7 +77,7 @@ func TestAccountNameHTTPContractPreservesStoredArguments(t *testing.T) {
 	for _, op := range ops {
 		require.JSONEq(t, `{"name":"نام آزمایشی"}`, string(op.Request.Payload))
 	}
-	status, body := apiRequest(t, s, "GET", "/app/capabilities", "", nil)
+	status, body := apiRequest(t, s, "GET", "/app/capabilities?provider=bale", "", nil)
 	require.Equal(t, 200, status)
 	for _, raw := range body["results"].([]any) {
 		entry := raw.(map[string]any)
@@ -91,7 +91,7 @@ func TestAccountNameHTTPContractPreservesStoredArguments(t *testing.T) {
 
 func TestMultipartScheduleRetainsOriginalFileOnRetryAndConflict(t *testing.T) {
 	s, svc := setupAPI(t, "")
-	d, err := svc.CreateDevice(context.Background(), "one")
+	d, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
 	at := time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
 	metadata, err := json.Marshal(map[string]any{"phone": "+10000000000", "caption": "later", "scheduled_at": at, "timezone": "UTC"})

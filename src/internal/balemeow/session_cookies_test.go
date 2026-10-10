@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )

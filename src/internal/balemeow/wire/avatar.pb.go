@@ -267,7 +267,7 @@ const file_wire_avatar_proto_rawDesc = "" +
 	"\x04file\x18\x01 \x01(\v2#.gobale.bale.reference.FileLocationR\x04file\x12\x14\n" +
 	"\x05width\x18\x02 \x01(\x05R\x05width\x12\x16\n" +
 	"\x06height\x18\x03 \x01(\x05R\x06height\x12\x1b\n" +
-	"\tfile_size\x18\x04 \x01(\x05R\bfileSizeB8Z6github.com/mimalef70/gobale/src/internal/balemeow/wireb\x06proto3"
+	"\tfile_size\x18\x04 \x01(\x05R\bfileSizeB8Z6github.com/mimalef70/goomni/src/internal/balemeow/wireb\x06proto3"
 
 var (
 	file_wire_avatar_proto_rawDescOnce sync.Once

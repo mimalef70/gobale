@@ -11,13 +11,13 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"github.com/stretchr/testify/require"
 )
 
 func TestProviderNullBodyReturnsErrorBeforePathOrQueryInjection(t *testing.T) {
 	s, svc := setupAPI(t, "")
-	_, err := svc.CreateDevice(context.Background(), "one")
+	_, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
 	for _, path := range []string{"/message/7/read", "/message/7/forward", "/chat/user:42/history?limit=5", "/group?title=x"} {
 		method := "POST"
@@ -46,7 +46,7 @@ func TestProviderGETQueryPeerAndBooleanUseTypedNativeValues(t *testing.T) {
 			return json.RawMessage(`{}`), nil
 		}}
 	})
-	_, err := svc.CreateDevice(context.Background(), "one")
+	_, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
 	for _, path := range []string{"/group/participants?peer=group:77&limit=12", "/user/my/groups?is_owner=true", "/group/invite-link?peer=group:77", "/user/info"} {
 		r := httptest.NewRequest("GET", path, nil)
@@ -86,7 +86,7 @@ func TestProviderGETWithoutBodyOverRealTCP(t *testing.T) {
 			return json.RawMessage(`{"messages":[]}`), nil
 		}}
 	})
-	_, err := svc.CreateDevice(context.Background(), "one")
+	_, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	require.NoError(t, err)
@@ -123,7 +123,7 @@ func TestReviewedGroupMutationsUseDurableRESTDispatch(t *testing.T) {
 			return json.RawMessage(`{"acknowledged":true}`), nil
 		}}
 	})
-	_, err := svc.CreateDevice(context.Background(), "one")
+	_, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
 	challenge, err := svc.StartAuth(context.Background(), "one", "+10000000000")
 	require.NoError(t, err)

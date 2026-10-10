@@ -4013,7 +4013,7 @@ const file_wire_account_extended_proto_rawDesc = "" +
 	"\abalance\x18\x03 \x01(\x03R\abalance\x12\x14\n" +
 	"\x05level\x18\x05 \x01(\x05R\x05level\"Z\n" +
 	"\x17AccountKifpoolsResponse\x12?\n" +
-	"\awallets\x18\x01 \x03(\v2%.gobale.bale.reference.AccountKifpoolR\awalletsB8Z6github.com/mimalef70/gobale/src/internal/balemeow/wireb\x06proto3"
+	"\awallets\x18\x01 \x03(\v2%.gobale.bale.reference.AccountKifpoolR\awalletsB8Z6github.com/mimalef70/goomni/src/internal/balemeow/wireb\x06proto3"
 
 var (
 	file_wire_account_extended_proto_rawDescOnce sync.Once

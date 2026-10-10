@@ -6,7 +6,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"github.com/stretchr/testify/require"
 )
 
@@ -17,15 +17,15 @@ func TestProvisioningRESTRejectsUnhashedFieldsAndNull(t *testing.T) {
 		return &testClient{}
 	})
 	for _, body := range []string{
-		`{"device_id":"channel","webhook_filters":{"directions":["incoming"]}}`,
-		`{"device_id":"channel","DEVICE_ID":"other"}`,
-		`{"device_id":"channel","Webhook_Secret":"ignored"}`,
-		`{"device_id":null}`,
-		`{"device_id":"channel","webhook_url":null}`,
-		`{"device_id":"channel","webhook_secret":null}`,
-		`{"device_id":"channel","webhook_events":null}`,
-		`{"device_id":"channel","webhook_filter":null}`,
-		`{"device_id":"channel","device_id":"other"}`,
+		`{"provider":"bale","device_id":"channel","webhook_filters":{"directions":["incoming"]}}`,
+		`{"provider":"bale","device_id":"channel","DEVICE_ID":"other"}`,
+		`{"provider":"bale","device_id":"channel","Webhook_Secret":"ignored"}`,
+		`{"provider":"bale","device_id":null}`,
+		`{"provider":"bale","device_id":"channel","webhook_url":null}`,
+		`{"provider":"bale","device_id":"channel","webhook_secret":null}`,
+		`{"provider":"bale","device_id":"channel","webhook_events":null}`,
+		`{"provider":"bale","device_id":"channel","webhook_filter":null}`,
+		`{"provider":"bale","device_id":"channel","device_id":"other"}`,
 	} {
 		t.Run(body, func(t *testing.T) {
 			response := consumerFlowRaw(t, srv, "POST", "/devices", nil, []byte(body), "application/json", "unconsumed-key")
@@ -37,8 +37,8 @@ func TestProvisioningRESTRejectsUnhashedFieldsAndNull(t *testing.T) {
 		})
 	}
 	for i, body := range []string{
-		`{"device_id":"channel","webhook_url":"https://example.test/hook","webhook_secret":"synthetic-secret"}`,
-		`{"webhook_secret":"synthetic-secret","device_id":"channel","webhook_filter":{},"webhook_url":"https://example.test/hook","webhook_events":[]}`,
+		`{"provider":"bale","device_id":"channel","webhook_url":"https://example.test/hook","webhook_secret":"synthetic-secret"}`,
+		`{"provider":"bale","webhook_secret":"synthetic-secret","device_id":"channel","webhook_filter":{},"webhook_url":"https://example.test/hook","webhook_events":[]}`,
 	} {
 		response := consumerFlowRaw(t, srv, "POST", "/devices", nil, []byte(body), "application/json", "unconsumed-key")
 		var envelope map[string]any
@@ -48,7 +48,7 @@ func TestProvisioningRESTRejectsUnhashedFieldsAndNull(t *testing.T) {
 		config := envelope["results"].(map[string]any)["webhook"].(map[string]any)
 		require.NotContains(t, config, "webhook_secret")
 	}
-	response := consumerFlowRaw(t, srv, "POST", "/devices", nil, []byte(`{"device_id":"channel","webhook_url":"https://example.test/hook","webhook_secret":"synthetic-secret","unknown":true}`), "application/json", "unconsumed-key")
+	response := consumerFlowRaw(t, srv, "POST", "/devices", nil, []byte(`{"provider":"bale","device_id":"channel","webhook_url":"https://example.test/hook","webhook_secret":"synthetic-secret","unknown":true}`), "application/json", "unconsumed-key")
 	defer response.Body.Close()
 	require.Equal(t, 400, response.StatusCode, "a changed unknown field must not silently become a successful replay")
 	require.Zero(t, providerCalls.Load())

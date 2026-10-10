@@ -2,7 +2,7 @@
 // 9216.fb97157470.js service encoders and index module 11125, not inferred values.
 syntax = "proto3";
 package gobale.bale.reference;
-option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+option go_package = "github.com/mimalef70/goomni/src/internal/balemeow/wire";
 import "wire/bale.proto";
 
 message GroupPermissions {

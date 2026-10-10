@@ -3,8 +3,8 @@ package rest
 import (
 	"context"
 	"encoding/json"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
 	"github.com/stretchr/testify/require"
 	"net/url"
 	"sync/atomic"
@@ -16,9 +16,9 @@ func TestCoreQueryRESTContractsAndConnectionScope(t *testing.T) {
 	var calls atomic.Int32
 	s, svc := setupAPIWithFactory(t, "", func(domains.Device) domains.Client { calls.Add(1); return &testClient{} })
 	ctx := context.Background()
-	d, err := svc.CreateDevice(ctx, "one")
+	d, err := svc.CreateDevice(ctx, "one", domains.ProviderBale)
 	require.NoError(t, err)
-	_, err = svc.CreateDevice(ctx, "two")
+	_, err = svc.CreateDevice(ctx, "two", domains.ProviderBale)
 	require.NoError(t, err)
 	due := time.Now().Add(time.Hour).UTC().Truncate(time.Millisecond)
 	job, err := s.store.CreateSchedule(ctx, d.ConnectionID, domains.SendRequest{Peer: domains.Peer{Type: "user", ID: "42"}, Kind: "text", Text: "fixture"}, due)
@@ -54,7 +54,7 @@ func TestCoreQueryRESTContractsAndConnectionScope(t *testing.T) {
 	}
 	require.LessOrEqual(t, calls.Load(), int32(1), "query routes must not instantiate provider clients (worker may claim the synthetic operation)")
 	require.NoError(t, svc.DeleteDevice(ctx, "one"))
-	_, err = svc.CreateDevice(ctx, "one")
+	_, err = svc.CreateDevice(ctx, "one", domains.ProviderBale)
 	require.NoError(t, err)
 	status, _ = apiRequest(t, s, "GET", "/send/schedules/"+job.ID+"/occurrences", "one", nil)
 	require.Equal(t, 404, status)
@@ -64,7 +64,7 @@ func TestCoreQueryRESTContractsAndConnectionScope(t *testing.T) {
 }
 func TestWebhookFilterPatchOmissionClearAndInvalid(t *testing.T) {
 	s, _ := setupAPI(t, "")
-	status, body := apiRequest(t, s, "POST", "/devices", "", map[string]any{"device_id": "filter", "webhook_filter": map[string]any{"peer_types": []string{"group"}, "directions": []string{"incoming"}}})
+	status, body := apiRequest(t, s, "POST", "/devices", "", map[string]any{"provider": "bale", "device_id": "filter", "webhook_filter": map[string]any{"peer_types": []string{"group"}, "directions": []string{"incoming"}}})
 	require.Equal(t, 201, status, body)
 	status, body = apiRequest(t, s, "PATCH", "/devices/filter/webhook", "", map[string]any{})
 	require.Equal(t, 200, status)

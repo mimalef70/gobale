@@ -17,10 +17,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
-	"github.com/mimalef70/gobale/src/ui/rest"
-	"github.com/mimalef70/gobale/src/usecase"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/ui/rest"
+	"github.com/mimalef70/goomni/src/usecase"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/require"
 )
@@ -48,14 +48,14 @@ func (c *loginFixtureClient) SubmitCode(_ context.Context, challenge, code strin
 		c.status.Auth = "awaiting_password"
 		return nil, nil
 	}
-	return &domains.Session{UserID: "42", Token: "synthetic-token", DeviceHash: "synthetic-hash"}, nil
+	return &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "42", Token: "synthetic-token", DeviceHash: "synthetic-hash"}, nil
 }
 func (c *loginFixtureClient) SubmitPassword(_ context.Context, challenge, password string) (*domains.Session, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.inputs["password"] = password
 	c.inputs["challenge"] = challenge
-	return &domains.Session{UserID: "42", Token: "synthetic-token", DeviceHash: "synthetic-hash"}, nil
+	return &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "42", Token: "synthetic-token", DeviceHash: "synthetic-hash"}, nil
 }
 func (c *loginFixtureClient) Connect(context.Context, *domains.Session, domains.Sink) error {
 	c.mu.Lock()
@@ -198,7 +198,7 @@ func executeFixtureLogin(f *loginRESTFixture, reader func(string) (string, error
 	cmd := loginCommandWithSecretReader(f.v, reader)
 	cmd.SilenceErrors = true
 	cmd.SilenceUsage = true
-	cmd.SetArgs([]string{"--device", "test", "--phone", "+10000000000"})
+	cmd.SetArgs([]string{"--provider", "bale", "--device", "test", "--phone", "+10000000000"})
 	return cmd.Execute()
 }
 
@@ -210,7 +210,7 @@ func TestLoginUsesProvisioningAndImmutableGuardsAgainstREST(t *testing.T) {
 			var before domains.Device
 			if existing {
 				var err error
-				before, _, err = f.service.ProvisionDevice(ctx, domains.ProvisionDeviceRequest{DeviceID: "test", WebhookURL: "https://example.invalid/events", WebhookSecret: "synthetic-webhook-secret"}, "fixture-create")
+				before, _, err = f.service.ProvisionDevice(ctx, domains.ProvisionDeviceRequest{Provider: domains.ProviderBale, DeviceID: "test", WebhookURL: "https://example.invalid/events", WebhookSecret: "synthetic-webhook-secret"}, "fixture-create")
 				require.NoError(t, err)
 			}
 			password := "  synthetic password\u2003 "
@@ -289,7 +289,7 @@ func TestLoginRejectsAliasReplacementDuringAuthentication(t *testing.T) {
 				if err := f.service.DeleteDevice(ctx, "test"); err != nil {
 					return err
 				}
-				_, err := f.service.CreateDevice(ctx, "test")
+				_, err := f.service.CreateDevice(ctx, "test", domains.ProviderBale)
 				return err
 			}
 			f := newLoginRESTFixture(t, true, func(f *loginRESTFixture, request loginFixtureRequest) bool {
@@ -300,7 +300,7 @@ func TestLoginRejectsAliasReplacementDuringAuthentication(t *testing.T) {
 				}
 				return false
 			})
-			original, err := f.service.CreateDevice(ctx, "test")
+			original, err := f.service.CreateDevice(ctx, "test", domains.ProviderBale)
 			require.NoError(t, err)
 			err = executeFixtureLogin(f, func(prompt string) (string, error) {
 				if (stage == "code" && prompt == "Code: ") || (stage == "password" && prompt == "Two-step password: ") {
@@ -330,7 +330,7 @@ func TestLoginRejectsAliasReplacementDuringAuthentication(t *testing.T) {
 func TestLoginDoesNotAdoptConcurrentProvisioning(t *testing.T) {
 	f := newLoginRESTFixture(t, false, func(f *loginRESTFixture, request loginFixtureRequest) bool {
 		if request.method == "GET" && request.path == "/api/devices" {
-			if _, err := f.service.CreateDevice(context.Background(), "test"); err != nil {
+			if _, err := f.service.CreateDevice(context.Background(), "test", domains.ProviderBale); err != nil {
 				t.Errorf("create concurrent fixture device: %v", err)
 			}
 		}
@@ -355,7 +355,7 @@ func TestLoginLostProvisioningResponseCannotAdoptReusedAlias(t *testing.T) {
 		if err := f.service.DeleteDevice(context.Background(), "test"); err != nil {
 			t.Errorf("delete original fixture device: %v", err)
 		}
-		if _, err := f.service.CreateDevice(context.Background(), "test"); err != nil {
+		if _, err := f.service.CreateDevice(context.Background(), "test", domains.ProviderBale); err != nil {
 			t.Errorf("reuse fixture alias: %v", err)
 		}
 		return true

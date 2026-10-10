@@ -534,7 +534,7 @@ const file_wire_stickers_extended_proto_rawDesc = "" +
 	"collection\x18\x01 \x01(\v2(.gobale.bale.reference.StickerCollectionR\n" +
 	"collection\"$\n" +
 	"\x12StickerPackRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x05R\x02idB8Z6github.com/mimalef70/gobale/src/internal/balemeow/wireb\x06proto3"
+	"\x02id\x18\x01 \x01(\x05R\x02idB8Z6github.com/mimalef70/goomni/src/internal/balemeow/wireb\x06proto3"
 
 var (
 	file_wire_stickers_extended_proto_rawDescOnce sync.Once

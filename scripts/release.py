@@ -75,7 +75,7 @@ def ensure_tag(tag, sha):
         if run('git', 'rev-parse', tag + '^{commit}') != sha:
             raise ValueError('Local tag points elsewhere; inspect instead of overwriting')
     else:
-        execute('git', 'tag', '-a', tag, sha, '-m', 'GoBale ' + tag)
+        execute('git', 'tag', '-a', tag, sha, '-m', 'GoOmni ' + tag)
     execute('git', 'push', 'origin', 'refs/tags/' + tag)
 
 
@@ -85,14 +85,14 @@ def publish(version):
     check_clean_version(version)
     identity = json.loads(run('gh', 'repo', 'view', '--json', 'nameWithOwner,defaultBranchRef'))
     if identity['nameWithOwner'].lower() != REPOSITORY or identity['defaultBranchRef']['name'] != 'main':
-        raise ValueError('Expected the reviewed GoBale repository with main as default branch')
+        raise ValueError('Expected the reviewed GoOmni repository with main as default branch')
     # Secrets are inspected by name only; values never enter this process.
     secrets = {row['name'] for row in json.loads(run('gh', 'secret', 'list', '--repo', REPOSITORY, '--json', 'name'))}
     if not {'DOCKERHUB_USERNAME', 'DOCKERHUB_TOKEN'} <= secrets:
         raise ValueError('Docker Hub publishing secrets are missing')
     origin = run('git', 'remote', 'get-url', 'origin')
     if origin not in ('https://github.com/' + REPOSITORY + '.git', 'git@github.com:' + REPOSITORY + '.git'):
-        raise ValueError('Origin must be the reviewed GoBale GitHub repository')
+        raise ValueError('Origin must be the reviewed GoOmni GitHub repository')
     sha = run('git', 'rev-parse', 'HEAD')
     execute('git', 'fetch', 'origin', 'main')
     execute('git', 'merge-base', '--is-ancestor', 'origin/main', sha)

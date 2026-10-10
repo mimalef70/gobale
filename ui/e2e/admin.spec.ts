@@ -1,11 +1,20 @@
 import { expect, test, type Page, type Route } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
+const send = {
+  kinds: ['text', 'file', 'image', 'audio', 'voice', 'video'],
+  max_text_bytes: 65536,
+  mentions_supported: true,
+  max_mentions: 100,
+  reply_supported: true,
+  media_format_notes: { voice: 'Complete Ogg Opus; synthetic catalogue fixture.' },
+}
 const scope = { id: 'support-demo', instance_id: 'synthetic-instance-A' }
 const now = new Date().toISOString()
 function device(id = scope.id, instance_id = scope.instance_id) {
   return {
     id,
     instance_id,
+    provider: 'bale',
     account_id: '123456789012345678',
     created_at: now,
     webhook: { webhook_url: 'https://example.test/hook', webhook_events: ['message'], revision: 1 },
@@ -13,7 +22,10 @@ function device(id = scope.id, instance_id = scope.instance_id) {
     deliveries: { pending: 3, failed: 1, paused: 1 },
   }
 }
-async function mock(page: Page, options: { count?: number; signedIn?: boolean } = {}) {
+async function mock(
+  page: Page,
+  options: { count?: number; signedIn?: boolean; passwordFirst?: boolean } = {},
+) {
   let signedIn = options.signedIn ?? false
   let phase = 'auth_required'
   let challenge: object | null = null
@@ -89,10 +101,50 @@ async function mock(page: Page, options: { count?: number; signedIn?: boolean } 
     if (!signedIn) return answer(null, 401, 'UI_UNAUTHORIZED')
     if (replaceOnMutation && method !== 'GET' && path.includes('/devices/'))
       return answer(null, 409, 'DEVICE_INSTANCE_CHANGED')
+    if (path === 'api/app/providers')
+      return answer([
+        {
+          id: 'bale',
+          name: 'Bale',
+          enabled: true,
+          verification: 'synthetic',
+          delivery_methods: ['sms'],
+          send,
+        },
+        {
+          id: 'eitaa',
+          name: 'Eitaa',
+          enabled: false,
+          verification: 'offline-tested-live-pending',
+          delivery_methods: [],
+          send: {
+            ...send,
+            max_text_bytes: undefined,
+            max_text_characters: 4096,
+            mentions_supported: false,
+            max_mentions: 0,
+          },
+        },
+        {
+          id: 'rubika',
+          name: 'Rubika',
+          enabled: false,
+          verification: 'offline-tested-live-pending',
+          delivery_methods: [],
+          send: {
+            ...send,
+            max_text_bytes: undefined,
+            max_text_characters: 4200,
+            mentions_supported: false,
+            max_mentions: 0,
+          },
+        },
+      ])
     if (path === 'api/devices/overview')
       return answer({ server_time: new Date().toISOString(), devices })
     if (path === 'api/devices' && method === 'POST') {
       expect(body?.device_id).toBeTruthy()
+      expect(body?.provider).toBe('bale')
       expect(route.request().headers()['idempotency-key']).toBeTruthy()
       const d = device(String(body?.device_id), 'new-instance')
       devices.push(d)
@@ -101,7 +153,7 @@ async function mock(page: Page, options: { count?: number; signedIn?: boolean } 
     if (path.endsWith('/login') && method === 'GET')
       return answer({ state: phase, challenge, server_time: new Date().toISOString() })
     if (path.endsWith('/login') && method === 'POST') {
-      phase = 'awaiting_code'
+      phase = options.passwordFirst ? 'awaiting_password' : 'awaiting_code'
       challenge = {
         challenge_id: 'challenge-1',
         state: phase,
@@ -112,10 +164,20 @@ async function mock(page: Page, options: { count?: number; signedIn?: boolean } 
       return answer(challenge)
     }
     if (path.endsWith('/login/code')) {
+      if (options.passwordFirst) {
+        phase = 'authenticated'
+        challenge = null
+        return answer(null)
+      }
       phase = 'awaiting_password'
       return answer(null, 401, 'PASSWORD_REQUIRED')
     }
     if (path.endsWith('/login/password')) {
+      if (options.passwordFirst) {
+        phase = 'awaiting_code'
+        challenge = { ...challenge, state: phase, challenge_id: 'challenge-after-password' }
+        return answer(null)
+      }
       phase = 'authenticated'
       challenge = null
       return answer(null)
@@ -138,7 +200,7 @@ async function mock(page: Page, options: { count?: number; signedIn?: boolean } 
     if (path.endsWith('/replay')) return answer([])
     if (path === 'api/app/info')
       return answer({
-        name: 'GoBale',
+        name: 'GoOmni',
         version: '1.0.0',
         release_stage: 'release',
         protocol_note: 'Synthetic test',
@@ -171,17 +233,19 @@ test('sign in, create connection with real contract, then sign out without stori
   const api = await mock(page)
   await login(page)
   await page.getByRole('button', { name: 'Add account', exact: true }).click()
+  await page.getByLabel('Messenger', { exact: true }).selectOption('bale')
   await page.getByLabel('Connection name').fill('new-demo')
   await page.getByRole('button', { name: 'Create connection', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'new-demo', exact: true })).toBeVisible()
   expect(api.recorded.find((r) => r.path === 'api/devices' && r.method === 'POST')?.body).toEqual({
     device_id: 'new-demo',
+    provider: 'bale',
   })
   const stored = await page.evaluate(() => ({
     local: Object.keys(localStorage),
     session: Object.keys(sessionStorage),
   }))
-  expect(stored.local.sort()).toEqual(['gobale.language', 'gobale.theme'])
+  expect(stored.local.sort()).toEqual(['goomni.language', 'goomni.theme'])
   expect(stored.session).toEqual([])
   await page.getByRole('button', { name: 'Sign out', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
@@ -206,6 +270,31 @@ test('resume challenge after refresh and preserve two-factor whitespace', async 
   expect(api.recorded.find((r) => r.path.endsWith('/login/password'))?.body?.password).toBe(
     '  synthetic secret  ',
   )
+})
+test('password-first providers continue with the refreshed OTP challenge', async ({ page }) => {
+  const api = await mock(page, { passwordFirst: true })
+  await login(page)
+  await page.getByRole('link', { name: 'Manage support-demo' }).click()
+  await page.getByRole('link', { name: 'Connect account', exact: true }).click()
+  await page.getByLabel('Phone number').fill('+15550000001')
+  await page.getByRole('button', { name: 'Request login code' }).click()
+  await expect(page.getByLabel('Two-step verification', { exact: true })).toBeVisible()
+  await page
+    .getByLabel('Two-step verification', { exact: true })
+    .fill('  synthetic first password  ')
+  await page.getByRole('button', { name: 'Verify password' }).click()
+  await expect(page.getByLabel('Login code')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Account authenticated' })).not.toBeVisible()
+  await page.reload()
+  await expect(page.getByLabel('Login code')).toBeVisible()
+  await page.getByLabel('Login code').fill('11111')
+  await page.getByRole('button', { name: 'Verify code' }).click()
+  await expect(page.getByRole('heading', { name: 'Account authenticated' })).toBeVisible()
+  const password = api.recorded.find((r) => r.path.endsWith('/login/password'))
+  const code = api.recorded.find((r) => r.path.endsWith('/login/code'))
+  expect(password?.body?.password).toBe('  synthetic first password  ')
+  expect(code?.body?.challenge_id).toBe('challenge-after-password')
+  expect(code?.headers['x-device-instance']).toBe(scope.instance_id)
 })
 test('webhook edit omits existing secret and renders effective routing', async ({ page }) => {
   const api = await mock(page)
@@ -285,7 +374,7 @@ test('stale instance mutation is blocked and old selection cleared', async ({ pa
   const api = await mock(page)
   await login(page)
   await page.getByRole('link', { name: 'Manage support-demo' }).click()
-  await page.getByRole('button', { name: 'Log out of Bale' }).click()
+  await page.getByRole('button', { name: 'Log out of account' }).click()
   api.replace()
   await page.getByRole('button', { name: 'Confirm', exact: true }).click()
   await expect(

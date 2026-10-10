@@ -15,7 +15,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"github.com/stretchr/testify/require"
 )
 
@@ -27,7 +27,7 @@ type scopedHTTPClient struct {
 
 func (f *scopedHTTPClient) SubmitCode(context.Context, string, string) (*domains.Session, error) {
 	f.calls.Add(1)
-	return &domains.Session{UserID: f.account, Token: "synthetic-token", DeviceHash: "synthetic-hash"}, nil
+	return &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: f.account, Token: "synthetic-token", DeviceHash: "synthetic-hash"}, nil
 }
 func (f *scopedHTTPClient) SubmitPassword(ctx context.Context, challenge, password string) (*domains.Session, error) {
 	return f.SubmitCode(ctx, challenge, password)
@@ -93,7 +93,7 @@ func TestHTTPAccountSelectionSurvivesAliasReuse(t *testing.T) {
 		{"login", "POST", "/devices/shared/login", `{"phone":"+10000000000"}`, false},
 		{"login-code", "POST", "/devices/shared/login/code", `{"challenge_id":"synthetic","code":"synthetic"}`, false},
 		{"login-password", "POST", "/devices/shared/login/password", `{"challenge_id":"synthetic","password":"synthetic"}`, false},
-		{"webhook", "PATCH", "/devices/shared/webhook", `{"webhook_url":"https://example.invalid/events","webhook_secret":"synthetic"}`, false},
+		{"webhook", "PATCH", "/devices/shared/webhook", `{"provider":"bale","webhook_url":"https://example.invalid/events","webhook_secret":"synthetic"}`, false},
 		{"media-upload", "POST", "/media", `synthetic media`, true},
 		{"multipart-send", "POST", "/send/file", "--scope\r\nContent-Disposition: form-data; name=\"peer\"\r\n\r\n{\"type\":\"user\",\"id\":\"42\"}\r\n--scope\r\nContent-Disposition: form-data; name=\"file\"; filename=\"synthetic.txt\"\r\nContent-Type: text/plain\r\n\r\nsynthetic media\r\n--scope--\r\n", true},
 	} {
@@ -103,7 +103,7 @@ func TestHTTPAccountSelectionSurvivesAliasReuse(t *testing.T) {
 				return &scopedHTTPClient{account: fmt.Sprint(1000 + identities.Add(1)), calls: &calls}
 			})
 			ctx := context.Background()
-			original, err := svc.CreateDevice(ctx, "shared")
+			original, err := svc.CreateDevice(ctx, "shared", domains.ProviderBale)
 			require.NoError(t, err)
 			challenge, err := svc.StartAuth(ctx, original.ID, "+10000000000")
 			require.NoError(t, err)
@@ -143,7 +143,7 @@ func TestHTTPAccountSelectionSurvivesAliasReuse(t *testing.T) {
 				t.Fatal("handler did not start reading the request body")
 			}
 			require.NoError(t, svc.DeleteDevice(ctx, original.ID))
-			replacement, err := svc.CreateDevice(ctx, original.ID)
+			replacement, err := svc.CreateDevice(ctx, original.ID, domains.ProviderBale)
 			require.NoError(t, err)
 			require.NotEqual(t, original.ConnectionID, replacement.ConnectionID)
 			challenge, err = svc.StartAuth(ctx, replacement.ID, "+10000000000")

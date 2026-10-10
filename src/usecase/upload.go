@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/validations"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/validations"
 )
 
 // SendUpload accepts a new owned local asset and enqueues its send atomically.
@@ -31,6 +31,9 @@ func (s *Service) SendUpload(ctx context.Context, id string, request domains.Sen
 	}
 	d, err := s.ResolveDevice(ctx, id)
 	if err != nil {
+		return domains.Operation{}, err
+	}
+	if err = s.validateSend(d, request); err != nil {
 		return domains.Operation{}, err
 	}
 	if d.ConnectionID != media.ConnectionID {
@@ -60,12 +63,18 @@ func (s *Service) ScheduleUpload(ctx context.Context, id string, request domains
 	if err != nil {
 		return domains.Schedule{}, err
 	}
+	if err = s.validateSend(d, request); err != nil {
+		return domains.Schedule{}, err
+	}
 	if d.ConnectionID != media.ConnectionID {
 		return domains.Schedule{}, domains.E("DEVICE_SCOPE_MISMATCH", "upload belongs to another connection", 409)
 	}
 	previous, found, err := s.store.LookupScheduleUpload(ctx, d.ConnectionID, request, key, media, digest)
 	if err != nil || found {
 		return previous, err
+	}
+	if strings.EqualFold(strings.TrimSpace(request.Recurrence), "once") {
+		return domains.Schedule{}, domains.E("INVALID_SCHEDULE", "use recurrence none for a one-time send", 400)
 	}
 	spec, err := validations.ParseScheduleOptions(request.ScheduleOptions, time.Now().UTC())
 	if err != nil {

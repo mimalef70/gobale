@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"github.com/stretchr/testify/require"
 )
 
@@ -22,7 +22,7 @@ func reliabilityApp(s *Server) *fiber.App {
 
 func TestRequestPanicKeepsDurableSendAndServerAvailable(t *testing.T) {
 	s, svc := setupAPI(t, "")
-	d, err := svc.CreateDevice(context.Background(), "panic")
+	d, err := svc.CreateDevice(context.Background(), "panic", domains.ProviderBale)
 	require.NoError(t, err)
 	app := reliabilityApp(s)
 	var saved domains.Operation
@@ -58,7 +58,7 @@ func TestRequestPanicKeepsDurableSendAndServerAvailable(t *testing.T) {
 func TestRequestDeadlineAndAcceptedSendRemainDistinct(t *testing.T) {
 	s, svc := setupAPI(t, "")
 	s.opts.RequestTimeout = 100 * time.Millisecond
-	d, err := svc.CreateDevice(context.Background(), "deadline")
+	d, err := svc.CreateDevice(context.Background(), "deadline", domains.ProviderBale)
 	require.NoError(t, err)
 	app := reliabilityApp(s)
 	app.Get("/slow", func(c fiber.Ctx) error { <-c.Context().Done(); return c.Context().Err() })

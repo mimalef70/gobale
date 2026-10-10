@@ -1,11 +1,11 @@
-// Package domains contains transport-independent GoBale contracts.
+// Package domains contains transport-independent GoOmni contracts.
 package domains
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/mimalef70/gobale/src/domains/send"
+	"github.com/mimalef70/goomni/src/domains/send"
 	"time"
 )
 
@@ -34,16 +34,11 @@ type Peer struct {
 
 func (p Peer) Key() string { return p.Type + ":" + p.ID }
 func (p Peer) Validate() error {
-	if p.Type != "user" && p.Type != "group" && p.Type != "channel" {
-		return E("INVALID_PEER", "peer.type must be user, group or channel", 400)
+	if !peerType(p.Type) {
+		return E("INVALID_PEER", "peer.type must be user, group, channel, bot or service", 400)
 	}
-	if p.ID == "" {
-		return E("INVALID_PEER", "peer.id is required", 400)
-	}
-	for _, c := range p.ID {
-		if c < '0' || c > '9' {
-			return E("INVALID_PEER", "peer.id must be a decimal string", 400)
-		}
+	if !ValidOpaqueID(p.ID) {
+		return E("INVALID_PEER", "peer.id must be a non-empty identifier of at most 256 bytes", 400)
 	}
 	return nil
 }
@@ -62,6 +57,7 @@ type WebhookPatch struct {
 	Filter *WebhookFilter `json:"webhook_filter"`
 }
 type Device struct {
+	Provider     Provider      `json:"provider"`
 	ID           string        `json:"id"`
 	ConnectionID string        `json:"-"`
 	InstanceID   string        `json:"instance_id"`
@@ -70,17 +66,22 @@ type Device struct {
 	Webhook      WebhookConfig `json:"webhook"`
 }
 type Challenge struct {
+	Delivery               string    `json:"delivery,omitempty"`
+	NextDelivery           string    `json:"next_delivery,omitempty"`
+	AvailableDeliveries    []string  `json:"available_deliveries,omitempty"`
 	ID                     string    `json:"challenge_id"`
 	State                  string    `json:"state"`
 	ExpiresAt              time.Time `json:"expires_at,omitempty"`
-	SentCodeType           int32     `json:"sent_code_type,omitempty"`
-	NextSendCodeType       int32     `json:"next_send_code_type,omitempty"`
+	SentCodeType           int32     `json:"-"`
+	NextSendCodeType       int32     `json:"-"`
 	ResendAfterSeconds     *int64    `json:"resend_after_seconds,omitempty"`
-	AvailableSendCodeTypes []int32   `json:"available_send_code_types,omitempty"`
+	AvailableSendCodeTypes []int32   `json:"-"`
 }
 
 // Session is private persistence data; never return it directly from REST.
 type Session struct {
+	Provider   Provider        `json:"provider"`
+	Version    int             `json:"version"`
 	UserID     string          `json:"user_id"`
 	Token      string          `json:"token"`
 	DeviceHash string          `json:"device_hash"`
@@ -88,10 +89,12 @@ type Session struct {
 	Data       json.RawMessage `json:"data,omitempty"`
 }
 type ConnectionStatus struct {
-	Auth      string `json:"auth"`
-	Transport string `json:"transport"`
-	Recovery  string `json:"recovery"`
-	LastError string `json:"last_error,omitempty"`
+	Auth                       string `json:"auth"`
+	Transport                  string `json:"transport"`
+	Recovery                   string `json:"recovery"`
+	LastError                  string `json:"last_error,omitempty"`
+	RecoveryIssue              string `json:"recovery_issue,omitempty"`
+	UnsupportedUpdatesObserved bool   `json:"unsupported_updates_observed,omitempty"`
 }
 type SendRequest struct {
 	Operation      string          `json:"operation,omitempty"`
@@ -112,20 +115,23 @@ type SendResult struct {
 	Date      time.Time       `json:"date,omitzero"`
 }
 type Event struct {
-	ID         string          `json:"event_id"`
-	Type       string          `json:"event"`
-	AccountID  string          `json:"device_id"`
-	SessionID  string          `json:"session_id"`
-	InstanceID string          `json:"instance_id,omitempty"`
-	Peer       Peer            `json:"peer"`
-	MessageID  string          `json:"message_id,omitempty"`
-	SenderID   string          `json:"sender_id,omitempty"`
-	Direction  string          `json:"direction,omitempty"`
-	Time       time.Time       `json:"timestamp"`
-	Payload    json.RawMessage `json:"payload"`
-	Message    *Message        `json:"message,omitempty"`
-	Checkpoint string          `json:"-"`
-	Media      *ProviderMedia  `json:"-"`
+	Provider      Provider        `json:"provider"`
+	ID            string          `json:"event_id"`
+	Type          string          `json:"event"`
+	AccountID     string          `json:"device_id"`
+	SessionID     string          `json:"session_id"`
+	InstanceID    string          `json:"instance_id,omitempty"`
+	Peer          Peer            `json:"peer"`
+	MessageID     string          `json:"message_id,omitempty"`
+	SenderID      string          `json:"sender_id,omitempty"`
+	Direction     string          `json:"direction,omitempty"`
+	Time          time.Time       `json:"timestamp"`
+	Payload       json.RawMessage `json:"payload"`
+	Message       *Message        `json:"message,omitempty"`
+	MessagePatch  *MessagePatch   `json:"message_patch,omitempty"`
+	Checkpoint    string          `json:"-"`
+	Media         *ProviderMedia  `json:"-"`
+	MediaRevision *MediaRevision  `json:"-"`
 }
 type Sink func(context.Context, Event) error
 type Client interface {
@@ -141,20 +147,22 @@ type Client interface {
 }
 type ClientFactory func(Device) Client
 type Operation struct {
-	ID             string      `json:"send_id"`
-	ScheduleID     string      `json:"schedule_id,omitempty"`
-	ScheduledFor   *time.Time  `json:"scheduled_for,omitempty"`
-	ConnectionID   string      `json:"-"`
-	DeviceID       string      `json:"device_id"`
-	Request        SendRequest `json:"request"`
-	IdempotencyKey string      `json:"-"`
-	PayloadHash    string      `json:"-"`
-	State          string      `json:"state"`
-	Result         *SendResult `json:"result,omitempty"`
-	ErrorCode      string      `json:"error_code,omitempty"`
-	ErrorMessage   string      `json:"error_message,omitempty"`
-	CreatedAt      time.Time   `json:"created_at"`
-	UpdatedAt      time.Time   `json:"updated_at"`
+	Stages         []OperationStage `json:"stages,omitempty"`
+	Provider       Provider         `json:"provider"`
+	ID             string           `json:"send_id"`
+	ScheduleID     string           `json:"schedule_id,omitempty"`
+	ScheduledFor   *time.Time       `json:"scheduled_for,omitempty"`
+	ConnectionID   string           `json:"-"`
+	DeviceID       string           `json:"device_id"`
+	Request        SendRequest      `json:"request"`
+	IdempotencyKey string           `json:"-"`
+	PayloadHash    string           `json:"-"`
+	State          string           `json:"state"`
+	Result         *SendResult      `json:"result,omitempty"`
+	ErrorCode      string           `json:"error_code,omitempty"`
+	ErrorMessage   string           `json:"error_message,omitempty"`
+	CreatedAt      time.Time        `json:"created_at"`
+	UpdatedAt      time.Time        `json:"updated_at"`
 }
 type Delivery struct {
 	Device       bool            `json:"-"`
@@ -173,6 +181,7 @@ type Delivery struct {
 	CreatedAt    time.Time       `json:"created_at"`
 }
 type Schedule struct {
+	Provider                  Provider    `json:"provider"`
 	ID                        string      `json:"id"`
 	ConnectionID              string      `json:"-"`
 	DeviceID                  string      `json:"device_id"`

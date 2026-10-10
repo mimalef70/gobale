@@ -1,6 +1,7 @@
 # Consumer integration contract
 
-This guide describes GoBale [2.2.0](../CHANGELOG.md#220--2026-10-09).
+This guide describes the GoOmni 2.3.0 contract. Upgrade the gateway and consuming
+backend together using the [GoBale upgrade guide](upgrade-goomni.md).
 Update consumers with the gateway: account name uses `push_name`, media text uses
 `caption`, multipart requests use ordinary fields and endpoint-named file parts,
 and acknowledged operation IDs appear directly at `results.message_id`.
@@ -11,14 +12,14 @@ bytes and format for retry/replay, including older events without `instance_id`.
 Use documentation and OpenAPI from the installed release tag; the hosted API
 reference follows `main` and can advance beyond a release.
 
-GoBale supplies Bale account lifecycle, durable provider operations and signed
+GoOmni supplies messenger account lifecycle, durable provider operations and signed
 events. The consuming application's backend owns users, organizations, channel
 permissions, contacts, conversations, AI generation, approvals and billing. Its
-browser must never receive GoBale's machine credential. The administrative UI and
+browser must never receive GoOmni's machine credential. The administrative UI and
 Basic credential grant gateway-wide administration; neither is a tenant login.
 
 Any application can integrate through the same public API. Keep its user and
-channel models in the consuming application; GoBale does not depend on them.
+channel models in the consuming application; GoOmni does not depend on them.
 [OpenAPI](openapi.yaml) is the HTTP contract; [webhook payloads](webhook-payload.md)
 describe event content and delivery behavior.
 
@@ -27,24 +28,106 @@ Send machine API requests from a trusted backend over TLS when remote. Include
 gateway-wide administration; never expose their results directly as a user's
 authorized account list.
 
+## Discover messenger availability
+
+Call `GET /app/providers` before provisioning. Each descriptor reports `id`,
+`name`, `enabled`, `verification` and `delivery_methods`. Only enabled providers
+can create connections. `GET /app/capabilities?provider=bale` requires an explicit
+provider; `GET /devices/{id}/capabilities` uses the guarded connection selection.
+An unsupported operation is rejected before durable acceptance. New providers do
+not inherit Bale's verified features, ID formats or recovery guarantees.
+
+## Use one message integration across providers
+
+Account provisioning, OTP/password stages, upload, ordinary send, operation
+polling, scheduling, signed delivery and authenticated download use the same
+contract for Bale, Eitaa and Rubika. Keep provider logic inside the gateway
+client/adapter boundary; contacts, conversations, operators and application
+permissions need not be restructured for each provider.
+
+Treat all IDs as strings. Route a conversation by `(gateway, instance_id,
+provider, peer.type, peer.id)`, then match a message within that scope by its
+provider message ID. Message IDs can differ between sender and recipient accounts
+(notably Eitaa); a reply/edit uses the ID observed by its selected connection.
+Never correlate two accounts by assuming their message IDs are identical. Newly projected `payload.chat_id` equals `peer.id` across
+providers; it is not a globally unique channel key. Never strip Eitaa's
+`channel_` prefix or turn a Rubika GUID into a phone number.
+
+For complete message/edit events, `payload.partial` is false and `payload.id`
+matches envelope `message_id`. Edits also carry `original_message_id` with that
+same value. Rubika may instead deliver `partial:true` edits: apply only present
+reviewed fields to that scoped target. In particular, absent `body` preserves
+text, whereas an explicit empty `body` clears it. A partial edit has no invented
+sender or original timestamp; it must not become a new incoming message or an
+operator takeover signal. See [patch examples](webhook-payload.md#routing-and-filters).
+Historical signed delivery bodies keep their exact accepted contract.
+
+`GET /app/providers` also returns `send` limits and `interactions`. Discover
+optional behavior instead of assuming every messenger implements Bale presence
+or GOWA acknowledgements:
+
+| Behavior | Bale | Eitaa | Rubika |
+| --- | --- | --- | --- |
+| Start typing | `presence.typing` | Unavailable on tested server | `chat.activity`, `Typing` |
+| Stop typing | `presence.stop` | Unavailable on tested server | Unavailable |
+| Online/offline | `presence.online` | Unavailable | Unavailable |
+| Mark read argument | `date` | `message_id` | `message_id` |
+| Received receipt model | Timestamp watermark | Message-ID watermark | Chat state only |
+| Delivered event | Available | Unavailable | Unavailable |
+| Sender display name | Bounded enrichment, may be unavailable | Unavailable | Unavailable |
+| Authenticated avatar download | Available | Available | Available |
+
+Each interaction preset supplies a public `operation` and fixed `parameters`.
+Look up that operation's method, path and mode in the provider catalogue, merge
+its parameters with the selected `peer` if required, and call it with the usual
+immutable instance guard. Mutation mode requires its own persisted idempotency
+key; ephemeral mode follows the advertised contract. Missing presets mean skip
+that optional feature; do not issue a guessed cancel/online request. Capability
+availability describes implemented semantics, not completed live acceptance.
+The reviewed Eitaa `chat.activity` operation remains in the source catalogue, but
+controlled typing/cancel requests were rejected with `FEATURE_NOT_SUPPORTED`;
+no active Eitaa typing preset is advertised. Consumers should skip it.
+
+Read marking and received receipts are separate capabilities. Cumulative
+watermarks do not prove an exact set of message IDs or their boundary inclusion.
+Rubika `chat.updated.last_seen_my_mid` remains native chat state; do not synthesize
+a shared delivered/read acknowledgement from it. Neither a receipt nor a typing
+response can reconcile an unknown send. Render an absent sender name with an
+application fallback and use the separate authenticated avatar endpoint rather
+than relying on private provider media URLs.
+
+Use `payload.media.type`, MIME and `download_supported` to handle media. Upload
+and download are account scoped. Keep text in `message` for text sends, `caption`
+for media; replies use `reply_message_id` with the selected peer. Voice must
+already be valid Ogg Opus; the gateway does not transcode. Eitaa's tested two- and
+five-second AVC MP4s retained video presentation and byte-identical downloads.
+One-second samples arrived as files; follow the received media type rather than
+assuming presentation from the send endpoint. Image sends may be
+processed by the provider: the controlled Eitaa PNG arrived as a same-dimension
+JPEG with a maximum one-level RGB difference. Use file sends when preserving
+original image bytes is required; do not promise byte identity for photo sends. Runtime media notes
+and the acceptance ledger distinguish format validation from provider rendering.
+Do not split long text inside the gateway; respect the advertised byte/character
+limit and persist each consumer-created part before submission.
+
 ## Persist one immutable reference per connected account
 
 Store the mapping `(consumer tenant, channel) -> (gateway, device alias,
-instance_id, account_id)` in the consumer's database. One tenant may own several
+instance_id, provider, account_id)` in the consumer's database. One tenant may own several
 channels/accounts. Authorize that mapping before every request and webhook
 dispatch. The provider's `account_id` becomes available after authentication; it
 is not a tenant identifier or a replacement for `instance_id`.
 
 1. Persist a unique provisioning key and the exact initial configuration before
    `POST /devices`. Send `Idempotency-Key` and a body such as
-   `{"device_id":"channel-42","webhook_url":"https://consumer.example/bale/events","webhook_secret":"RANDOM_BACKEND_SECRET","webhook_events":["message","message.edited"]}`.
+   `{"device_id":"channel-42","provider":"bale","webhook_url":"https://consumer.example/bale/events","webhook_secret":"RANDOM_BACKEND_SECRET","webhook_events":["message","message.edited"]}`.
    The device and initial webhook configuration commit together. New creation
    returns 201; replay of the same key/configuration returns 200 and the same
    immutable device lifetime. Changed configuration under the key returns 409.
    The alias must be 1–64 ASCII letters, digits, dots, underscores or hyphens,
    starting with a letter or digit. A webhook URL requires a secret; unknown,
    duplicate and null provisioning fields are rejected.
-2. Save the returned `id` and `instance_id`. Provisioning keys are global to this
+2. Save the returned `id`, `instance_id` and immutable `provider`. Provisioning keys are global to this
    gateway database and separate from send keys. Replaying a key after deletion
    returns `PROVISIONING_RETIRED`; a deliberate replacement needs a new key.
    Replay never restores an old webhook configuration over later edits.
@@ -60,9 +143,10 @@ is not a tenant identifier or a replacement for `instance_id`.
    to `POST /devices/{id}/login/password` only when the
    state is `awaiting_password`. `GET /devices/{id}/status` returns public
    challenge metadata together with auth, transport and recovery state. Respect expiry and resend
-   cooldown independently; keep OTPs/passwords out of browser storage and logs.
+   cooldown independently. Public code delivery uses `delivery`, optional
+   `next_delivery` and `available_deliveries`, not provider wire enum numbers; keep OTPs/passwords out of browser storage and logs.
 5. Read `GET /devices/{id}/status` after login and persist its `account_id`.
-   The same response includes `device_id` (alias), `instance_id`, `auth`,
+   The same response includes `device_id` (alias), `instance_id`, `provider`, `auth`,
    `transport`, `recovery`, nullable `challenge` and `server_time`. It is a local
    snapshot with no provider RPC or implicit reconnect. `account_id` is empty
    before the first login; logout retains the account binding. Expired challenges
@@ -73,6 +157,16 @@ is not a tenant identifier or a replacement for `instance_id`.
 Choose webhook destinations in trusted backend configuration. An authenticated
 administrator can configure HTTP endpoints, including private destinations;
 untrusted end users must not gain arbitrary callback or gateway URL control.
+
+## Preserve messenger peer identities
+
+Route with the returned `{type,id}` pair and the selected immutable connection.
+Eitaa classic group `{"type":"group","id":"91"}` and supergroup
+`{"type":"group","id":"channel_91"}` are different conversations; a broadcast channel
+is `{"type":"channel","id":"91"}`. Keep the supergroup prefix in sends, history,
+media references and webhook filters. Eitaa sender IDs remain numeric strings.
+Do not strip prefixes, infer peer type from a number or reuse peer metadata from
+another connection.
 
 ## Persist submissions and interpret their outcome
 
@@ -102,6 +196,14 @@ display description. A successful HTTP response contains the REST
 | 202, `unknown` / `SEND_UNKNOWN` | Preserve uncertainty. Inspect/reconcile; never generate a new key to resend. |
 | Failed operation with `results.send_id` | Retain the durable operation and diagnostic, including on a non-2xx response. |
 | Transport timeout or lost response | Keep the original key/content. No blanket mutation retry; explicitly recover through the same keyed submission or a known operation ID. |
+
+Compound native operations may also expose `stages`, ordered by `number`, with
+`name`, `state`, `started_at` and `updated_at`. A stage is persisted before its
+provider call. An upload stage succeeding does not mean its final message was
+sent; inspect the enclosing operation and the final send stage. Private upload
+references and provider nonces remain encrypted and are absent from the API.
+Partial or ambiguous compounds remain `unknown` and are never automatically
+replayed. The same operation ID and idempotency key retain their audit history.
 
 An exact keyed resubmission returns the existing operation instead of repeating
 its provider write. A previously accepted `unknown` operation remains uncertain.
@@ -137,10 +239,11 @@ raw bytes using a constant-time comparison. Do not parse and re-serialize before
 checking. Reject malformed JSON and ambiguous identity fields.
 
 New event envelopes carry `session_id` (alias), `instance_id` (immutable lifetime)
-and `device_id` (Bale account ID). Check all three against the saved mapping after
+and `device_id` (provider account ID), plus `provider` on newly accepted events.
+Check the immutable connection, alias and account against the saved mapping after
 signature verification; never choose a tenant from an untrusted body alone.
 The gateway overwrites provider-supplied identity with its stored connection.
-Require `X-GoBale-Event-Id` to match the body's `event_id`. Deduplicate by
+Require `X-GoOmni-Event-Id` to match the body's `event_id`. Deduplicate by
 `(gateway, instance_id, event_id)`, not the delivery ID. Commit the inbox record
 before returning 2xx and process business effects from durable work afterward.
 If persistence fails, return 503 so delivery can retry. HTTP 4xx other than
@@ -179,14 +282,14 @@ before repeating them. See [retry and replay](webhook-payload.md#retries-changes
 
 ## Use the Bale account contract
 
-| Topic | GoBale contract |
+| Topic | GoOmni contract |
 | --- | --- |
 | Authentication | Native phone/OTP flow, optional password challenge, immutable device instance. |
 | Peer identity | Structured `peer: {type,id}` with decimal string IDs. Do not infer phone numbers from peer IDs. |
 | Message events | `payload` contains display-ready `body`, sender name, identity, reply/edit/forward and media fields; `content` retains reviewed native structured content. Unknown sender/direction remains explicit. |
 | Receipts | Preserve `start_date` plus `read_date`/`received_date`; own-read has separate optional `end_date`. These are provider timestamps, not two validated range endpoints. Zero remains zero; exact per-message coverage is unverified and `message_ids_supported` is false. See [receipt timestamps](webhook-payload.md#receipt-timestamps). |
 | Send outcomes | Durable operation ID/state, persisted request ID, and eventual provider result; 202 is not completed delivery. |
-| Downloads | Authenticated, connection-scoped binary download through GoBale; no provider URL/hash credentials in public JSON. |
+| Downloads | Authenticated, connection-scoped binary download through GoOmni; no provider URL/hash credentials in public JSON. |
 | Formatting and limits | Validate the selected Bale operation's documented formatting, size and editing contract. |
 
 Keep public IDs as strings, including negative signed message/file IDs. Use
@@ -235,13 +338,13 @@ file to the configured media limit. Omitted MIME defaults to
 
 ```sh
 curl --fail-with-body --user "$APP_BASIC_AUTH" \
-  -H "X-Device-Id: $GOBALE_DEVICE" \
-  -H "X-Device-Instance: $GOBALE_INSTANCE" \
+  -H "X-Device-Id: $GATEWAY_DEVICE" \
+  -H "X-Device-Instance: $GATEWAY_INSTANCE" \
   -H 'Idempotency-Key: attachment-42' \
   -F 'peer={"type":"user","id":"123"};type=application/json' \
   -F 'caption=Attachment' \
   -F 'image=@./picture.webp;type=image/webp' \
-  "$GOBALE_URL/send/image"
+  "$GATEWAY_URL/send/image"
 ```
 
 To schedule that same upload, include `scheduled_at` and an IANA `timezone`.
@@ -275,7 +378,7 @@ total; native WebP receipt/rendering remains live-unverified.
 ## Verification boundary
 
 `src/ui/rest/saas_flow_test.go` exercises three synthetic connections, with two
-named for one conceptual consumer and one for another, against GoBale's real
+named for one conceptual consumer and one for another, against GoOmni's real
 REST/storage/usecase stack. It checks immutable selection, separate OTP/password
 state, durable send keys/unknown outcomes, account-scoped resources and a signed
 webhook retry across SQLite close/reopen. It does not prove consumer tenant ACLs

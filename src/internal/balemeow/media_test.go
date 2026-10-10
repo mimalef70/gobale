@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 )
@@ -340,7 +340,7 @@ func TestNegativeSignedFileIDRoundTrip(t *testing.T) {
 	require.NoError(t, e)
 	require.Equal(t, fileID, sentFile.Load())
 	var downloader domains.MediaDownloader = c
-	stream, e := downloader.Download(context.Background(), domains.ProviderMedia{FileID: "-8123456789012345678", AccessHash: "12345", Size: int64(len(body))})
+	stream, e := downloader.Download(context.Background(), domains.ProviderMedia{Provider: domains.ProviderBale, Version: 1, FileID: "-8123456789012345678", AccessHash: "12345", Size: int64(len(body))})
 	require.NoError(t, e)
 	defer stream.Close()
 	got, e := io.ReadAll(stream)

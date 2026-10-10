@@ -10,18 +10,23 @@ import (
 	"io"
 	"math/rand/v2"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 func (s *Service) Send(ctx context.Context, id string, request domains.SendRequest, key string) (domains.Operation, error) {
 	if request.Operation != "" || len(request.Payload) > 0 || request.Kind == "operation" {
 		return domains.Operation{}, domains.E("INVALID_REQUEST", "use the durable mutation endpoint for provider operations", 400)
 	}
-	if err := request.Validate(); err != nil {
+	d, err := s.ResolveDevice(ctx, id)
+	if err != nil {
+		return domains.Operation{}, err
+	}
+	if err = s.validateSend(d, request); err != nil {
 		return domains.Operation{}, err
 	}
 	if request.IsScheduled() {
@@ -36,10 +41,6 @@ func (s *Service) Send(ctx context.Context, id string, request domains.SendReque
 	if request.Kind == "" {
 		request.Kind = "text"
 	}
-	d, err := s.ResolveDevice(ctx, id)
-	if err != nil {
-		return domains.Operation{}, err
-	}
 	// Storage resolves idempotency before checking media, so a completed send
 	// can still be inspected through its key after an old asset is retired.
 	operation, _, err := s.store.Enqueue(ctx, d.ConnectionID, request, key, s.admissionLimits())
@@ -50,7 +51,12 @@ func (s *Service) GetOperation(ctx context.Context, id, operationID string) (dom
 	if err != nil {
 		return domains.Operation{}, err
 	}
-	return s.store.GetOperation(ctx, d.ConnectionID, operationID)
+	op, err := s.store.GetOperation(ctx, d.ConnectionID, operationID)
+	if err != nil {
+		return op, err
+	}
+	op.Stages, err = s.store.OperationStages(ctx, d.ConnectionID, operationID)
+	return op, err
 }
 
 func (s *Service) sendLoop() {
@@ -92,12 +98,22 @@ func (s *Service) processOperation(op domains.Operation) {
 	}
 	d, err := s.store.DeviceByConnection(s.ctx, op.ConnectionID)
 	if err != nil {
-		finish("failed", nil, "DEVICE_NOT_FOUND", "connection no longer exists")
+		var missing *domains.Error
+		if errors.As(err, &missing) && (missing.Code == "DEVICE_NOT_FOUND" || missing.Code == "NOT_FOUND") {
+			finish("failed", nil, "DEVICE_NOT_FOUND", "connection no longer exists")
+		} else {
+			s.workerError(err)
+			finish("queued", nil, "", "") // no provider request has been made
+			s.wait()
+		}
 		return
 	}
 	e, err := s.entry(d)
 	if err != nil {
 		finish("queued", nil, "", "")
+		// Disabling an adapter does not invalidate already accepted work. Wait
+		// before claiming again so an unavailable adapter cannot spin the queue.
+		s.wait()
 		return
 	}
 	e.mu.Lock()
@@ -134,6 +150,9 @@ func (s *Service) processOperation(op domains.Operation) {
 		return
 	}
 	ctx, cancel := context.WithTimeout(s.ctx, s.options.SendTimeout)
+	ctx = domains.WithOperationStageRecorder(ctx, func(stageCtx context.Context, stage domains.OperationStage) error {
+		return s.store.RecordOperationStage(stageCtx, op.ConnectionID, op.ID, op.Request.RequestID, stage)
+	})
 	started := time.Now()
 	var result domains.SendResult
 	if op.Request.Kind == "operation" {
@@ -178,65 +197,134 @@ func (s *Service) processOperation(op domains.Operation) {
 
 func (s *Service) reconnectLoop() {
 	defer s.wg.Done()
+	cursor := reconnectCursor{connections: make(map[domains.Provider]string)}
 	for s.ctx.Err() == nil {
-		s.mu.RLock()
-		entries := make(map[string]*clientEntry, len(s.clients))
-		for id, e := range s.clients {
-			entries[id] = e
-		}
-		s.mu.RUnlock()
-		for conn, e := range entries {
-			if !e.mu.TryLock() {
-				continue
-			}
-			if e.closed || !e.desired {
-				e.mu.Unlock()
-				continue
-			}
-			status := e.client.Status()
-			if status.Auth == "auth_required" {
-				e.desired = false
-				_ = s.store.ClearSession(s.ctx, conn)
-				e.mu.Unlock()
-				continue
-			}
-			if status.Transport == "connected" {
-				e.failures = 0
-				e.mu.Unlock()
-				continue
-			}
-			if time.Now().Before(e.nextConnect) {
-				e.mu.Unlock()
-				continue
-			}
-			select {
-			case s.reconnectSlots <- struct{}{}:
-				s.wg.Add(1)
-				go s.connectEntry(conn, e) // entry lock is intentionally transferred to worker
-			default:
-				e.mu.Unlock()
-			}
-		}
+		s.reconnectPass(&cursor)
 		if !s.wait() {
 			return
 		}
 	}
 }
-func (s *Service) connectEntry(conn string, e *clientEntry) {
-	defer s.busyWorker("reconnect")()
+
+// Nonblocking pool attempts have no queued waiter after they fail. Keep a
+// dispatch cursor across polls to fairly rotate providers and their connections.
+type reconnectCursor struct {
+	provider    domains.Provider
+	connections map[domains.Provider]string
+}
+
+func (s *Service) reconnectPass(cursor *reconnectCursor) {
+	providers, err := s.ActiveProviders(s.ctx)
+	if err != nil {
+		s.workerError(err)
+		return
+	}
+	s.reconnectPool.SetProviders(providers)
+	if len(providers) == 0 {
+		return
+	}
+	if cursor.connections == nil {
+		cursor.connections = make(map[domains.Provider]string)
+	}
+	s.mu.RLock()
+	entries := make(map[string]*clientEntry, len(s.clients))
+	connections := make(map[domains.Provider][]string, len(providers))
+	for conn, e := range s.clients {
+		entries[conn] = e
+		connections[e.provider] = append(connections[e.provider], conn)
+	}
+	s.mu.RUnlock()
+	for provider, ids := range connections {
+		sort.Strings(ids)
+		start := sort.SearchStrings(ids, cursor.connections[provider])
+		if start < len(ids) && ids[start] == cursor.connections[provider] {
+			start++
+		}
+		connections[provider] = append(append([]string(nil), ids[start:]...), ids[:start]...)
+	}
+	start := 0
+	for i, provider := range providers {
+		if provider == cursor.provider {
+			start = (i + 1) % len(providers)
+			break
+		}
+	}
+	providers = append(append([]domains.Provider(nil), providers[start:]...), providers[:start]...)
+	launched := 0
+	for launched < s.options.ReconnectWorkers {
+		progress := false
+		for _, provider := range providers {
+			for len(connections[provider]) > 0 {
+				conn := connections[provider][0]
+				connections[provider] = connections[provider][1:]
+				e := entries[conn]
+				if !e.mu.TryLock() {
+					continue
+				}
+				if e.closed || !e.desired {
+					e.mu.Unlock()
+					continue
+				}
+				status := e.client.Status()
+				if status.Auth == "auth_required" {
+					e.desired = false
+					e.setPersistenceActive(false)
+					s.workerError(s.store.ClearSession(s.ctx, conn))
+					e.mu.Unlock()
+					continue
+				}
+				if status.Transport == "connected" {
+					e.failures = 0
+					e.mu.Unlock()
+					continue
+				}
+				if time.Now().Before(e.nextConnect) {
+					e.mu.Unlock()
+					continue
+				}
+				release, acquired := s.reconnectPool.TryAcquireFor(provider, conn)
+				if !acquired {
+					e.mu.Unlock()
+					// Other connections cannot bypass this provider's quota.
+					connections[provider] = nil
+					break
+				}
+				cursor.provider, cursor.connections[provider] = provider, conn
+				launched++
+				progress = true
+				s.wg.Add(1)
+				go s.connectEntry(conn, e, release) // entry lock transfers to the worker
+				break
+			}
+			if launched == s.options.ReconnectWorkers {
+				return
+			}
+		}
+		if !progress {
+			return
+		}
+	}
+}
+func (s *Service) connectEntry(conn string, e *clientEntry, release func()) {
 	defer s.wg.Done()
-	defer func() { <-s.reconnectSlots }()
+	defer s.busyWorker("reconnect")()
+	defer release()
 	defer e.mu.Unlock()
 	ctx, cancel := context.WithTimeout(s.ctx, 30*time.Second)
 	defer cancel()
-	session, err := s.store.LoadSession(ctx, conn)
+	session, err := s.stopForReconnect(ctx, conn, e)
 	if err == nil && session == nil {
 		e.desired = false
 		return
 	}
 	if err == nil {
 		started := time.Now()
-		err = e.client.Connect(ctx, session, s.sink(conn))
+		var d domains.Device
+		d, err = s.store.DeviceByConnection(ctx, conn)
+		if err == nil {
+			e.setPersistenceActive(true)
+			err = s.connect(ctx, d, e.client, session)
+		}
 		s.observeReconnect(started, err != nil && s.ctx.Err() == nil)
 	}
 	if err != nil {
@@ -366,10 +454,10 @@ func (s *Service) deliver(d domains.Delivery) {
 		return
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-GoBale-Event-Id", d.EventID)
-	req.Header.Set("X-GoBale-Delivery-Id", d.ID)
+	req.Header.Set("X-GoOmni-Event-Id", d.EventID)
+	req.Header.Set("X-GoOmni-Delivery-Id", d.ID)
 	req.Header.Set("X-Webhook-Id", d.EventID)
-	req.Header.Set("User-Agent", "GoBale-Webhook/1")
+	req.Header.Set("User-Agent", "GoOmni-Webhook/1")
 	mac := hmac.New(sha256.New, []byte(d.Secret))
 	_, _ = mac.Write(d.Body)
 	req.Header.Set("X-Hub-Signature-256", "sha256="+hex.EncodeToString(mac.Sum(nil)))

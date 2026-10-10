@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"github.com/coder/websocket"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 	"sync"
+	"sync/atomic"
 	"testing"
 )
 
@@ -29,6 +30,7 @@ func TestRecoveryBaselineAndRestartCatchup(t *testing.T) {
 		}
 		return nil
 	}
+	var baselineSent atomic.Bool
 	var fake *fakeWS
 	fake = newFakeWS(t, func(ws *websocket.Conn, m *wire.ClientMessage) {
 		if m.Request == nil {
@@ -38,7 +40,9 @@ func TestRecoveryBaselineAndRestartCatchup(t *testing.T) {
 		switch r.Method {
 		case "GetRoutesStates":
 			// A pre-baseline update already admitted must commit before its marker.
-			fake.send(ws, &wire.ServerMessage{Update: &wire.UpdateEnvelope{Payload: marshal(t, &wire.StreamUpdate{Sequence: 5, Update: syntheticUpdate(t, 5)})}})
+			if !baselineSent.Swap(true) {
+				fake.send(ws, &wire.ServerMessage{Update: &wire.UpdateEnvelope{Payload: marshal(t, &wire.StreamUpdate{Sequence: 5, Update: syntheticUpdate(t, 5)})}})
+			}
 			fake.send(ws, &wire.ServerMessage{Response: &wire.Response{Index: r.Index, Payload: marshal(t, &wire.RoutesResponse{States: []*wire.RouteState{{Group: &wire.PeerRef{}, Sequence: 5}}})}})
 		case "GetDiff":
 			q := &wire.DiffRequest{}
@@ -93,6 +97,9 @@ func TestRecoveryDoesNotAdvanceBeforeSinkAndMarksTooLong(t *testing.T) {
 					return
 				}
 				r := m.Request
+				if recoveryInventoryFixture(t, fake, ws, r) {
+					return
+				}
 				reply := &wire.DiffResponse{Routes: []*wire.RouteDiff{{State: &wire.RouteState{Group: &wire.PeerRef{}, Sequence: 7}, Updates: [][]byte{syntheticUpdate(t, 6), syntheticUpdate(t, 7)}}}}
 				if tooLong {
 					reply.Routes[0].TooLong = &wire.BoolValue{Value: true}
@@ -137,6 +144,9 @@ func TestRecoveryStreamJumpReconcilesBeforeCurrent(t *testing.T) {
 			return
 		}
 		r := m.Request
+		if recoveryInventoryFixture(t, fake, ws, r) {
+			return
+		}
 		q := &wire.DiffRequest{}
 		_ = decode(r.Payload, q)
 		seq := q.States[0].Sequence
@@ -192,6 +202,9 @@ func TestUnsupportedStreamKeepsLiveConnectionAndContiguousCheckpoint(t *testing.
 		if m.Request == nil {
 			return
 		}
+		if recoveryInventoryFixture(t, fake, ws, m.Request) {
+			return
+		}
 		fake.send(ws, &wire.ServerMessage{Response: &wire.Response{Index: m.Request.Index, Payload: marshal(t, &wire.DiffResponse{Routes: []*wire.RouteDiff{{State: &wire.RouteState{Group: &wire.PeerRef{}, Sequence: 5}}}})}})
 	})
 	c := fake.client()
@@ -227,5 +240,86 @@ func TestUnsupportedStreamKeepsLiveConnectionAndContiguousCheckpoint(t *testing.
 	}
 	if len(diagnostics) != 1 || diagnostics[0] != "UPDATE_MESSAGE_INVALID" {
 		t.Fatalf("unsafe/missing diagnostic: %v", diagnostics)
+	}
+}
+
+func recoveryInventoryFixture(t *testing.T, fake *fakeWS, ws *websocket.Conn, r *wire.Request) bool {
+	if r.Method != "GetRoutesStates" {
+		return false
+	}
+	fake.send(ws, &wire.ServerMessage{Response: &wire.Response{Index: r.Index, Payload: marshal(t, &wire.RoutesResponse{States: []*wire.RouteState{{Group: &wire.PeerRef{}, Sequence: 99}}})}})
+	return true
+}
+
+func TestRestartDiscoversNewRoutesWithoutReplacingDurableCursors(t *testing.T) {
+	var mu sync.Mutex
+	saved := `{"version":1,"account":"12345","routes":{"0":5},"gap":true}`
+	var ids []string
+	var fake *fakeWS
+	fake = newFakeWS(t, func(ws *websocket.Conn, m *wire.ClientMessage) {
+		if m.Request == nil {
+			return
+		}
+		r := m.Request
+		if r.Method == "GetRoutesStates" {
+			fake.send(ws, &wire.ServerMessage{Response: &wire.Response{Index: r.Index, Payload: marshal(t, &wire.RoutesResponse{States: []*wire.RouteState{
+				{Group: &wire.PeerRef{}, Sequence: 99}, {Group: &wire.PeerRef{Id: 77}, Sequence: 8},
+			}})}})
+			return
+		}
+		if r.Method != "GetDiff" {
+			t.Errorf("unexpected method %s", r.Method)
+			return
+		}
+		q := &wire.DiffRequest{}
+		if decode(r.Payload, q) != nil || len(q.States) != 2 {
+			t.Error("both durable and discovered routes must be requested")
+			return
+		}
+		reply := &wire.DiffResponse{}
+		for _, s := range q.States {
+			want := int32(5)
+			if s.Group.Id == 77 {
+				want = 0
+			}
+			if s.Sequence != want {
+				t.Error("provider snapshot skipped unseen work")
+			}
+			d := &wire.RouteDiff{State: &wire.RouteState{Group: s.Group, Sequence: s.Sequence}}
+			if s.Group.Id == 77 {
+				d.State.Sequence = 8
+				d.Updates = [][]byte{syntheticUpdate(t, 8)}
+			}
+			reply.Routes = append(reply.Routes, d)
+		}
+		fake.send(ws, &wire.ServerMessage{Response: &wire.Response{Index: r.Index, Payload: marshal(t, reply)}})
+	})
+	c := fake.client()
+	c.opts.RecoveryVerified = true
+	c.opts.LoadCheckpoint = func(context.Context) (string, error) { mu.Lock(); defer mu.Unlock(); return saved, nil }
+	connectTest(t, c, func(_ context.Context, event domains.Event) error {
+		mu.Lock()
+		defer mu.Unlock()
+		if event.Checkpoint != "" {
+			saved = event.Checkpoint
+		}
+		if event.Type == "message" {
+			ids = append(ids, event.MessageID)
+		}
+		return nil
+	})
+	eventually(t, func() bool {
+		mu.Lock()
+		defer mu.Unlock()
+		var cp recoveryCheckpoint
+		_ = json.Unmarshal([]byte(saved), &cp)
+		return cp.Routes["77"] == 8
+	})
+	mu.Lock()
+	defer mu.Unlock()
+	var cp recoveryCheckpoint
+	_ = json.Unmarshal([]byte(saved), &cp)
+	if cp.Routes["0"] != 5 || !cp.Gap || len(ids) != 1 || ids[0] != "8" || c.Status().Recovery == "current" {
+		t.Fatal("route discovery overwrote a cursor, lost work or cleared a prior gap")
 	}
 }

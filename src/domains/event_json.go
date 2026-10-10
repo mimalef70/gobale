@@ -10,6 +10,14 @@ type eventRecord Event
 // gateway envelope. content retains only the existing reviewed native projection.
 // Other event families retain their own payload, including native receipts.
 func (e Event) MarshalJSON() ([]byte, error) {
+	if e.MessagePatch != nil {
+		return json.Marshal(struct {
+			eventRecord
+			MessagePatch *MessagePatch   `json:"message_patch,omitempty"`
+			Payload      *MessagePatch   `json:"payload"`
+			Content      json.RawMessage `json:"content"`
+		}{eventRecord: eventRecord(e), Payload: e.MessagePatch, Content: e.Payload})
+	}
 	if e.Message == nil {
 		return json.Marshal(eventRecord(e))
 	}
@@ -30,11 +38,25 @@ func (e *Event) UnmarshalJSON(data []byte) error {
 		return err
 	}
 	if len(record.Content) > 0 {
-		var message Message
-		if err := json.Unmarshal(record.Payload, &message); err != nil {
+		var projection struct {
+			Partial bool `json:"partial"`
+		}
+		if err := json.Unmarshal(record.Payload, &projection); err != nil {
 			return err
 		}
-		record.Message = &message
+		if projection.Partial {
+			var patch MessagePatch
+			if err := json.Unmarshal(record.Payload, &patch); err != nil {
+				return err
+			}
+			record.MessagePatch = &patch
+		} else {
+			var message Message
+			if err := json.Unmarshal(record.Payload, &message); err != nil {
+				return err
+			}
+			record.Message = &message
+		}
 		record.Payload = record.Content
 	}
 	*e = Event(record.eventRecord)

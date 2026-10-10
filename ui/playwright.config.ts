@@ -9,7 +9,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [['list']],
   use: {
-    baseURL: process.env.GOBALE_E2E_URL || 'http://127.0.0.1:15173/ui/',
+    baseURL: process.env.GOOMNI_E2E_URL || 'http://127.0.0.1:15173/ui/',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
@@ -18,7 +18,7 @@ export default defineConfig({
     { name: 'firefox', use: { ...devices['Desktop Firefox'] } },
     { name: 'webkit', use: { ...devices['Desktop Safari'] } },
   ],
-  webServer: process.env.GOBALE_E2E_URL
+  webServer: process.env.GOOMNI_E2E_URL
     ? undefined
     : {
         command: 'npm run dev -- --port 15173',

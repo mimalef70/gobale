@@ -9,19 +9,21 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"math"
 	"strconv"
+	"strings"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
-const operationColumns = `o.id,o.connection_id,d.alias,o.request,COALESCE(o.idempotency_key,''),o.payload_hash,o.state,o.result,o.error_code,o.error_message,o.created_at,o.updated_at,COALESCE((SELECT schedule_id FROM schedule_occurrences so WHERE so.operation_id=o.id AND so.connection_id=o.connection_id),''),(SELECT scheduled_for FROM schedule_occurrences so WHERE so.operation_id=o.id AND so.connection_id=o.connection_id)`
+const operationColumns = `o.id,o.connection_id,d.alias,d.provider,o.request,COALESCE(o.idempotency_key,''),o.payload_hash,o.state,o.result,o.error_code,o.error_message,o.created_at,o.updated_at,COALESCE((SELECT schedule_id FROM schedule_occurrences so WHERE so.operation_id=o.id AND so.connection_id=o.connection_id),''),(SELECT scheduled_for FROM schedule_occurrences so WHERE so.operation_id=o.id AND so.connection_id=o.connection_id)`
 
 func scanOperation(row scanner) (op domains.Operation, e error) {
 	var request string
 	var result sql.NullString
 	var created, updated int64
 	var scheduled sql.NullInt64
-	e = row.Scan(&op.ID, &op.ConnectionID, &op.DeviceID, &request, &op.IdempotencyKey, &op.PayloadHash, &op.State, &result, &op.ErrorCode, &op.ErrorMessage, &created, &updated, &op.ScheduleID, &scheduled)
+	e = row.Scan(&op.ID, &op.ConnectionID, &op.DeviceID, &op.Provider, &request, &op.IdempotencyKey, &op.PayloadHash, &op.State, &result, &op.ErrorCode, &op.ErrorMessage, &created, &updated, &op.ScheduleID, &scheduled)
 	if e != nil {
 		return op, dbError(e)
 	}
@@ -150,8 +152,21 @@ func (s *Store) enqueue(ctx context.Context, conn string, req domains.SendReques
 	return op, created, s.commitTx(tx)
 }
 
-// ClaimOperations picks at most one queued operation per device. A provider call
-// is never made until the sending transition has committed.
+// SetSendConcurrency configures admission to provider calls. Configure before
+// starting workers. Each provider with active connections gets a bounded share;
+// a disconnected provider cannot occupy every worker in a mixed installation.
+func (s *Store) SetSendConcurrency(workers int) {
+	s.dispatchMu.Lock()
+	defer s.dispatchMu.Unlock()
+	if workers < 1 {
+		workers = 1
+	}
+	s.sendConcurrency = workers
+}
+
+// ClaimOperations persists both the sending transition and the dispatch turn
+// before a provider call. Fair turns survive restart and retained history does
+// not participate in selecting the next connection.
 func (s *Store) claimOperations(ctx context.Context, limit int) ([]domains.Operation, error) {
 	if limit <= 0 {
 		limit = 50
@@ -159,42 +174,94 @@ func (s *Store) claimOperations(ctx context.Context, limit int) ([]domains.Opera
 	if limit > 500 {
 		limit = 500
 	}
+	s.dispatchMu.Lock()
+	defer s.dispatchMu.Unlock()
 	tx, e := s.beginTx(ctx)
 	if e != nil {
 		return nil, e
 	}
 	defer s.rollbackTx(tx)
-	rows, e := tx.QueryContext(ctx, `SELECT `+operationColumns+` FROM operations o JOIN devices d ON d.connection_id=o.connection_id
- WHERE o.state='queued' AND d.deleted_at IS NULL
- AND NOT EXISTS(SELECT 1 FROM operations p WHERE p.connection_id=o.connection_id AND p.state='sending')
- AND NOT EXISTS(SELECT 1 FROM operations p WHERE p.connection_id=o.connection_id AND p.state='queued' AND p.queue_order<o.queue_order)
- ORDER BY o.updated_at,o.queue_order LIMIT ?`, limit)
+	active := map[domains.Provider]int{}
+	total := 0
+	rows, e := tx.QueryContext(ctx, `SELECT d.provider,COUNT(*) FROM operations o JOIN devices d ON d.connection_id=o.connection_id WHERE o.state='sending' AND d.deleted_at IS NULL GROUP BY d.provider`)
 	if e != nil {
 		return nil, e
 	}
-	ops := []domains.Operation{}
 	for rows.Next() {
-		op, e := scanOperation(rows)
-		if e != nil {
+		var provider domains.Provider
+		var count int
+		if e = rows.Scan(&provider, &count); e != nil {
 			rows.Close()
 			return nil, e
 		}
-		ops = append(ops, op)
+		active[provider] = count
+		total += count
 	}
 	e = rows.Err()
 	rows.Close()
 	if e != nil {
 		return nil, e
 	}
-	t := now()
-	for i := range ops {
-		if _, e = tx.ExecContext(ctx, `UPDATE operations SET state='sending',updated_at=? WHERE id=? AND state='queued'`, t, ops[i].ID); e != nil {
+	budget := 500
+	if s.sendConcurrency > 0 {
+		var providers int
+		if e = tx.QueryRowContext(ctx, `SELECT COUNT(DISTINCT provider) FROM devices WHERE deleted_at IS NULL`).Scan(&providers); e != nil {
 			return nil, e
 		}
-		ops[i].State = "sending"
-		ops[i].UpdatedAt = stamp(t)
+		budget = max(1, s.sendConcurrency/max(1, providers))
 	}
-	return ops, s.commitTx(tx)
+	var turn int64
+	if e = tx.QueryRowContext(ctx, `SELECT COALESCE(MAX(last_claim),0) FROM connection_dispatch`).Scan(&turn); e != nil {
+		return nil, e
+	}
+	ops := []domains.Operation{}
+	for len(ops) < limit && (s.sendConcurrency == 0 || total < s.sendConcurrency) {
+		allowed := []any{}
+		for _, provider := range []domains.Provider{domains.ProviderBale, domains.ProviderEitaa, domains.ProviderRubika} {
+			if active[provider] < budget {
+				allowed = append(allowed, provider)
+			}
+		}
+		if len(allowed) == 0 {
+			break
+		}
+		placeholders := strings.TrimSuffix(strings.Repeat("?,", len(allowed)), ",")
+		query := `SELECT ` + operationColumns + ` FROM operations o JOIN devices d ON d.connection_id=o.connection_id
+ LEFT JOIN connection_dispatch cd ON cd.connection_id=o.connection_id
+ LEFT JOIN (SELECT owner.provider,MAX(turns.last_claim) AS last_claim FROM connection_dispatch turns JOIN devices owner ON owner.connection_id=turns.connection_id GROUP BY owner.provider) pd ON pd.provider=d.provider
+ WHERE o.state='queued' AND d.deleted_at IS NULL AND d.provider IN (` + placeholders + `)
+ AND NOT EXISTS(SELECT 1 FROM operations p WHERE p.connection_id=o.connection_id AND p.state='sending')
+ AND NOT EXISTS(SELECT 1 FROM operations p WHERE p.connection_id=o.connection_id AND p.state='queued' AND p.queue_order<o.queue_order)
+ ORDER BY (SELECT COUNT(*) FROM operations running JOIN devices owner ON owner.connection_id=running.connection_id WHERE running.state='sending' AND owner.provider=d.provider),COALESCE(pd.last_claim,0),COALESCE(cd.last_claim,0),o.updated_at,o.queue_order LIMIT 1`
+		op, err := scanOperation(tx.QueryRowContext(ctx, query, allowed...))
+		if err != nil {
+			var de *domains.Error
+			if errors.As(err, &de) && de.Code == "NOT_FOUND" {
+				break
+			}
+			return nil, err
+		}
+		t := now()
+		if _, e = tx.ExecContext(ctx, `UPDATE operations SET state='sending',updated_at=? WHERE id=? AND state='queued'`, t, op.ID); e != nil {
+			return nil, e
+		}
+		if turn == math.MaxInt64 {
+			return nil, domains.E("DISPATCH_LIMIT", "dispatch sequence exhausted", 500)
+		}
+		turn++
+		if _, e = tx.ExecContext(ctx, `INSERT INTO connection_dispatch(connection_id,last_claim) VALUES(?,?) ON CONFLICT(connection_id) DO UPDATE SET last_claim=excluded.last_claim`, op.ConnectionID, turn); e != nil {
+			return nil, e
+		}
+		op.State = "sending"
+		op.UpdatedAt = stamp(t)
+		ops = append(ops, op)
+		active[op.Provider]++
+		total++
+	}
+	if e = s.commitTx(tx); e != nil {
+		return nil, e
+	}
+	return ops, nil
 }
 func (s *Store) finishOperation(ctx context.Context, conn, id, state string, result *domains.SendResult, code, message string) error {
 	switch state {

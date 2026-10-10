@@ -13,21 +13,21 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 )
 
 // This measures real client transports against a local protocol fixture. It
 // deliberately makes no claim about provider limits or live account capacity.
 func TestOptionalNativeCapacity(t *testing.T) {
-	if os.Getenv("GOBALE_NATIVE_CAPACITY") == "" {
-		t.Skip("set GOBALE_NATIVE_CAPACITY=1 for isolated transport capacity")
+	if os.Getenv("GOOMNI_NATIVE_CAPACITY") == "" {
+		t.Skip("set GOOMNI_NATIVE_CAPACITY=1 for isolated transport capacity")
 	}
 	accounts := 300
-	if raw := os.Getenv("GOBALE_SOAK_ACCOUNTS"); raw != "" {
+	if raw := os.Getenv("GOOMNI_SOAK_ACCOUNTS"); raw != "" {
 		n, err := strconv.Atoi(raw)
 		if err != nil || n < 1 || n > 1000 {
-			t.Fatal("GOBALE_SOAK_ACCOUNTS must be 1..1000")
+			t.Fatal("GOOMNI_SOAK_ACCOUNTS must be 1..1000")
 		}
 		accounts = n
 	}
@@ -50,6 +50,9 @@ func TestOptionalNativeCapacity(t *testing.T) {
 			fake.send(ws, &wire.ServerMessage{Response: &wire.Response{Index: r.Index, Payload: marshal(t, &wire.DiffResponse{Routes: []*wire.RouteDiff{{State: &wire.RouteState{Group: &wire.PeerRef{}, Sequence: 1}}}})}})
 		case "MessageRead":
 			fake.send(ws, &wire.ServerMessage{Response: &wire.Response{Index: r.Index, Payload: marshal(t, &wire.Empty{})}})
+		case "GetContacts":
+			// Incoming updates resolve their sender through the selected account.
+			fake.send(ws, &wire.ServerMessage{Response: &wire.Response{Index: r.Index, Payload: marshal(t, &wire.ContactsResponse{Users: []*wire.User{{Id: 42, AccessHash: 91, Name: "Synthetic contact"}}})}})
 		default:
 			t.Errorf("unexpected fixture RPC %s", r.Method)
 		}
@@ -144,7 +147,7 @@ func TestOptionalNativeCapacity(t *testing.T) {
 	}
 	report, _ := json.Marshal(map[string]any{"measurement_scope": "local protocol fixture, real balemeow clients; not live provider capacity", "accounts": accounts, "connect_workers": 4, "initial_connect_seconds": first.Seconds(), "reconnect_seconds": reconnected.Seconds(), "rpc_calls": rpc.Load(), "updates": updates.Load(), "passed": !t.Failed()})
 	t.Log(string(report))
-	if path := os.Getenv("GOBALE_SOAK_RESULT"); path != "" {
+	if path := os.Getenv("GOOMNI_SOAK_RESULT"); path != "" {
 		if err := os.WriteFile(path, append(report, '\n'), 0600); err != nil {
 			t.Fatal(err)
 		}

@@ -14,13 +14,16 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/providers/bale"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/infrastructure/workpool"
 )
 
 // Options controls bounded background work. The gateway must remain behind an
 // authenticated service boundary; organization/operator authorization belongs to the consuming application.
 type Options struct {
+	Providers            *domains.ProviderRegistry
 	GlobalWebhooks       []storage.WebhookTarget
 	GlobalWebhookEvents  []string
 	MergeGlobal          bool
@@ -35,6 +38,11 @@ type Options struct {
 }
 
 type clientEntry struct {
+	provider          domains.Provider
+	persistMu         sync.Mutex
+	persistGeneration uint64
+	persistActive     bool
+	persistSession    domains.SessionPersister
 	mu                sync.Mutex   // serializes sends and lifecycle transitions for this account
 	clientMu          sync.RWMutex // short lock for status snapshots when lifecycle work is in progress
 	client            domains.Client
@@ -48,23 +56,34 @@ type clientEntry struct {
 }
 
 type Service struct {
-	store          *storage.Store
-	options        Options
-	factory        domains.ClientFactory
-	lifecycleMu    sync.Mutex
-	mu             sync.RWMutex
-	clients        map[string]*clientEntry
-	ctx            context.Context
-	cancel         context.CancelFunc
-	started        bool
-	closed         bool
-	wg             sync.WaitGroup
-	done           chan struct{}
-	reconnectSlots chan struct{}
-	metrics        workerMetrics
+	store         *storage.Store
+	options       Options
+	factory       domains.ClientFactory
+	lifecycleMu   sync.Mutex
+	mu            sync.RWMutex
+	clients       map[string]*clientEntry
+	ctx           context.Context
+	cancel        context.CancelFunc
+	started       bool
+	closed        bool
+	wg            sync.WaitGroup
+	done          chan struct{}
+	reconnectPool *workpool.Pool
+	metrics       workerMetrics
 }
 
 func New(store *storage.Store, options Options, factory domains.ClientFactory) *Service {
+	if options.Providers == nil {
+		options.Providers, _ = domains.NewProviderRegistry(domains.ProviderRegistration{Contract: bale.Contract{}, Factory: factory})
+	}
+	originalRegistry := options.Providers
+	factory = func(d domains.Device) domains.Client {
+		r, err := originalRegistry.Get(d.Provider)
+		if err != nil || r.Factory == nil {
+			return nil
+		}
+		return r.Factory(d)
+	}
 	if options.QueueLimit <= 0 {
 		options.QueueLimit = 1000
 	}
@@ -99,7 +118,10 @@ func New(store *storage.Store, options Options, factory domains.ClientFactory) *
 		copyClient.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
 		options.WebhookClient = &copyClient
 	}
-	return &Service{store: store, options: options, factory: factory, clients: make(map[string]*clientEntry), done: make(chan struct{}), reconnectSlots: make(chan struct{}, options.ReconnectWorkers)}
+	if store != nil {
+		store.SetSendConcurrency(options.SendWorkers)
+	}
+	return &Service{store: store, options: options, factory: factory, clients: make(map[string]*clientEntry), done: make(chan struct{}), reconnectPool: workpool.New(options.ReconnectWorkers)}
 }
 
 func (s *Service) Start(ctx context.Context) error {
@@ -124,6 +146,9 @@ func (s *Service) Start(ctx context.Context) error {
 		return err
 	}
 	for _, device := range devices {
+		if _, err := s.provider(device.Provider); err != nil {
+			continue
+		}
 		entry, err := s.entry(device)
 		if err != nil {
 			return err
@@ -132,6 +157,7 @@ func (s *Service) Start(ctx context.Context) error {
 		session, loadErr := s.store.LoadSession(ctx, device.ConnectionID)
 		if loadErr == nil {
 			entry.desired = session != nil
+			entry.setPersistenceActive(session != nil)
 		}
 		entry.mu.Unlock()
 		if loadErr != nil {
@@ -180,6 +206,7 @@ func (s *Service) Close(ctx context.Context) error {
 					e.closed = true
 					e.clearAuthMetadata()
 					e.desired = false
+					e.setPersistenceActive(false)
 					callCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 					defer cancel()
 					_ = e.client.Disconnect(callCtx)
@@ -210,7 +237,16 @@ func (s *Service) entry(device domains.Device) (*clientEntry, error) {
 	}
 	entry := s.clients[device.ConnectionID]
 	if entry == nil {
-		entry = &clientEntry{client: s.factory(device)}
+		if _, err := s.provider(device.Provider); err != nil {
+			return nil, err
+		}
+		entry = &clientEntry{provider: device.Provider, client: s.factory(device), persistSession: func(ctx context.Context, next *domains.Session) error {
+			return s.store.UpdateSession(ctx, device.ConnectionID, next)
+		}}
+		if entry.client == nil {
+			return nil, domains.E("SERVICE_CONFIGURATION", "provider factory returned no client", 500)
+		}
+		entry.attachSessionPersistence(entry.client)
 		s.clients[device.ConnectionID] = entry
 	}
 	return entry, nil
@@ -234,14 +270,17 @@ func (s *Service) ResolveDevice(ctx context.Context, id string) (domains.Device,
 	}
 	return devices[0], nil
 }
-func (s *Service) CreateDevice(ctx context.Context, id string) (domains.Device, error) {
+func (s *Service) CreateDevice(ctx context.Context, id string, provider domains.Provider) (domains.Device, error) {
 	if strings.TrimSpace(id) == "" {
 		return domains.Device{}, domains.E("INVALID_DEVICE_ID", "device id is required", 400)
 	}
 	if len(id) > 128 || strings.TrimSpace(id) != id || strings.ContainsAny(id, "/\\\x00\r\n") {
 		return domains.Device{}, domains.E("INVALID_DEVICE_ID", "device id must be 1–128 characters without path separators or surrounding whitespace", 400)
 	}
-	return s.store.CreateDevice(ctx, id)
+	if _, err := s.provider(provider); err != nil {
+		return domains.Device{}, err
+	}
+	return s.store.CreateDevice(ctx, id, provider)
 }
 func (s *Service) ListDevices(ctx context.Context) ([]domains.Device, error) {
 	return s.store.ListDevices(ctx)
@@ -254,6 +293,9 @@ func (s *Service) DeleteDevice(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
+	if !s.providerEnabled(device.Provider) {
+		return s.store.DeleteDevice(ctx, device.ConnectionID)
+	}
 	e, err := s.entry(device)
 	if err != nil {
 		return err
@@ -262,6 +304,7 @@ func (s *Service) DeleteDevice(ctx context.Context, id string) error {
 	defer e.mu.Unlock()
 	e.desired = false
 	e.closed = true
+	e.setPersistenceActive(false)
 	e.clearAuthMetadata()
 	if err := s.store.DeleteDevice(ctx, device.ConnectionID); err != nil {
 		e.closed = false
@@ -331,7 +374,7 @@ func (s *Service) StartAuth(ctx context.Context, id, phone string) (domains.Chal
 	}
 	e.authMetaMu.Lock()
 	e.resendAvailableAt = resendAt
-	e.challenge = &domains.PublicChallenge{ID: challenge.ID, ExpiresAt: challenge.ExpiresAt, ResendAvailableAt: resendAt, SentCodeType: challenge.SentCodeType, NextSendCodeType: challenge.NextSendCodeType, AvailableSendCodeTypes: append([]int32{}, challenge.AvailableSendCodeTypes...), MaskedPhone: maskedPhone(phone)}
+	e.challenge = &domains.PublicChallenge{ID: challenge.ID, ExpiresAt: challenge.ExpiresAt, ResendAvailableAt: resendAt, SentCodeType: challenge.SentCodeType, NextSendCodeType: challenge.NextSendCodeType, AvailableSendCodeTypes: append([]int32{}, challenge.AvailableSendCodeTypes...), Delivery: challenge.Delivery, NextDelivery: challenge.NextDelivery, AvailableDeliveries: append([]string{}, challenge.AvailableDeliveries...), MaskedPhone: maskedPhone(phone)}
 	e.authMetaMu.Unlock()
 	return challenge, nil
 }
@@ -378,11 +421,18 @@ func (s *Service) submitAuth(ctx context.Context, id, challenge, value string, p
 		return e.adminStatus(time.Now()), safeError(err)
 	}
 	if session == nil {
+		if source, ok := e.client.(domains.AuthChallengeSource); ok {
+			e.refreshChallenge(source.CurrentChallenge())
+		}
 		return cleanStatus(e.client.Status()), nil
 	}
 	e.clearAuthMetadata()
-	if session.UserID == "" || session.Token == "" {
-		return cleanStatus(e.client.Status()), domains.E("INVALID_PROVIDER_SESSION", "provider did not return a complete session", 502)
+	contract, contractErr := s.provider(d.Provider)
+	if contractErr != nil {
+		return cleanStatus(e.client.Status()), contractErr
+	}
+	if err = contract.ValidateSession(session); err != nil {
+		return cleanStatus(e.client.Status()), err
 	}
 	if err = s.store.SaveSession(ctx, d.ConnectionID, session); err != nil {
 		_ = e.client.Disconnect(ctx)
@@ -393,7 +443,8 @@ func (s *Service) submitAuth(ctx context.Context, id, challenge, value string, p
 	e.desired = true
 	e.failures = 0
 	e.nextConnect = time.Time{}
-	err = e.client.Connect(ctx, session, s.sink(d.ConnectionID))
+	e.setPersistenceActive(true)
+	err = s.connect(ctx, d, e.client, session)
 	if err != nil {
 		e.failures++
 		e.nextConnect = time.Now().Add(reconnectDelay(e.failures))
@@ -411,21 +462,19 @@ func (s *Service) Reconnect(ctx context.Context, id string) error {
 	}
 	e.mu.Lock()
 	defer e.mu.Unlock()
-	session, err := s.store.LoadSession(ctx, d.ConnectionID)
+	if e.closed {
+		return domains.E("DEVICE_NOT_FOUND", "device no longer exists", 404)
+	}
+	session, err := s.stopForReconnect(ctx, d.ConnectionID, e)
 	if err != nil {
 		return err
 	}
 	if session == nil {
 		return domains.E("AUTH_REQUIRED", "connect the account first", 409)
 	}
-	if e.closed {
-		return domains.E("DEVICE_NOT_FOUND", "device no longer exists", 404)
-	}
 	e.desired = true
-	if err = e.client.Disconnect(ctx); err != nil {
-		return safeError(err)
-	}
-	err = e.client.Connect(ctx, session, s.sink(d.ConnectionID))
+	e.setPersistenceActive(true)
+	err = s.connect(ctx, d, e.client, session)
 	if err != nil {
 		e.failures++
 		e.nextConnect = time.Now().Add(reconnectDelay(e.failures))
@@ -440,6 +489,12 @@ func (s *Service) Logout(ctx context.Context, id string) error {
 	if err != nil {
 		return err
 	}
+	if !s.providerEnabled(d.Provider) {
+		if err := s.store.LogoutConnection(ctx, d.ConnectionID); err != nil {
+			return err
+		}
+		return domains.E("REMOTE_LOGOUT_UNCONFIRMED", "local session cleared; remote logout could not be confirmed", 502)
+	}
 	e, err := s.entry(d)
 	if err != nil {
 		return err
@@ -447,6 +502,7 @@ func (s *Service) Logout(ctx context.Context, id string) error {
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	e.desired = false
+	e.setPersistenceActive(false)
 	e.clearAuthMetadata()
 	remoteErr := e.client.Logout(ctx)
 	_ = e.client.Disconnect(ctx)
@@ -471,25 +527,22 @@ func (s *Service) Call(ctx context.Context, id, operation string, payload json.R
 	if err != nil {
 		return nil, err
 	}
-	if isDurableMutation(operation) {
-		return nil, domains.E("DURABLE_OPERATION_REQUIRED", "use the durable mutation endpoint with an Idempotency-Key", 409)
+	contract, err := s.provider(d.Provider)
+	if err != nil {
+		return nil, err
 	}
-	contract, extension := domains.OperationDefinition(operation)
-	if !allowedCalls[operation] && !extension {
+	definition, ok := operationDefinition(contract, operation)
+	if !ok {
 		return nil, domains.Unsupported(operation)
 	}
-	if len(payload) > 1<<20 || (len(payload) > 0 && !json.Valid(payload)) {
-		return nil, domains.E("INVALID_REQUEST", "payload must be valid JSON up to 1 MiB", 400)
+	if definition.Mode == "mutation" {
+		return nil, domains.E("DURABLE_OPERATION_REQUIRED", "use the durable mutation endpoint with an Idempotency-Key", 409)
 	}
-	if extension {
-		if contract.Mode != "read" && contract.Mode != "ephemeral" {
-			return nil, domains.Unsupported(operation)
-		}
-		payload, _, err = domains.NormalizeOperation(operation, payload)
-		if err != nil {
-			return nil, err
-		}
+	payload, _, err = contract.NormalizeOperation(operation, payload)
+	if err != nil {
+		return nil, err
 	}
+
 	e.mu.Lock()
 	defer e.mu.Unlock()
 	if e.closed {
@@ -497,12 +550,6 @@ func (s *Service) Call(ctx context.Context, id, operation string, payload json.R
 	}
 	result, err := e.client.Call(ctx, operation, payload)
 	return result, safeError(err)
-}
-
-var allowedCalls = map[string]bool{
-	"chat.history": true, "chat.messages": true, "chat.list": true, "chats": true,
-	"group.list": true, "group.members": true, "contacts.list": true, "contacts.search": true,
-	"group.info": true, "group.link": true, "account.info": true,
 }
 
 func (s *Service) GetWebhook(ctx context.Context, id string) (domains.WebhookConfig, error) {
@@ -542,6 +589,15 @@ func (s *Service) PatchWebhook(ctx context.Context, id string, patch domains.Web
 			}
 		}
 	}
+	if patch.Filter != nil {
+		contract, err := s.provider(d.Provider)
+		if err != nil {
+			return domains.WebhookConfig{}, err
+		}
+		if err = validateFilter(contract, *patch.Filter); err != nil {
+			return domains.WebhookConfig{}, err
+		}
+	}
 	return s.store.PatchWebhook(ctx, d.ConnectionID, patch)
 }
 func validateWebhookURL(value string) error {
@@ -571,6 +627,13 @@ func (s *Service) sink(connection string) domains.Sink {
 		}
 		if event.AccountID != "" && d.AccountID != "" && event.AccountID != d.AccountID {
 			return domains.E("EVENT_ACCOUNT_MISMATCH", "event account does not match connection", 409)
+		}
+		if event.Provider != "" && event.Provider != d.Provider {
+			return domains.E("EVENT_PROVIDER_MISMATCH", "event provider does not match connection", 409)
+		}
+		event.Provider = d.Provider
+		if err := event.ValidateMessageProjection(); err != nil {
+			return err
 		}
 		event.SessionID = d.ID
 		event.AccountID = d.AccountID
@@ -672,7 +735,7 @@ func safeCode(code string) string {
 }
 func cleanStatus(status domains.ConnectionStatus) domains.ConnectionStatus {
 	switch status.LastError {
-	case "", "CONNECT_FAILED", "CONNECTION_LOST", "SESSION_REVOKED", "HANDSHAKE_FAILED", "WRITE_FAILED", "PROTOCOL_ERROR", "UPDATE_PROTOCOL_ERROR", "HEARTBEAT_TIMEOUT", "HEARTBEAT_FAILED", "EVENT_CONTEXT_MISSING", "EVENT_PERSIST_FAILED", "EVENT_BACKPRESSURE", "EVENT_DRAIN_INCOMPLETE", "RECOVERY_FAILED", "RECOVERY_GAP":
+	case "", "CONNECT_FAILED", "CONNECTION_LOST", "SESSION_REVOKED", "HANDSHAKE_FAILED", "WRITE_FAILED", "PROTOCOL_ERROR", "UPDATE_PROTOCOL_ERROR", "UPDATE_ACCEPTANCE_FAILED", "HEARTBEAT_TIMEOUT", "HEARTBEAT_FAILED", "EVENT_CONTEXT_MISSING", "EVENT_PERSIST_FAILED", "EVENT_BACKPRESSURE", "EVENT_DRAIN_INCOMPLETE", "RECOVERY_FAILED", "RECOVERY_GAP":
 		return status
 	}
 	for _, prefix := range []string{"WS_CLOSE_", "CONNECTION_CLOSED_"} {
@@ -717,6 +780,7 @@ func diagnostic(err error) string {
 }
 
 func (e *clientEntry) setClient(client domains.Client) {
+	e.attachSessionPersistence(client)
 	e.clearAuthMetadata()
 	e.clientMu.Lock()
 	e.client = client

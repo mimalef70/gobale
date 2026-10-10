@@ -1,20 +1,18 @@
-# Operating GoBale
+# Operating GoOmni
 
-This guide describes GoBale 2.2.0. Its HTTP fields and webhook envelope change the
-2.1 contract; account-instance guards and idempotency keys also change the 1.x API.
-Coordinate consumer updates and
-back up storage before upgrading. See [Backup, restore and upgrades](#backup-restore-and-upgrades).
-Use the documentation at the same tag as your installed artifact. The hosted API
-reference is deployed from `main` and can become newer than a published release.
+This guide describes GoOmni 2.3.0. Existing data remains owned by one process;
+stop the old service and copy the complete storage and master key before
+upgrading. The [GoBale upgrade guide](upgrade-goomni.md) covers paths, volumes,
+consumer contracts and rollback without losing accepted work.
 
-For installation, use the [README](../readme.md#how-to-use). Endpoint contracts are
+For installation, use the [README](../README.md#how-to-use). Endpoint contracts are
 in [OpenAPI](openapi.yaml); delivery behavior is in
 [Webhook payloads](webhook-payload.md).
 
 ## Configuration reference
 
 Precedence is **CLI flags → environment variables → `.env` in the working
-directory → defaults**. `gobale init` generates `.env` and `master.key` with private
+directory → defaults**. `goomni init` generates `.env` and `master.key` with private
 permissions and refuses to overwrite existing files. Relative database, media and
 key paths resolve from the process's working directory. Keep credentials out of
 command-line arguments, logs and public issues.
@@ -27,7 +25,7 @@ command-line arguments, logs and public issues.
 | `APP_UI_ENABLED` | `--ui-enabled` | `true` | Serve the embedded administrative panel |
 | `APP_UI_PUBLIC_ORIGIN` | `--ui-public-origin` | empty | Exact external HTTPS origin, e.g. `https://gateway.example.com`; no trailing slash or path |
 | `APP_BASIC_AUTH` | `--basic-auth` | empty; required | One administrative `username:password`, both parts nonempty |
-| `APP_DATABASE` | `--database` | `storages/gobale.db` | SQLite path |
+| `APP_DATABASE` | `--database` | `storages/goomni.db` | SQLite path |
 | `APP_MEDIA_ROOT` | `--media-root` | `storages/media` | Private media directory |
 | `APP_MASTER_KEY_FILE` | `--master-key-file` | empty | File with a base64-encoded 32-byte encryption key |
 | `APP_MASTER_KEY` | `--master-key` | empty; required without key file | Base64-encoded 32-byte encryption key |
@@ -36,9 +34,20 @@ command-line arguments, logs and public issues.
 | `BALE_API_VERSION` | `--bale-api-version` | `173855` | Reviewed web-client API version |
 | `BALE_GRPC_ENDPOINT` | `--grpc-endpoint` | `https://next-ws.bale.ai` | gRPC-Web endpoint |
 | `BALE_WS_ENDPOINT` | `--ws-endpoint` | `wss://next-ws.bale.ai/ws/` | WebSocket endpoint |
-| `BALE_WEBHOOK` | `--webhook` | empty | Comma-separated global fallback HTTP(S) URLs |
-| `BALE_WEBHOOK_SECRET` | `--webhook-secret` | empty | Required HMAC secret when global URLs are set |
-| `BALE_WEBHOOK_DEVICE_MERGE_GLOBAL` | `--webhook-device-merge-global` | `false` | Deliver to globals alongside a device override |
+| `EITAA_ENABLED` | `--eitaa-enabled` | `false` | Opt in to the native Eitaa adapter; live acceptance pending |
+| `EITAA_ENDPOINT` | `--eitaa-endpoint` | `https://hasan.eitaa.ir/eitaa/` | Authenticated HTTP TL endpoint |
+| `EITAA_UPLOAD_ENDPOINT` | `--eitaa-upload-endpoint` | `https://alzheimer.eitaa.com/eitaa/` | Fixed endpoint for the complete upload transaction |
+| `EITAA_DOWNLOAD_ENDPOINT` | `--eitaa-download-endpoint` | `https://mohsen.eitaa.com/eitaa/` | Authenticated media download endpoint |
+| `EITAA_API_ID` | `--eitaa-api-id` | `2496` | Reviewed public web application ID |
+| `EITAA_API_HASH` | `--eitaa-api-hash` | Reviewed public web application hash | Matching public client identity; not an account session |
+| `EITAA_POLL_INTERVAL` | `--eitaa-poll-interval` | `5s` | Account/channel difference polling, 1s–5m |
+| `RUBIKA_ENABLED` | `--rubika-enabled` | `false` | Opt in to the native Rubika adapter; live acceptance pending |
+| `RUBIKA_DISCOVERY_ENDPOINT` | `--rubika-discovery-endpoint` | `https://getdcmess.iranlms.ir/` | Data-center discovery endpoint |
+| `RUBIKA_API_ENDPOINT` | `--rubika-api-endpoint` | empty | Optional override of the discovered API endpoint |
+| `RUBIKA_SOCKET_ENDPOINT` | `--rubika-socket-endpoint` | empty | Optional override of the discovered update WebSocket endpoint |
+| `APP_WEBHOOK` | `--webhook` | empty | Comma-separated global fallback HTTP(S) URLs |
+| `APP_WEBHOOK_SECRET` | `--webhook-secret` | empty | Required HMAC secret when global URLs are set |
+| `APP_WEBHOOK_DEVICE_MERGE_GLOBAL` | `--webhook-device-merge-global` | `false` | Deliver to globals alongside a device override |
 | `APP_SEND_WORKERS` | `--send-workers` | `4` | 1–64 globally; one active send per connection |
 | `APP_WEBHOOK_WORKERS` | `--webhook-workers` | `8` | 1–64 delivery workers |
 | `APP_RECONNECT_WORKERS` | `--reconnect-workers` | `4` | 1–4 concurrent reconnects |
@@ -54,25 +63,149 @@ this key separately backed up: a newly generated key cannot recover existing
 sessions. Sessions and stored secrets are encrypted; message bodies and ordinary
 media are not application-encrypted. Protect the data directory and backups.
 
-`gobale init --bale-web-client` explicitly opts in to the public application
+`goomni init --bale-web-client` explicitly opts in to the public application
 identity shipped by the reviewed Bale web client. It does not copy a browser
 session or authenticate an account. Omit the flag to configure another verified
 identity locally. Changing API-version or endpoint values does not establish
 protocol compatibility.
 
 `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY` apply to provider/webhook transports;
-they have no GoBale CLI flags. Media fetched from a caller-supplied URL uses direct,
+they have no GoOmni CLI flags. Media fetched from a caller-supplied URL uses direct,
 destination-checked requests. Worker values are configurable bounds, not measured
-Bale account capacity.
+messenger account capacity.
 
 The table lists native defaults. The Docker image listens on `0.0.0.0:3000` and
-uses `/app/storages/gobale.db` and `/app/storages/media`. Compose keeps that internal
+uses `/app/storages/goomni.db` and `/app/storages/media`. Compose keeps that internal
 port fixed; `APP_PORT` selects the published localhost port. It passes the master
 key value and fixes the container storage paths, with `APP_MASTER_KEY_FILE` empty.
-Host values of `APP_DATABASE`, `APP_MEDIA_ROOT` and `APP_MASTER_KEY_FILE` are not
-forwarded. `GOBALE_IMAGE` selects the Compose image, not a GoBale setting; explicitly
-use `gobale:local` for a development build. Compose's default image is
-`ghcr.io/mimalef70/gobale:v2.2.0`; `mimalef70/gobale:v2.2.0` selects Docker Hub.
+`APP_DATABASE` and `APP_MEDIA_ROOT` can override the defaults and must name paths
+inside the container. `APP_MASTER_KEY_FILE` is not forwarded. `APP_IMAGE` selects
+the Compose image, not a runtime gateway setting. Its default is
+`docker.io/mimalef70/goomni:v2.3.0`; `APP_DATA_VOLUME` selects the actual named
+volume, defaulting to `goomni-data` for a new installation. Set it to the existing
+volume when upgrading. For a local image use `APP_IMAGE=goomni:dev` with
+`docker compose build`.
+
+## Provider availability
+
+`GET /app/providers` reports enabled adapters for the exact running build. This
+source build enables Bale by default. Eitaa and Rubika have native adapters,
+disabled by default with `EITAA_ENABLED=false` and `RUBIKA_ENABLED=false`. Their
+synthetic fixtures are not live acceptance. A disabled provider cannot provision
+a new connection; it never falls back to Bale. Each adapter
+has independent evidence and capabilities; `GET /app/capabilities?provider=bale`
+requires an explicit provider. New connections require an immutable `provider`.
+
+The descriptor's `send` object covers ordinary text/media routes and schedules,
+separately from named extension operations. `kinds` lists supported request kinds;
+`max_text_bytes` is a UTF-8 byte limit and `max_text_characters` counts Unicode
+code points. The same limit applies to captions. Bale advertises 65,536 bytes,
+Eitaa 4,096 characters and Rubika 4,200 characters. Only Bale currently advertises
+`mentions_supported: true` and `max_mentions: 100`; the other adapters advertise
+false and zero. All three advertise `reply_supported: true`. `media_format_notes`
+describes inspected formats, not live acceptance or recipient playback. Disabled
+adapters still expose implemented admission rules; an unregistered adapter has
+an empty `kinds` list. Always check `enabled` and `verification` as well.
+
+Treat returned peer IDs as opaque strings. Eitaa preserves two different group
+namespaces: `{"type":"group","id":"91"}` is a classic group, while
+`{"type":"group","id":"channel_91"}` is a channel-backed supergroup. A broadcast
+channel remains `{"type":"channel","id":"91"}`. Keep the `channel_` prefix when
+sending, querying history/media or configuring filters; do not derive a peer
+from the numeric portion alone. Eitaa user and sender IDs remain positive
+decimal strings. Existing Bale and Rubika ID formats are unchanged.
+
+Keep global routing in `APP_WEBHOOK`, `APP_WEBHOOK_SECRET` and
+`APP_WEBHOOK_DEVICE_MERGE_GLOBAL`; replace old BALE_WEBHOOK settings explicitly.
+Bale protocol credentials/endpoints retain their BALE_ prefix.
+
+Native protocols and authentication steps remain separate. Eitaa uses bounded
+HTTP TL calls and account/channel difference polling; Rubika uses encrypted HTTP
+calls and an update socket. The client decides whether OTP or password comes
+first. Follow `state`, `delivery` and `available_deliveries`; do not infer numeric
+wire codes or force the Bale login order. The CLI follows these states under the
+same immutable account guard.
+
+Eitaa image sends inspect JPEG/PNG bytes. Voice and audio currently require
+complete single-stream Ogg Opus; other codecs can be sent as files. Video sends
+inspect a nonfragmented MP4 with one AVC video track, bounded dimensions and
+consistent container timing. This inspection does not decode video frames or
+prove recipient playback. Albums accept 2–10 image/video items. Every compound
+upload/send phase is journaled before provider contact; a later uncertain result
+stays `unknown`, retaining its media and stage history without automatic resend.
+User avatar downloads resolve the current authenticated reference and fully
+inspect bounded JPEG/PNG/GIF bytes before returning a stream. Rubika avatar
+mutations derive the provider's 200×200 and 800×800 square JPEG renditions from
+the inspected source; each upload is journaled before the profile change. This
+specific avatar preparation is not a general media transcoder. Eitaa avatar
+history is a bounded paginated read; deleting an older photo requires its fresh
+reference among the first 100 own photos, otherwise the operation fails safely.
+
+The reviewed Eitaa web worker explicitly intercepts sticker/GIF, reaction and
+several draft methods with local stubs (`eitaaNoSend`). Their TL declarations and
+inherited client wrappers do not establish server support. These methods are
+excluded from native admission; the adapter does not return empty local success
+or guess a server implementation. Check the provider inventory for exact gaps.
+
+Native read results remain provider-specific. Eitaa dialogs return actual dialog
+rows, not every cached user or group. Its history/dialog `next_cursor` is signed
+and bound to the account, immutable connection, operation and peer; do not modify
+or reuse it on another connection. Session-token renewal can invalidate an older
+cursor, requiring a fresh first page. `has_more` is a bounded continuation hint;
+`complete=false` does not claim an exhaustive export. Non-advancing boundaries
+stop with an explicit incomplete result. History only advertises downloadable
+media after the private account-scoped reference has been persisted.
+
+Eitaa history uses one bounded native page of 50 rows even when the caller
+requests fewer; controlled reads through both native and official Web RPC returned
+a stale window for `limit=5`. A request for 100 returned 50 rows with a placeholder
+count of 1000; neither that count nor the larger requested limit proves the end.
+The gateway returns at most the requested number and
+builds `next_cursor` from that output, so omitted rows remain available on the next
+page. A zero-ID channel migration notice is not a message: history counts it as
+`omitted_service_notices`, while durable update recovery retains `chat.migrated`.
+Rubika history sends the requested limit and returns `next_offset_id` based on
+the smallest delivered message ID minus one, matching its inclusive `max_id`
+semantics. It does not use a server boundary beyond locally omitted messages.
+Neither provider's `complete: false` becomes a promise of exhaustive export.
+
+Eitaa and Rubika retain old mixed recovery warnings as
+`recovery_issue: legacy_unclassified`. This is uncertainty, not proof of missing
+messages, and is not silently erased. Eitaa `updateChannelTooLong` requests its
+independent channel difference stream; only an actual `differenceTooLong` or
+`channelDifferenceTooLong` records the corresponding expired-state reason.
+An update without enough metadata to bind deleted/read message IDs to a peer has
+the separate `unresolved_message_peer` reason. Unsupported variants remain
+durable diagnostics and coverage warnings, without inventing a lost inbox.
+Initial attachment still starts from a provider baseline. Rubika accepts the
+bounded interval messages with that baseline; it does not silently skip the first
+messages of a newly discovered conversation or claim to import all old history.
+After Rubika expires a mutation state, rebaselining preserves an existing
+new-message watermark. Continued `FromMin` pages can recover newer messages across
+restarts; the warning about unproven historical edits/deletions remains visible.
+
+Eitaa static locations use the reviewed current Android input layout and require
+the persisted send nonce to match the provider acknowledgement. Earlier mismatched
+acknowledgements stay unknown. Video uploads include streaming metadata and, when
+the bounded AVC decoder supports the first frame, a real JPEG preview. The preview
+upload identity is journaled before any provider write. Tested two- and five-second
+clips retained video attributes; one-second clips returned as files, including in
+the official Web client. Do not change duration or add audio to disguise that
+provider behavior; inspect the received media type. No runtime transcoder is used.
+
+Media and reconnect admission retain global worker limits and reserve a quota
+for each configured active provider. Each quota is at least one and otherwise
+`floor(global capacity / active provider count)`; a single provider uses the full
+capacity. Scheduling selects providers and then connections in rotation, while
+preserving FIFO within a connection. A blocked provider cannot consume every
+slot. Pending media admission is bounded to 1000 globally and 100 per connection;
+`RESOURCE_BUSY` rejects excess admission. HTTP media admission waits at most 45
+seconds. A handed-off stream keeps its own lifetime and frees its slot on close
+or cancellation. These bounds are isolation mechanisms, not capacity evidence.
+
+See the [provider source inventories](providers/sources.md) for current evidence
+and remaining native/live gates. Existing Bale verification remains independent
+of Eitaa/Rubika implementation and does not establish their interoperability.
 
 ## Deployment and access
 
@@ -121,44 +254,45 @@ the configured HTTP proxies. These are intentionally different network policies.
 ### Docker without Compose
 
 Run these commands from a dedicated configuration directory in a POSIX shell on
-Linux or macOS. They use the v2.2.0 image and a dedicated named volume; host Go and
-Node installations are not needed. Skip initialization if the directory already
+Linux or macOS. The following commands use the pinned release image and a named
+volume. For a local source build, use `goomni:dev` instead. Skip initialization if the directory already
 has `.env` and `master.key`.
 
 ```sh
-mkdir -p gobale-data
-cd gobale-data
-export GOBALE_IMAGE=ghcr.io/mimalef70/gobale:v2.2.0
-docker pull "$GOBALE_IMAGE"
+mkdir -p goomni-data
+cd goomni-data
+export APP_IMAGE=docker.io/mimalef70/goomni:v2.3.0
+docker pull "$APP_IMAGE"
 docker run --rm --user "$(id -u):$(id -g)" \
   --volume "$PWD:/config" --workdir /config \
-  "$GOBALE_IMAGE" init --bale-web-client
+  "$APP_IMAGE" init --bale-web-client
 
 export APP_MASTER_KEY="$(cat master.key)"
-docker volume create gobale-data
-docker run --detach --name gobale --restart unless-stopped \
+docker volume create goomni-data
+docker run --detach --name goomni --restart unless-stopped \
   --publish 127.0.0.1:3000:3000 --env-file .env \
   --env APP_HOST=0.0.0.0 --env APP_PORT=3000 \
   --env APP_MASTER_KEY --env APP_MASTER_KEY_FILE= \
-  --env APP_DATABASE=/app/storages/gobale.db \
+  --env APP_DATABASE=/app/storages/goomni.db \
   --env APP_MEDIA_ROOT=/app/storages/media \
-  --volume gobale-data:/app/storages \
+  --volume goomni-data:/app/storages \
   --read-only --tmpfs /tmp:size=67108864,mode=1777 \
   --security-opt no-new-privileges:true --cap-drop ALL \
   --log-driver json-file --log-opt max-size=10m --log-opt max-file=5 \
   --stop-timeout 30 --add-host host.docker.internal:host-gateway \
-  "$GOBALE_IMAGE"
+  "$APP_IMAGE"
 ```
 
 Open `http://localhost:3000/ui/` (include `APP_BASE_PATH` if set) and use the
-administrative credentials generated in `.env` to connect a Bale account. The
+administrative credentials generated in `.env` to connect a messenger account. The
 standalone command fixes the host port at 3000; change only the first port number
 in `--publish` to choose another. Unlike Compose, `--env-file` does not interpolate
 shell expressions or automatically forward host proxy variables. Put any required
 proxy values in that private file or pass them explicitly with `--env`.
 
-The standalone volume `gobale-data` is separate from Compose's project-prefixed
-volume by default. Replacing the image does not import native or Compose sessions.
+The standalone and Compose examples both use `goomni-data` by default. Choose
+different names for independent installations; never start both against the same
+volume. Replacing an image does not import a native process's host storage.
 Do not run native, standalone Docker and Compose services against the same data
 or published port. Use the [backup and upgrade procedure](#backup-restore-and-upgrades)
 before reusing an existing volume. To apply changed environment values, stop and
@@ -177,7 +311,7 @@ storage.
 Local browser access accepts only `localhost`/loopback Host values. For remote
 access set `APP_UI_PUBLIC_ORIGIN=https://gateway.example.com` (no trailing slash
 or path), terminate HTTPS at a trusted reverse proxy, and preserve that public
-Host header when forwarding to the private GoBale listener. With a base path such
+Host header when forwarding to the private GoOmni listener. With a base path such
 as `/bale`, open `https://gateway.example.com/bale/ui/`; the origin still excludes
 `/bale`. Expose only the TLS ingress, not the internal plaintext listener.
 Arbitrary `Forwarded`/`X-Forwarded-*` values do not grant browser access. Cookies
@@ -191,7 +325,7 @@ The panel exchanges existing Basic credentials for a random HttpOnly,
 SameSite=Strict, path-scoped cookie. Origin and CSRF checks protect mutations.
 Sessions are memory-only: at most 100, with 30-minute idle and eight-hour absolute
 expiry. Polling counts as activity. Logout invalidates the panel session; restart
-invalidates every panel session but preserves encrypted Bale sessions. Login has
+invalidates every panel session but preserves encrypted messenger sessions. Login has
 per-IP and global limits; proxies can share the per-IP budget. Keep credentials
 out of URLs and proxy logs. Only language/theme are saved in localStorage.
 
@@ -202,7 +336,7 @@ All account-scoped UI requests require `X-Device-Instance`. A stale tab gets
 External Basic clients must also send `X-Device-Instance` on every account-scoped
 request; update existing consumers before using the current API contract.
 
-Snapshots read local status and batch queue counts; polling does not call Bale.
+Snapshots read local status and batch queue counts; polling does not call the provider.
 Lists refresh every ten seconds, active login every three and delivery lists every
 fifteen, while visible. Payloads are loaded on demand as escaped JSON. Retry targets
 the previous destination at its original queue position; replay explicitly uses
@@ -223,12 +357,12 @@ the receiver must deduplicate by `event_id`.
 | `/ui/` is unavailable with a published older artifact | Build this checkout or install a release that includes the panel. UI files are not downloaded at runtime. |
 | Startup reports missing, stale or corrupt UI assets | Run `make build` or rebuild the Docker image. For an intentional API-only deployment, set `APP_UI_ENABLED=false`; browser routes are then absent, while Basic API routes remain. |
 | `UI_ORIGIN_REJECTED` | Check the exact HTTPS public origin, browser URL and forwarded Host. Keep the configured path prefix. Do not rewrite Origin or rely on forwarded headers to bypass the check. |
-| `UI_UNAUTHORIZED` after a restart or idle period | Sign in to the panel again. This alone does not require logging the Bale account in again. |
-| A pending Bale login returns to the phone step | A challenge expires or is lost on restart; request a fresh code explicitly. A page refresh can only resume a still-valid challenge in the same server process. |
+| `UI_UNAUTHORIZED` after a restart or idle period | Sign in to the panel again. This alone does not require logging the messenger account in again. |
+| A pending messenger login returns to the phone step | A challenge expires or is lost on restart; request a fresh code explicitly. A page refresh can only resume a still-valid challenge in the same server process. |
 | `DEVICE_INSTANCE_CHANGED` | Refresh the account list and reselect the intended connection; the old alias was replaced. Do not retry the stale action against the replacement. |
 | `UI_LOGIN_RATE_LIMITED` or `AUTH_RESEND_TOO_SOON` | Wait for the indicated retry time. Refreshing the page or opening a second tab does not reset the server-side limit. |
 
-Panel sign-out, Bale logout and connection deletion are different actions. The
+Panel sign-out, messenger logout and connection deletion are different actions. The
 latter two cancel unsent account work; neither promises to erase retained history,
 media, ambiguous sends or audit records. See [Retention and disk use](#retention-and-disk-use).
 
@@ -239,7 +373,7 @@ Generating a new key does not recover sessions encrypted by the previous key.
 
 For a consistent cold backup:
 
-1. Stop GoBale cleanly and confirm its process/container has exited.
+1. Stop GoOmni cleanly and confirm its process/container has exited.
 2. Copy the complete storage directory or named volume, including the media tree.
 3. Preserve the matching key and record the configuration, binary version and
    source revision or immutable image digest.
@@ -256,23 +390,31 @@ can move with a restore. Legacy absolute references must remain inside that root
 restore them at their original location or migrate their metadata explicitly.
 Do not replace missing files with external symlinks.
 
+New installations default to `goomni.db` and the `goomni-data` volume. Upgrades
+must explicitly retain their original database path (often `gobale.db`), media
+root and actual named volume through `APP_DATA_VOLUME`. Otherwise Docker can
+silently create an empty installation. Internal media lock/staging names and
+cryptographic storage labels retain their original values; never rewrite or
+remove them to match the product name. See the [upgrade guide](upgrade-goomni.md).
+
 Migrations run at startup; take a backup before upgrading. Foreign databases and
 wrong master keys are rejected. Roll back with a compatible database snapshot,
 not an arbitrary older binary against a newer schema. Check release notes for
 protocol and storage changes before replacing the running version.
 
-GoBale 2.0.1 upgrades storage from schema 5 used by v1.0.0 to schema 7, applying
-schema 6 on the way. The storage schema number is independent of the application
-version. Stop the old process, back up its complete storage and key, deploy 2.2.0
+Historical GoBale upgrades reached schema 7. Schema 8 assigns
+Bale to every existing connection, including retired connections, and preserves
+sessions, IDs, queued/unknown work, schedules and private media references. The storage schema number is independent of the application
+version. Stop the old process, back up its complete storage and key, deploy GoOmni
 with the same key, and update consumers before resuming requests. Do not run a
-1.x binary against the migrated database; rollback requires the pre-upgrade
+older binary against the migrated database; rollback requires the pre-upgrade
 snapshot and the matching old binary/configuration.
 
 The 2.2 HTTP/webhook upgrade also requires consumers to use `push_name`, media
 `caption`, the new ordinary multipart fields and flat `results.message_id`.
 New message/edit events put the display-ready message in `payload` and native
 content in `content`; receipt timestamps use `read_date`/`received_date`.
-Storage remains schema 7 and previously accepted work is retained. Already stored
+Previously accepted work is retained through the provider migration. Already stored
 signed webhooks keep their original format even when delivered or replayed after
 upgrading. Coordinate consumer handling before restarting delivery; see the
 [consumer contract](consumer-integration.md) and [webhook payloads](webhook-payload.md).
@@ -338,7 +480,7 @@ it does not implement historical retention or selective erasure.
 
 Choose a disk budget and alert on growth/free space, leaving room for SQLite WAL,
 backups and concurrent media transfers. Bounded worker queues do not bound retained
-history. A disk-full persistence failure needs operator attention; GoBale must
+history. A disk-full persistence failure needs operator attention; GoOmni must
 not silently discard pending work or report successful persistence.
 
 Do not run ad hoc DELETE statements or remove files from a live data directory.
@@ -370,20 +512,20 @@ Graceful shutdown preserves retryable work; unexpected termination can require
 reconciliation and repeated webhook delivery.
 
 Current protocol and operational limitations and verified scope are summarized in the
-[README](../readme.md). Worker limits, synthetic benchmarks and two-account tests
+[README](../README.md). Worker limits, synthetic benchmarks and two-account tests
 must not be interpreted as proven live deployment capacity.
 
 ### Metrics and request limits
 
 `/metrics` reads cached queue/disk/media snapshots. The background sampler runs
 once every five seconds; media traversal is incremental and bounded. Inspect
-`gobale_metrics_snapshot_timestamp_seconds` and
-`gobale_metrics_snapshot_stale` before using cached values. Last successful
+`goomni_metrics_snapshot_timestamp_seconds` and
+`goomni_metrics_snapshot_stale` before using cached values. Last successful
 samples remain available during storage failures; `/ready` returns 503.
 Metrics include SQLite pool waits, transaction/commit/persistence latency,
 reviewed SQLite error categories, busy workers, reconnect attempts, queue ages,
-database/WAL/media bytes and available storage. `gobale_storage_free_bytes`
-measures the database filesystem; `gobale_media_free_bytes` measures the media
+database/WAL/media bytes and available storage. `goomni_storage_free_bytes`
+measures the database filesystem; `goomni_media_free_bytes` measures the media
 filesystem independently, with snapshot component `media_disk`. Labels contain no account,
 message, credentials or destination identifiers.
 
@@ -405,7 +547,7 @@ the files for diagnosis. A minute-based worker retries released intents.
 Legacy `.upload-*` files are considered only during startup and only after
 ownership and registration checks. Unregistered final files without ownership
 proof are reported rather than deleted. Never scan global temporary directories
-or manually remove files while GoBale owns the data. Schedules share registered
+or manually remove files while GoOmni owns the data. Schedules share registered
 uploads: completing or cancelling one schedule does not delete that media.
 
 ### Operation and event queries
@@ -426,23 +568,32 @@ separate events; this is neither reconstructed chat history nor a provider impor
 Queries are scoped to the selected immutable connection. Lower time bounds are
 inclusive, upper bounds exclusive; pagination defaults to 50 with a maximum 100.
 
-Ordinary text/media sends and schedules accept `mentions: ["123", "456"]`:
+Bale text/media sends and schedules accept `mentions: ["123", "456"]`:
 up to 100 unique canonical positive uint32 strings and nonempty message/caption.
-Mentions are included in idempotency comparisons. Their live provider behavior
-has not been newly verified by these offline changes.
+Mentions are included in idempotency comparisons and remain live-unverified.
+Eitaa and Rubika reject nonempty mentions; consult the selected provider's
+`send` capabilities before offering them.
 
-Scheduled `message.forward` uses the existing `operation`/`payload` schedule
-shape, with `peer`, `source_peer`, signed-string `message_id`, positive-string
-`source_date` and optional `hide_sender`. Every occurrence gets its own persisted
-RID. The source reference is retained, not a copy of its content. A missing source
-at execution produces the normal failed/unknown outcome; unknown work is not
-blindly resent. Scheduled forwarding remains live-unverified.
+Scheduled `message.forward` uses the `operation`/`payload` schedule shape with
+the selected provider's contract. All three adapters require `peer`, `source_peer`
+and string `message_id`; Bale also requires positive-string `source_date` and
+accepts optional `hide_sender`. Eitaa accepts optional `hide_sender` but no
+`source_date`; Rubika accepts neither field. Message and peer ID formats remain
+provider-specific. Every occurrence gets its own persisted request ID. The source
+reference is retained, not a copy of its content. A missing source at execution
+produces the normal failed/unknown outcome; unknown work is not blindly resent.
+Controlled one-time scheduled forwards were acknowledged for all three
+providers; other recurrence and forwarding variants remain live-unverified.
+Other provider operations can be
+scheduled only when their capability entry explicitly sets `schedulable: true`.
 
 ### Reproducible capacity acceptance
 
 The mixed test uses real REST handlers, SQLite and signed HTTP webhooks with a
-synthetic provider. The separate native test uses real balemeow clients and a
-local WebSocket/RPC fixture. Neither establishes a provider account quota.
+synthetic provider. Use `--providers bale,eitaa,rubika` for 100 accounts of each
+provider in a 300-account run; this requires equal allocation. Separate native
+fixtures exercise actual Go protocol clients against local HTTP/socket servers.
+Neither fixture establishes a live provider account quota.
 The acceptance target is 300 connections, Linux with 4 CPU / 8 GiB, 60 incoming
 events/s and 10 new sends/s (8 immediate, 2 scheduled), a threefold 60-second
 burst, ten read/search requests/s and one 1 MiB upload every ten seconds.
@@ -450,15 +601,24 @@ Production worker counts and the 500 ms poll interval are retained.
 
 ```sh
 # Build the separate local runtime image first; host Go 1.26.9 compiles the tests.
-docker build --file docker/golang.Dockerfile --tag gobale:dev .
-# Uses only synthetic identities and isolated Docker volumes, no Bale network.
-python3 scripts/start_soak.py --duration 10m --warmup 0s --accounts 300 --wait
-# Native client fixture in the same Linux 4 CPU / 8 GiB environment.
+docker build --file docker/golang.Dockerfile --tag goomni:dev .
+# Uses only synthetic identities and isolated Docker volumes, no messenger network.
+python3 scripts/start_soak.py --providers bale,eitaa,rubika --accounts 300 --duration 10m --warmup 0s --max-disk-gib 1 --image goomni:dev --wait
+# Bale native client fixture in the same Linux 4 CPU / 8 GiB environment.
 python3 scripts/start_soak.py --native --duration 1s --warmup 0s --accounts 300 --wait
-# Full sequence: native fixture, mixed smoke, 50/150/300 comparison, 1h, then 24h.
+# Existing Bale sequence: native fixture, service smoke, 50/150/300, 1h, then 24h.
 python3 scripts/run_capacity.py
 # Collect a detached run's final verdict; running never means passed.
 python3 scripts/start_soak.py --collect artifacts/soak/RUN/run.json
+```
+
+The Eitaa and Rubika native fixtures each exercise 100 independent clients
+against local protocol servers, including authentication, updates and reconnect.
+Run them explicitly from `src`; this is synthetic protocol evidence, separate
+from the mixed service/storage run and from live provider acceptance:
+
+```sh
+GOOMNI_MIXED_CAPACITY=1 go test -race ./internal/eitaameow ./internal/rubikameow -run '^TestRunConcurrent100NativeClients$' -count=1 -v
 ```
 
 The image is an isolated runtime base; the runner compiles and mounts a separate

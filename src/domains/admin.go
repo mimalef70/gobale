@@ -36,12 +36,15 @@ type DevicesOverview struct {
 // PublicChallenge contains only local metadata safe for an authenticated admin.
 // Provider transaction hashes and complete phone numbers never cross this API.
 type PublicChallenge struct {
+	Delivery               string    `json:"delivery"`
+	NextDelivery           string    `json:"next_delivery,omitempty"`
+	AvailableDeliveries    []string  `json:"available_deliveries"`
 	ID                     string    `json:"challenge_id"`
 	ExpiresAt              time.Time `json:"expires_at"`
 	ResendAvailableAt      time.Time `json:"resend_available_at"`
-	SentCodeType           int32     `json:"sent_code_type"`
-	NextSendCodeType       int32     `json:"next_send_code_type"`
-	AvailableSendCodeTypes []int32   `json:"available_send_code_types"`
+	SentCodeType           int32     `json:"-"`
+	NextSendCodeType       int32     `json:"-"`
+	AvailableSendCodeTypes []int32   `json:"-"`
 	MaskedPhone            string    `json:"masked_phone"`
 }
 
@@ -54,6 +57,7 @@ type LoginState struct {
 // DeviceStatus is a local snapshot for one immutable account connection.
 // Transport/authentication state alone cannot establish inbox synchronization.
 type DeviceStatus struct {
+	Provider Provider `json:"provider"`
 	ConnectionStatus
 	DeviceID   string           `json:"device_id"`
 	InstanceID string           `json:"instance_id"`

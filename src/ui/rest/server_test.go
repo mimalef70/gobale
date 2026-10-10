@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
-	"github.com/mimalef70/gobale/src/usecase"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/usecase"
 	"github.com/stretchr/testify/require"
 	"go.yaml.in/yaml/v3"
 )
@@ -96,7 +96,7 @@ func (f *testClient) StartAuth(context.Context, string) (domains.Challenge, erro
 	return domains.Challenge{ID: "challenge", State: "awaiting_code"}, nil
 }
 func (f *testClient) SubmitCode(context.Context, string, string) (*domains.Session, error) {
-	return &domains.Session{UserID: "9007199254740993", Token: "local-test-token", DeviceHash: "local-test-hash"}, nil
+	return &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "42", Token: "local-test-token", DeviceHash: "local-test-hash"}, nil
 }
 func (f *testClient) SubmitPassword(ctx context.Context, a, b string) (*domains.Session, error) {
 	return f.SubmitCode(ctx, a, b)
@@ -178,20 +178,20 @@ func TestAuthBasePathAndExplicitDeviceIsolation(t *testing.T) {
 	require.NoError(t, e)
 	require.Equal(t, 200, res.StatusCode)
 	res.Body.Close()
-	_, e = svc.CreateDevice(context.Background(), "one")
+	_, e = svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, e)
 	status, out := apiRequest(t, s, "GET", "/api/app/status", "missing", nil)
 	require.Equal(t, 404, status, out)
 	status, _ = apiRequest(t, s, "GET", "/api/app/status", "", nil)
 	require.Equal(t, 400, status)
-	_, e = svc.CreateDevice(context.Background(), "two")
+	_, e = svc.CreateDevice(context.Background(), "two", domains.ProviderBale)
 	require.NoError(t, e)
 	status, _ = apiRequest(t, s, "GET", "/api/app/status", "", nil)
 	require.Equal(t, 400, status)
 }
 func TestWebhookSecretIsWriteOnly(t *testing.T) {
 	s, _ := setupAPI(t, "")
-	status, _ := apiRequest(t, s, "POST", "/devices", "", map[string]any{"device_id": "one"})
+	status, _ := apiRequest(t, s, "POST", "/devices", "", map[string]any{"provider": "bale", "device_id": "one"})
 	require.Equal(t, 201, status)
 	status, out := apiRequest(t, s, "PATCH", "/devices/one/webhook", "", map[string]any{"webhook_url": "http://127.0.0.1:9999/hook", "webhook_secret": "super-sensitive"})
 	require.Equal(t, 200, status, out)
@@ -204,25 +204,25 @@ func TestWebhookSecretIsWriteOnly(t *testing.T) {
 }
 func TestAuthenticatedSendReturnsPersistedOperation(t *testing.T) {
 	s, _ := setupAPI(t, "")
-	_, _ = apiRequest(t, s, "POST", "/devices", "", map[string]any{"device_id": "one"})
+	_, _ = apiRequest(t, s, "POST", "/devices", "", map[string]any{"provider": "bale", "device_id": "one"})
 	_, _ = apiRequest(t, s, "POST", "/devices/one/login", "", map[string]any{"phone": "+10000000000"})
 	status, out := apiRequest(t, s, "POST", "/devices/one/login/code", "", map[string]any{"challenge_id": "challenge", "code": "fake"})
 	require.Equal(t, 200, status, out)
-	status, out = apiRequest(t, s, "POST", "/send/message", "one", map[string]any{"peer": map[string]string{"type": "user", "id": "9007199254740993"}, "message": "hello"})
+	status, out = apiRequest(t, s, "POST", "/send/message", "one", map[string]any{"peer": map[string]string{"type": "user", "id": "42"}, "message": "hello"})
 	require.Equal(t, 200, status, out)
 	op := out["results"].(map[string]any)
 	require.NotEmpty(t, op["send_id"])
 	require.Contains(t, []string{"sent", "succeeded"}, op["state"])
-	_, e := s.service.CreateDevice(context.Background(), "other")
+	_, e := s.service.CreateDevice(context.Background(), "other", domains.ProviderBale)
 	require.NoError(t, e)
 	status, _ = apiRequest(t, s, "GET", "/send/operations/"+op["send_id"].(string), "other", nil)
 	require.Equal(t, 404, status)
 }
 func TestMediaScopeStreamingLimitAndSSRF(t *testing.T) {
 	s, svc := setupAPI(t, "")
-	_, e := svc.CreateDevice(context.Background(), "one")
+	_, e := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, e)
-	_, e = svc.CreateDevice(context.Background(), "two")
+	_, e = svc.CreateDevice(context.Background(), "two", domains.ProviderBale)
 	require.NoError(t, e)
 	upload := func(n int) (int, map[string]any) {
 		r := httptest.NewRequest("POST", "/media", bytes.NewReader(bytes.Repeat([]byte{42}, n)))
@@ -254,7 +254,7 @@ func TestMediaScopeStreamingLimitAndSSRF(t *testing.T) {
 }
 func TestUnsupportedProviderIsExplicit(t *testing.T) {
 	s, svc := setupAPI(t, "")
-	_, e := svc.CreateDevice(context.Background(), "one")
+	_, e := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, e)
 	status, out := apiRequest(t, s, "POST", "/message/7/revoke", "one", map[string]string{})
 	require.Contains(t, []int{501, 409}, status, out)

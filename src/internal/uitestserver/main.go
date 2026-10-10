@@ -23,12 +23,12 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/mimalef70/gobale/src/config"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
-	"github.com/mimalef70/gobale/src/ui/rest"
-	"github.com/mimalef70/gobale/src/ui/web"
-	"github.com/mimalef70/gobale/src/usecase"
+	"github.com/mimalef70/goomni/src/config"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/ui/rest"
+	"github.com/mimalef70/goomni/src/ui/web"
+	"github.com/mimalef70/goomni/src/usecase"
 )
 
 type syntheticClient struct {
@@ -42,7 +42,7 @@ type syntheticClient struct {
 func newSyntheticClient(d domains.Device) domains.Client {
 	hash := fnv.New64a()
 	_, _ = hash.Write([]byte(d.ConnectionID))
-	return &syntheticClient{account: strconv.FormatUint((hash.Sum64()&((1<<62)-1))+1, 10), status: domains.ConnectionStatus{Auth: "auth_required", Transport: "disconnected", Recovery: "degraded"}}
+	return &syntheticClient{account: strconv.FormatUint((hash.Sum64()%((1<<32)-1))+1, 10), status: domains.ConnectionStatus{Auth: "auth_required", Transport: "disconnected", Recovery: "degraded"}}
 }
 func (c *syntheticClient) StartAuth(context.Context, string) (domains.Challenge, error) {
 	c.mu.Lock()
@@ -84,7 +84,7 @@ func (c *syntheticClient) SubmitPassword(_ context.Context, challenge, password 
 func (c *syntheticClient) accept() *domains.Session {
 	c.challenge = ""
 	c.status.Auth = "authenticated"
-	return &domains.Session{UserID: c.account, Token: "synthetic-session", DeviceHash: "synthetic-device"}
+	return &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: c.account, Token: "synthetic-session", DeviceHash: "synthetic-device"}
 }
 func (c *syntheticClient) Connect(context.Context, *domains.Session, domains.Sink) error {
 	c.mu.Lock()
@@ -118,11 +118,11 @@ func (c *syntheticClient) Call(context.Context, string, json.RawMessage) (json.R
 }
 
 func seed(ctx context.Context, svc *usecase.Service, st *storage.Store) error {
-	online, err := svc.CreateDevice(ctx, "online-demo")
+	online, err := svc.CreateDevice(ctx, "online-demo", domains.ProviderBale)
 	if err != nil {
 		return err
 	}
-	if _, err = svc.CreateDevice(ctx, "login-demo"); err != nil {
+	if _, err = svc.CreateDevice(ctx, "login-demo", domains.ProviderBale); err != nil {
 		return err
 	}
 	challenge, err := svc.StartAuth(ctx, online.ID, "+15550000123")
@@ -178,7 +178,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	dir, err := os.MkdirTemp("", "gobale-ui-synthetic-")
+	dir, err := os.MkdirTemp("", "goomni-ui-synthetic-")
 	if err != nil {
 		return err
 	}

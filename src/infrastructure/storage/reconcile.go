@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 const storedMessageProofIndex = `CREATE INDEX events_message_proof ON events(connection_id,message_id) WHERE type='message'`
@@ -38,7 +38,7 @@ func (s *Store) reconcileStoredVoiceProofs(ctx context.Context) error {
 	lastOperation := int64(0)
 	for {
 		rows, err := tx.QueryContext(ctx, `SELECT o.rowid,o.connection_id,d.account_id,json_extract(o.request,'$.request_id') FROM operations o JOIN devices d ON d.connection_id=o.connection_id
- WHERE o.rowid>? AND o.state='unknown' AND d.deleted_at IS NULL AND d.account_id<>''
+ WHERE o.rowid>? AND o.state='unknown' AND d.deleted_at IS NULL AND d.provider='bale' AND d.account_id<>''
  AND json_extract(o.request,'$.kind')='voice' AND COALESCE(json_extract(o.request,'$.operation'),'')=''
  AND COALESCE(json_extract(o.request,'$.request_id'),'')<>'' ORDER BY o.rowid LIMIT 100`, lastOperation)
 		if err != nil {

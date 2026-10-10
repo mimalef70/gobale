@@ -60,8 +60,8 @@ def registry_targets(environment):
     return (
         ("ghcr.io/" + repository, "https://ghcr.io", "https://ghcr.io/token",
          "ghcr.io", repository, environment["GITHUB_ACTOR"], environment["GH_TOKEN"]),
-        ("docker.io/mimalef70/gobale", "https://registry-1.docker.io",
-         "https://auth.docker.io/token", "registry.docker.io", "mimalef70/gobale",
+        ("docker.io/mimalef70/goomni", "https://registry-1.docker.io",
+         "https://auth.docker.io/token", "registry.docker.io", "mimalef70/goomni",
          environment["DOCKERHUB_USERNAME"], environment["DOCKERHUB_TOKEN"]),
     )
 

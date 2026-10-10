@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/pkg/sqlite"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/pkg/sqlite"
 	"golang.org/x/sys/unix"
 )
 

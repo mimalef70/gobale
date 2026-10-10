@@ -1,7 +1,7 @@
 package balemeow
 
 import (
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"strconv"
 	"sync/atomic"
 	"time"

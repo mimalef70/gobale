@@ -1,7 +1,7 @@
 // Bale Web 5.7.0 module 98503 (bale.v1.Images), module 22663 (descriptors).
 syntax = "proto3";
 package gobale.bale.reference;
-option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+option go_package = "github.com/mimalef70/goomni/src/internal/balemeow/wire";
 import "wire/bale.proto";
 
 message StickerDescriptor { int32 id = 1; StringValue emoji = 2; StickerImage image128 = 3; StickerImage image512 = 4; StickerImage image256 = 5; int32 format = 6; StickerImage animation = 7; }

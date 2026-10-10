@@ -51,7 +51,7 @@ class PublicProofTest(unittest.TestCase):
                 verify_registries('v2.1.0')
 
     def test_manifest_binds_version_revision_all_archives_and_checksums(self):
-        packages = [{'platform': platform, 'file': 'gobale_2.1.0_' + platform.replace('/', '_') + '.tar.gz',
+        packages = [{'platform': platform, 'file': 'goomni_2.1.0_' + platform.replace('/', '_') + '.tar.gz',
                      'sha256': 'a' * 64, 'bytes': 123}
                     for platform in ('linux/amd64', 'linux/arm64', 'darwin/amd64', 'darwin/arm64')]
         manifest = {'version': '2.1.0', 'revision': 'b' * 40, 'packages': packages}
@@ -96,7 +96,7 @@ class CoordinatorTest(unittest.TestCase):
         raw = json.dumps(job)
         self.assertNotIn('secrets.', raw)
         self.assertNotIn('login-action', raw)
-        self.assertIn('gobale-anonymous-docker', raw)
+        self.assertIn('goomni-anonymous-docker', raw)
         self.assertIn('scripts/verify_release.py', raw)
         self.assertIn('scripts/docker_smoke.py', raw)
 

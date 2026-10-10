@@ -36,7 +36,9 @@ export function DevicePage({ overview }: { overview: Overview }) {
       </Link>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">{t('connection')}</p>
+          <p className="eyebrow">
+            {t(`providerName.${device.provider}`)} · {t('connection')}
+          </p>
           <h1 dir="auto">{device.id}</h1>
           <p>
             {t('accountID')}: <bdi className="mono">{device.account_id || t('notConnected')}</bdi>
@@ -114,6 +116,8 @@ function DeviceOverview({ device }: { device: Device }) {
         {['gap_detected', 'degraded'].includes(device.status.recovery) && (
           <Notice>{t('recoveryWarning')}</Notice>
         )}
+        {device.status.unsupported_updates_observed && <Notice>{t('unsupportedUpdatesWarning')}</Notice>}
+        {device.status.recovery_issue === 'legacy_unclassified' && <Notice>{t('legacyRecoveryWarning')}</Notice>}
         <dl className="details-list">
           <div>
             <dt>{t('created')}</dt>

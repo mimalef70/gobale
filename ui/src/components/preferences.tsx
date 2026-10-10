@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 function initialTheme(): 'light' | 'dark' {
   try {
-    const stored = localStorage.getItem('gobale.theme')
+    const stored = localStorage.getItem('goomni.theme')
     if (stored === 'light' || stored === 'dark') return stored
   } catch {
     /* Storage can be unavailable. */
@@ -16,7 +16,7 @@ export function Preferences() {
   useEffect(() => {
     document.documentElement.dataset.theme = theme
     try {
-      localStorage.setItem('gobale.theme', theme)
+      localStorage.setItem('goomni.theme', theme)
     } catch {
       /* Preferences are optional. */
     }
@@ -25,7 +25,7 @@ export function Preferences() {
     document.documentElement.lang = i18n.language
     document.documentElement.dir = i18n.language === 'fa' ? 'rtl' : 'ltr'
     try {
-      localStorage.setItem('gobale.language', i18n.language)
+      localStorage.setItem('goomni.language', i18n.language)
     } catch {
       /* Preferences are optional. */
     }
@@ -60,11 +60,11 @@ export function Brand() {
           fill="currentColor"
         />
         <path
-          d="M13 11h9c9 0 9 8 3 8 7 1 7 9-3 9h-9V11Zm5 4v4h3c4 0 4-4 0-4h-3Zm0 7v3h4c4 0 4-3 0-3h-4Z"
+          d="M22 9a11 11 0 1 0 0 22 11 11 0 0 0 0-22Zm0 5a6 6 0 1 1 0 12 6 6 0 0 1 0-12Z"
           className="brand-letter"
         />
       </svg>
-      <span dir="ltr">GoBale</span>
+      <span dir="ltr">GoOmni</span>
     </div>
   )
 }

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 // Metrics contains bounded process-local worker statistics, never account IDs,

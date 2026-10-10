@@ -3,7 +3,7 @@
 // This deliberately projects only the fields required for avatar download.
 syntax = "proto3";
 package gobale.bale.reference;
-option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+option go_package = "github.com/mimalef70/goomni/src/internal/balemeow/wire";
 import "wire/bale.proto";
 
 message UserAvatarResponse { UserAvatarProjection user = 1; }

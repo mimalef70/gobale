@@ -1,10 +1,10 @@
 {
-  "name": "gobale-admin",
-  "version": "2.2.0",
+  "name": "goomni-admin",
+  "version": "2.3.0",
   "private": true,
   "type": "module",
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=24.12.0"
   },
   "scripts": {
     "dev": "vite --host 127.0.0.1",

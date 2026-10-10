@@ -8,8 +8,8 @@ import (
 	_ "time/tzdata"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
-	domainSend "github.com/mimalef70/gobale/src/domains/send"
-	pkgError "github.com/mimalef70/gobale/src/pkg/error"
+	domainSend "github.com/mimalef70/goomni/src/domains/send"
+	pkgError "github.com/mimalef70/goomni/src/pkg/error"
 )
 
 type ScheduleSpec struct {
@@ -43,8 +43,8 @@ func ParseScheduleOptions(options domainSend.ScheduleOptions, now time.Time) (Sc
 		return ScheduleSpec{}, pkgError.ValidationError("scheduled_at must be in the future")
 	}
 	recurrence := strings.ToLower(strings.TrimSpace(options.Recurrence))
-	// "none" is the public spelling for a one-time send. Keep "once" for
-	// existing callers and persisted schedules; the calendar engine uses once.
+	// The public admission layer accepts "none". The calendar engine also
+	// reads "once" from already accepted durable schedules without rewriting them.
 	if recurrence == "" || recurrence == "none" {
 		recurrence = "once"
 	}

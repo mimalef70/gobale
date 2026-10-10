@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test'
 test.describe('real Go REST and embedded assets', () => {
   test.skip(
-    !process.env.GOBALE_E2E_URL,
-    'Set GOBALE_E2E_URL to the isolated uismoke server to run integration tests',
+    !process.env.GOOMNI_E2E_URL,
+    'Set GOOMNI_E2E_URL to the isolated uismoke server to run integration tests',
   )
   test('real session, device creation, OTP/2FA, webhook and scoped delivery detail', async ({
     page,
@@ -13,6 +13,7 @@ test.describe('real Go REST and embedded assets', () => {
     await page.getByRole('button', { name: 'Sign in', exact: true }).click()
     await expect(page.getByRole('heading', { name: 'Accounts', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Add account', exact: true }).click()
+    await page.getByLabel('Messenger', { exact: true }).selectOption('bale')
     await page.getByLabel('Connection name').fill(`browser-${Date.now()}`)
     await page.getByRole('button', { name: 'Create connection', exact: true }).click()
     await expect(page.getByLabel('Phone number')).toBeVisible()

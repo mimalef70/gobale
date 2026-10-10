@@ -1,7 +1,7 @@
 // Reviewed official public web 5.7.0+173855, modules 27369,15631,41918 and modulesBuilder.
 syntax = "proto3";
 package gobale.bale.reference;
-option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+option go_package = "github.com/mimalef70/goomni/src/internal/balemeow/wire";
 import "wire/bale.proto";
 message MiniAppBotRequest { uint32 bot_user_id = 1; }
 message MiniAppMain { StringValue start_param = 1; Peer peer = 2; }

@@ -3,6 +3,7 @@ package rest
 import (
 	"context"
 	"encoding/json"
+	"github.com/mimalef70/goomni/src/domains"
 	"net/http/httptest"
 	"testing"
 
@@ -11,9 +12,9 @@ import (
 
 func TestConflictingRepeatedSelectorsNeverChooseAnAccount(t *testing.T) {
 	s, svc := setupAPI(t, "")
-	a, err := svc.CreateDevice(context.Background(), "one")
+	a, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
-	b, err := svc.CreateDevice(context.Background(), "two")
+	b, err := svc.CreateDevice(context.Background(), "two", domains.ProviderBale)
 	require.NoError(t, err)
 	for _, tc := range []struct {
 		name, path, secondDevice, secondInstance, code string

@@ -15,8 +15,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -36,7 +36,7 @@ func codeOf(err error) string {
 	return ""
 }
 func fakeSession() *domains.Session {
-	return &domains.Session{UserID: "12345", Token: "synthetic-session-token", DeviceHash: "00112233445566778899aabbccddeeff00"}
+	return &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "12345", Token: "synthetic-session-token", DeviceHash: "00112233445566778899aabbccddeeff00"}
 }
 func acceptingSink(context.Context, domains.Event) error { return nil }
 func eventually(t *testing.T, check func() bool) {

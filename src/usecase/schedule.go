@@ -6,8 +6,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/validations"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/validations"
 )
 
 func (s *Service) CreateSchedule(ctx context.Context, id string, request domains.SendRequest) (domains.Schedule, error) {
@@ -15,21 +15,31 @@ func (s *Service) CreateSchedule(ctx context.Context, id string, request domains
 }
 
 func (s *Service) CreateScheduleIdempotent(ctx context.Context, id string, request domains.SendRequest, key string) (domains.Schedule, error) {
+	d, err := s.ResolveDevice(ctx, id)
+	if err != nil {
+		return domains.Schedule{}, err
+	}
 	if len(key) > 256 {
 		return domains.Schedule{}, domains.E("INVALID_IDEMPOTENCY_KEY", "idempotency key exceeds 256 bytes", 400)
 	}
 	if request.Operation != "" || len(request.Payload) > 0 || request.Kind == "operation" {
 		// Only reviewed message producers may recur. Administrative operations,
 		// stories and financial actions are never admitted by this scheduler.
-		switch request.Operation {
-		case "message.forward", "send.poll", "send.sticker", "send.contact", "send.location", "send.template":
-		default:
+		contract, err := s.provider(d.Provider)
+		if err != nil {
+			return domains.Schedule{}, err
+		}
+		definition, exists := operationDefinition(contract, request.Operation)
+		if !exists {
+			return domains.Schedule{}, domains.Unsupported(request.Operation)
+		}
+		if !definition.Schedulable || definition.Mode != "mutation" {
 			return domains.Schedule{}, domains.E("INVALID_REQUEST", "this operation cannot be scheduled", 400)
 		}
 		if (request.Kind != "" && request.Kind != "operation") || request.Phone != "" || request.Text != "" || request.ReplyMessageID != "" || request.MediaID != "" || len(request.Mentions) > 0 {
 			return domains.Schedule{}, domains.E("INVALID_REQUEST", "scheduled operations take message fields inside payload", 400)
 		}
-		normalized, peer, err := normalizeMutation(request.Operation, request.Payload)
+		normalized, peer, err := s.normalizeMutation(d, request.Operation, request.Payload)
 		if err != nil {
 			return domains.Schedule{}, err
 		}
@@ -37,7 +47,7 @@ func (s *Service) CreateScheduleIdempotent(ctx context.Context, id string, reque
 			return domains.Schedule{}, domains.E("INVALID_REQUEST", "conflicting scheduled operation destinations", 400)
 		}
 		request.Kind, request.Peer, request.Payload = "operation", peer, normalized
-	} else if err := request.Validate(); err != nil {
+	} else if err := s.validateSend(d, request); err != nil {
 		return domains.Schedule{}, err
 	}
 	if !request.IsScheduled() {
@@ -49,10 +59,6 @@ func (s *Service) CreateScheduleIdempotent(ctx context.Context, id string, reque
 	if request.Kind == "" {
 		request.Kind = "text"
 	}
-	d, err := s.ResolveDevice(ctx, id)
-	if err != nil {
-		return domains.Schedule{}, err
-	}
 	if key != "" {
 		// A retry can arrive after scheduled_at or completion. Existing matching
 		// work wins before new-schedule time and media availability checks.
@@ -60,6 +66,11 @@ func (s *Service) CreateScheduleIdempotent(ctx context.Context, id string, reque
 		if err != nil || found {
 			return previous, err
 		}
+	}
+	// Historical accepted requests keep their original hash and calendar data.
+	// New requests use the single current public spelling for one-time sends.
+	if strings.EqualFold(strings.TrimSpace(request.Recurrence), "once") {
+		return domains.Schedule{}, domains.E("INVALID_SCHEDULE", "use recurrence none for a one-time send", 400)
 	}
 	spec, err := validations.ParseScheduleOptions(request.ScheduleOptions, time.Now().UTC())
 	if err != nil {

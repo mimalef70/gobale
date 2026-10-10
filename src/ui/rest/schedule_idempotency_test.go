@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"github.com/mimalef70/goomni/src/domains"
 	"net/http/httptest"
 	"testing"
 	"time"
@@ -13,7 +14,7 @@ import (
 
 func TestScheduledSendIdempotencySharedAcrossRESTEntryPoints(t *testing.T) {
 	s, svc := setupAPI(t, "")
-	_, err := svc.CreateDevice(context.Background(), "one")
+	_, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
 	body := map[string]any{"peer": map[string]string{"type": "user", "id": "42"}, "message": "scheduled once", "timezone": "UTC", "scheduled_at": time.Now().Add(time.Hour).UTC().Format(time.RFC3339)}
 	var id string

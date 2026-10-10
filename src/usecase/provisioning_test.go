@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 func TestProvisionDeviceValidatesAndDoesNotContactProvider(t *testing.T) {
@@ -14,14 +14,14 @@ func TestProvisionDeviceValidatesAndDoesNotContactProvider(t *testing.T) {
 		return nil
 	})
 	ctx := context.Background()
-	request := domains.ProvisionDeviceRequest{DeviceID: "channel", WebhookURL: "https://example.test/hook", WebhookSecret: "synthetic-secret"}
+	request := domains.ProvisionDeviceRequest{Provider: domains.ProviderBale, DeviceID: "channel", WebhookURL: "https://example.test/hook", WebhookSecret: "synthetic-secret"}
 	for _, test := range []struct {
 		request domains.ProvisionDeviceRequest
 		key     string
 		code    string
 	}{
 		{request, "", "IDEMPOTENCY_KEY_REQUIRED"},
-		{domains.ProvisionDeviceRequest{DeviceID: "channel", WebhookURL: "https://example.test/hook"}, "key", "WEBHOOK_SECRET_REQUIRED"},
+		{domains.ProvisionDeviceRequest{Provider: domains.ProviderBale, DeviceID: "channel", WebhookURL: "https://example.test/hook"}, "key", "WEBHOOK_SECRET_REQUIRED"},
 	} {
 		_, _, err := s.ProvisionDevice(ctx, test.request, test.key)
 		var de *domains.Error

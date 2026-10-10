@@ -2,9 +2,9 @@ package rest
 
 import (
 	"github.com/gofiber/fiber/v3"
-	"github.com/mimalef70/gobale/src/config"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/ui/web"
+	"github.com/mimalef70/goomni/src/config"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/ui/web"
 )
 
 func (s *Server) registerBrowserUI(r fiber.Router) error {
@@ -22,7 +22,7 @@ func (s *Server) registerBrowserUI(r fiber.Router) error {
 	}
 	sessions.Register(r)
 	api := r.Group("/ui/api", sessions.Protect, func(c fiber.Ctx) error {
-		c.Locals("gobale.browser", true)
+		c.Locals("goomni.browser", true)
 		return c.Next()
 	})
 	s.registerAdminRoutes(api)

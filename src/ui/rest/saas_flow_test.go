@@ -16,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
-	"github.com/mimalef70/gobale/src/usecase"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/usecase"
 	"github.com/stretchr/testify/require"
 )
 
@@ -63,7 +63,7 @@ func (c *consumerFlowClient) SubmitPassword(_ context.Context, challenge, passwo
 }
 
 func (c *consumerFlowClient) session() *domains.Session {
-	return &domains.Session{UserID: c.account, Token: "synthetic-token-" + c.alias, DeviceHash: "synthetic-hash-" + c.alias}
+	return &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: c.account, Token: "synthetic-token-" + c.alias, DeviceHash: "synthetic-hash-" + c.alias}
 }
 
 func (c *consumerFlowClient) Connect(_ context.Context, _ *domains.Session, sink domains.Sink) error {
@@ -175,10 +175,10 @@ func TestConsumerConnectionFlow(t *testing.T) {
 	start()
 	t.Cleanup(stop)
 
-	status, body := consumerFlowRequest(t, srv, "POST", "/devices", nil, map[string]string{"device_id": "missing-key"}, "")
+	status, body := consumerFlowRequest(t, srv, "POST", "/devices", nil, map[string]string{"provider": "bale", "device_id": "missing-key"}, "")
 	require.Equal(t, 400, status, body)
 	require.Equal(t, "IDEMPOTENCY_KEY_REQUIRED", body["code"])
-	status, body = consumerFlowRequest(t, srv, "POST", "/devices", nil, map[string]string{"device_id": "invalid-atomic", "webhook_url": "https://example.invalid/events"}, "invalid-atomic")
+	status, body = consumerFlowRequest(t, srv, "POST", "/devices", nil, map[string]string{"provider": "bale", "device_id": "invalid-atomic", "webhook_url": "https://example.invalid/events"}, "invalid-atomic")
 	require.Equal(t, 400, status, body)
 	status, body = consumerFlowRequest(t, srv, "GET", "/devices", nil, nil, "")
 	require.Equal(t, 200, status)
@@ -186,7 +186,7 @@ func TestConsumerConnectionFlow(t *testing.T) {
 
 	refs := map[string]domains.Device{}
 	for _, alias := range []string{"a-primary", "a-secondary", "b-primary"} {
-		request := map[string]any{"device_id": alias}
+		request := map[string]any{"provider": "bale", "device_id": alias}
 		status, body = consumerFlowRequest(t, srv, "POST", "/devices", nil, request, "provision-"+alias)
 		require.Equal(t, 201, status, body)
 		refs[alias] = consumerFlowDevice(t, body)
@@ -195,7 +195,7 @@ func TestConsumerConnectionFlow(t *testing.T) {
 		require.Equal(t, refs[alias].InstanceID, consumerFlowDevice(t, body).InstanceID)
 	}
 	a, a2, b := refs["a-primary"], refs["a-secondary"], refs["b-primary"]
-	status, body = consumerFlowRequest(t, srv, "POST", "/devices", nil, map[string]string{"device_id": "different"}, "provision-a-primary")
+	status, body = consumerFlowRequest(t, srv, "POST", "/devices", nil, map[string]string{"provider": "bale", "device_id": "different"}, "provision-a-primary")
 	require.Equal(t, 409, status, body)
 	require.Equal(t, "IDEMPOTENCY_CONFLICT", body["code"])
 
@@ -331,9 +331,9 @@ func TestConsumerConnectionFlow(t *testing.T) {
 		_, _ = mac.Write(raw)
 		var event domains.Event
 		decodeErr := json.Unmarshal(raw, &event)
-		valid := readErr == nil && decodeErr == nil && hmac.Equal([]byte(r.Header.Get("X-Hub-Signature-256")), []byte("sha256="+hex.EncodeToString(mac.Sum(nil)))) && r.Header.Get("X-GoBale-Event-Id") == event.ID
+		valid := readErr == nil && decodeErr == nil && hmac.Equal([]byte(r.Header.Get("X-Hub-Signature-256")), []byte("sha256="+hex.EncodeToString(mac.Sum(nil)))) && r.Header.Get("X-GoOmni-Event-Id") == event.ID
 		hookMu.Lock()
-		captured = append(captured, capturedDelivery{body: raw, event: event, deliveryID: r.Header.Get("X-GoBale-Delivery-Id"), valid: valid})
+		captured = append(captured, capturedDelivery{body: raw, event: event, deliveryID: r.Header.Get("X-GoOmni-Delivery-Id"), valid: valid})
 		count := len(captured)
 		hookMu.Unlock()
 		if count == 1 {
@@ -391,10 +391,10 @@ func TestConsumerConnectionFlow(t *testing.T) {
 
 	status, body = consumerFlowRequest(t, srv, "DELETE", "/devices/"+b.ID, &b, nil, "")
 	require.Equal(t, 200, status, body)
-	status, body = consumerFlowRequest(t, srv, "POST", "/devices", nil, map[string]string{"device_id": b.ID}, "provision-b-primary")
+	status, body = consumerFlowRequest(t, srv, "POST", "/devices", nil, map[string]string{"provider": "bale", "device_id": b.ID}, "provision-b-primary")
 	require.Equal(t, 409, status, body)
 	require.Equal(t, "PROVISIONING_RETIRED", body["code"])
-	status, body = consumerFlowRequest(t, srv, "POST", "/devices", nil, map[string]string{"device_id": b.ID}, "provision-b-replacement")
+	status, body = consumerFlowRequest(t, srv, "POST", "/devices", nil, map[string]string{"provider": "bale", "device_id": b.ID}, "provision-b-replacement")
 	require.Equal(t, 201, status, body)
 	replacement := consumerFlowDevice(t, body)
 	require.NotEqual(t, b.InstanceID, replacement.InstanceID)

@@ -1,6 +1,6 @@
 syntax = "proto3";
 package gobale.bale.reference;
-option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+option go_package = "github.com/mimalef70/goomni/src/internal/balemeow/wire";
 import "wire/bale.proto";
 
 // Reviewed official web 5.7.0+173855, modules 18913/77108/5594.

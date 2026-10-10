@@ -19,8 +19,8 @@ import (
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -71,6 +71,8 @@ type connection struct {
 	account             string
 	token               string
 	sink                domains.Sink
+	batchSink           domains.BatchSink
+	checkpointRaw       string
 	checkpoint          recoveryCheckpoint
 	recoveryFailed      bool
 	bufferedUpdateBytes int64
@@ -101,6 +103,7 @@ type Client struct {
 	authMu              sync.Mutex
 	session             *domains.Session
 	sink                domains.Sink
+	batchSink           domains.BatchSink
 	status              domains.ConnectionStatus
 	challenge           *authChallenge
 	conn                *connection
@@ -129,7 +132,7 @@ func New(opts Options) *Client {
 		opts.APIVersion = 173855
 	}
 	if opts.DeviceTitle == "" {
-		opts.DeviceTitle = "GoBale"
+		opts.DeviceTitle = "GoOmni"
 	}
 	if opts.MaxMediaBytes <= 0 {
 		opts.MaxMediaBytes = 64 << 20
@@ -221,6 +224,17 @@ func (c *Client) metadata(token string) *wire.Metadata {
 // Connect waits for a completed handshake. Concurrent callers share the attempt.
 // Successful connections own their lifetime independently of the caller's context.
 func (c *Client) Connect(ctx context.Context, session *domains.Session, sink domains.Sink) error {
+	return c.connect(ctx, session, sink, nil)
+}
+func (c *Client) ConnectBatch(ctx context.Context, session *domains.Session, sink domains.BatchSink) error {
+	if sink == nil {
+		return boundedError("INVALID_SINK", "a durable batch sink is required", 400)
+	}
+	return c.connect(ctx, session, func(ctx context.Context, event domains.Event) error {
+		return sink(ctx, domains.EventBatch{Events: []domains.Event{event}})
+	}, sink)
+}
+func (c *Client) connect(ctx context.Context, session *domains.Session, sink domains.Sink, batchSink domains.BatchSink) error {
 	if session == nil || session.Token == "" || session.UserID == "" {
 		return boundedError("AUTH_REQUIRED", "a complete authenticated session is required", 401)
 	}
@@ -260,7 +274,12 @@ func (c *Client) Connect(ctx context.Context, session *domains.Session, sink dom
 	stored := *session
 	stored.Data = append([]byte(nil), session.Data...)
 	c.session = &stored
+	c.batchSink = c.prepareBatchSink(batchSink)
+	preparedBatch := c.batchSink
 	c.sink = func(ctx context.Context, event domains.Event) error {
+		if preparedBatch != nil {
+			return preparedBatch(ctx, domains.EventBatch{Events: []domains.Event{event}})
+		}
 		// Name resolution may wait for its bounded rate limit. Give each durable
 		// acceptance its own request budget afterwards, rather than spending the
 		// storage deadline on enrichment or earlier events in a recovery page.
@@ -308,6 +327,7 @@ func (c *Client) dial(ctx context.Context) error {
 	}
 	session := *c.session
 	sink := c.sink
+	batchSink := c.batchSink
 	c.mu.Unlock()
 	u, err := url.Parse(c.opts.WebSocketEndpoint)
 	if err != nil || (u.Scheme != "wss" && u.Scheme != "ws") || u.Host == "" {
@@ -330,7 +350,7 @@ func (c *Client) dial(ctx context.Context) error {
 	}
 	ws.SetReadLimit(c.opts.MaxFrameBytes)
 	lifetime, cancel := context.WithCancel(context.Background())
-	conn := &connection{account: session.UserID, token: session.Token, writeGate: make(chan struct{}, 1), done: make(chan struct{}), sink: sink, ws: ws, ctx: lifetime, cancel: cancel, handshake: make(chan error, 1), updates: make(chan []byte, c.opts.EventBuffer), pending: make(map[int64]*pendingRPC)}
+	conn := &connection{account: session.UserID, token: session.Token, writeGate: make(chan struct{}, 1), done: make(chan struct{}), sink: sink, batchSink: batchSink, ws: ws, ctx: lifetime, cancel: cancel, handshake: make(chan error, 1), updates: make(chan []byte, c.opts.EventBuffer), pending: make(map[int64]*pendingRPC)}
 	conn.workers.Add(1)
 	c.mu.Lock()
 	if c.session == nil || c.session.Token != session.Token || c.status.Auth == "auth_required" || ctx.Err() != nil {

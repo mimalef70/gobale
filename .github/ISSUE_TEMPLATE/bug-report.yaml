@@ -1,5 +1,5 @@
 name: Bug report
-description: Report a reproducible GoBale problem without private data.
+description: Report a reproducible GoOmni problem without private data.
 title: '[Bug]: '
 labels: [bug]
 body:
@@ -11,7 +11,7 @@ body:
   - type: input
     id: version
     attributes:
-      label: GoBale version or commit
+      label: GoOmni version or commit
       description: Include the image digest if using Docker.
       placeholder: v0.2.0-alpha.1
     validations:

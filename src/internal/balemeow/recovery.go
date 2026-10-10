@@ -3,8 +3,8 @@ package balemeow
 import (
 	"context"
 	"encoding/json"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 	"strconv"
 	"time"
 )
@@ -64,28 +64,27 @@ func (c *Client) initializeRecovery(ctx context.Context, conn *connection) error
 		}
 	}
 	conn.checkpoint = cp
+	conn.checkpointRaw = raw
+	routes, err := c.discoverRecoveryRoutes(ctx)
+	if err != nil {
+		return err
+	}
+	for key, seq := range routes {
+		if _, exists := conn.checkpoint.Routes[key]; exists {
+			continue
+		}
+		if len(conn.checkpoint.Routes) >= maxRoutes {
+			return updateFault("RECOVERY_RESPONSE_INVALID")
+		}
+		if raw != "" {
+			// A conversation may have been joined while a gap was already present
+			// or while this process was offline. Discover it without skipping to
+			// today's provider snapshot. Existing durable cursors never move here.
+			seq = 0
+		}
+		conn.checkpoint.Routes[key] = seq
+	}
 	if raw == "" {
-		data, err := c.readRPC(ctx, recoveryService, "GetRoutesStates", &wire.RoutesRequest{})
-		if err != nil {
-			return err
-		}
-		response := &wire.RoutesResponse{}
-		if decode(data, response) != nil || len(response.States) > maxRoutes {
-			return updateFault("RECOVERY_RESPONSE_INVALID")
-		}
-		for _, state := range response.States {
-			if state.Group == nil || state.Sequence < 0 {
-				return updateFault("RECOVERY_RESPONSE_INVALID")
-			}
-			key := strconv.FormatUint(uint64(state.Group.Id), 10)
-			if _, exists := conn.checkpoint.Routes[key]; exists {
-				return updateFault("RECOVERY_RESPONSE_INVALID")
-			}
-			conn.checkpoint.Routes[key] = state.Sequence
-		}
-		if len(conn.checkpoint.Routes) == 0 {
-			return updateFault("RECOVERY_RESPONSE_INVALID")
-		}
 		// First-attachment coverage starts at this snapshot. Persist every update
 		// already admitted by the reader before recording its baseline marker.
 		for {
@@ -119,6 +118,29 @@ func (c *Client) initializeRecovery(ctx context.Context, conn *connection) error
 	}
 	c.finishRecovery(conn)
 	return nil
+}
+
+func (c *Client) discoverRecoveryRoutes(ctx context.Context) (map[string]int32, error) {
+	data, err := c.readRPC(ctx, recoveryService, "GetRoutesStates", &wire.RoutesRequest{})
+	if err != nil {
+		return nil, err
+	}
+	response := &wire.RoutesResponse{}
+	if decode(data, response) != nil || len(response.States) == 0 || len(response.States) > maxRoutes {
+		return nil, updateFault("RECOVERY_RESPONSE_INVALID")
+	}
+	routes := make(map[string]int32, len(response.States))
+	for _, state := range response.States {
+		if state.Group == nil || state.Sequence < 0 {
+			return nil, updateFault("RECOVERY_RESPONSE_INVALID")
+		}
+		key := strconv.FormatUint(uint64(state.Group.Id), 10)
+		if _, exists := routes[key]; exists {
+			return nil, updateFault("RECOVERY_RESPONSE_INVALID")
+		}
+		routes[key] = state.Sequence
+	}
+	return routes, nil
 }
 func (c *Client) recoverRoutes(ctx context.Context, conn *connection) error {
 	pending := map[string]int32{}
@@ -240,6 +262,16 @@ func (c *Client) persistRecovery(ctx context.Context, conn *connection, events [
 	cp, err := json.Marshal(conn.checkpoint)
 	if err != nil {
 		return err
+	}
+	if conn.batchSink != nil {
+		payload, _ := json.Marshal(map[string]any{"phase": phase, "gap_detected": conn.checkpoint.Gap})
+		marker := domains.Event{ID: eventHash(conn.account + "|checkpoint|" + string(cp)), Type: "connection.recovery", AccountID: conn.account, Direction: "unknown", Time: time.Now().UTC(), Payload: payload}
+		batch := domains.EventBatch{Events: append(events, marker), Checkpoints: []domains.CheckpointTransition{{Scope: domains.DefaultCheckpointScope, Expected: conn.checkpointRaw, Next: string(cp)}}}
+		if err := conn.batchSink(ctx, batch); err != nil {
+			return err
+		}
+		conn.checkpointRaw = string(cp)
+		return nil
 	}
 	// A separate checkpoint marker guarantees progress even if the last update
 	// was already persisted before a crash; marker IDs change with the route map.

@@ -3,8 +3,8 @@ package balemeow
 import (
 	"context"
 	"encoding/json"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 	"sort"
 	"strconv"
 )
@@ -370,7 +370,7 @@ func providerMedia(m *wire.Message) *domains.ProviderMedia {
 	if d == nil {
 		return nil
 	}
-	return &domains.ProviderMedia{FileID: sid(d.FileId), AccessHash: sid(d.AccessHash), Size: int64(d.FileSize), Name: d.Name, ContentType: d.MimeType}
+	return &domains.ProviderMedia{Provider: domains.ProviderBale, Version: 1, FileID: sid(d.FileId), AccessHash: sid(d.AccessHash), Size: int64(d.FileSize), Name: d.Name, ContentType: d.MimeType}
 }
 
 func messageMedia(m *wire.Message, q *wire.QuotedMessage) *domains.ProviderMedia {
@@ -387,6 +387,7 @@ func sortActions(v []map[string]any) {
 // prepareEvent is applied once to the connection sink, covering both live and
 // recovered updates. The sink commits the private reference with the event.
 func (c *Client) prepareEvent(ctx context.Context, e domains.Event) domains.Event {
+	e.Provider = domains.ProviderBale
 	e.Peer = c.canonicalPeer(e.Peer)
 	var b map[string]any
 	if json.Unmarshal(e.Payload, &b) == nil {

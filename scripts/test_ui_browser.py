@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     subprocess.run([sys.executable, str(ROOT / "scripts/build_ui.py"), "--check"],
                    cwd=ROOT, check=True)
-    with tempfile.TemporaryDirectory(prefix="gobale-ui-e2e-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="goomni-ui-e2e-") as temporary:
         directory = Path(temporary)
         binary = directory / "uitestserver"
         subprocess.run(["go", "build", "-tags=purego,uismoke", "-trimpath",
@@ -43,7 +43,7 @@ def main():
             if url is None:
                 raise RuntimeError("Synthetic UI server did not become ready")
             print("Testing embedded UI with isolated synthetic accounts and /gateway base path", flush=True)
-            environment = dict(os.environ, GOBALE_E2E_URL=url)
+            environment = dict(os.environ, GOOMNI_E2E_URL=url)
             result = subprocess.run(["npx", "--no-install", "playwright", "test", *sys.argv[1:]],
                                     cwd=ROOT / "ui", env=environment)
             return result.returncode

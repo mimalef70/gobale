@@ -14,7 +14,7 @@ import run_capacity
 
 class CapacityRunnerTest(unittest.TestCase):
     def record(self):
-        return {"harness": "mixed", "container": "fixture-container-id", "name": "gobale-soak-fixture", "image_id": "sha256:fixture-image",
+        return {"harness": "mixed", "container": "fixture-container-id", "name": "goomni-soak-fixture", "image_id": "sha256:fixture-image",
                 "container_started_at": "synthetic-start", "duration": "1h", "warmup": "10m", "synthetic_accounts": 300,
                 "event_rate": 60, "send_rate": 10, "seed": 1, "architecture": "arm64", "source_sha256": "fixture-source", "binary_sha256": "fixture-binary", "queue_limit": 1000, "connection_queue_limit": 100}
 
@@ -61,6 +61,17 @@ class CapacityRunnerTest(unittest.TestCase):
                 self.assertFalse(start_soak.valid_result(self.record(), state, dict(self.result(), **{field: value})))
         self.assertFalse(start_soak.valid_result(self.record(), dict(state, OOMKilled=True), self.result()))
         self.assertFalse(start_soak.valid_result(self.record(), dict(state, ExitCode=1), self.result()))
+
+    def test_mixed_provider_evidence_cannot_be_replaced_by_bale_only(self):
+        providers = ["bale", "eitaa", "rubika"]
+        record = dict(self.record(), providers=providers)
+        result = dict(self.result(), providers=providers)
+        state = {"ExitCode": 0}
+        self.assertTrue(start_soak.valid_result(record, state, result))
+        self.assertFalse(start_soak.valid_result(record, state, dict(result, providers=["bale"])))
+        evidence = dict(record, status="passed", result=result)
+        with self.assertRaises(ValueError):
+            start_soak.validate_evidence(dict(evidence, providers=["bale"]), record, 86400, 100 * start_soak.GIB)
 
     def test_source_hash_includes_embedded_assets_and_runner(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -114,11 +125,11 @@ class CapacityRunnerTest(unittest.TestCase):
     def test_disk_block_is_not_a_capacity_failure_and_never_overwrites_evidence(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
-            args = SimpleNamespace(name="gobale-soak-blocked", native=False, max_disk_gib=1)
+            args = SimpleNamespace(name="goomni-soak-blocked", native=False, max_disk_gib=1)
             with self.assertRaises(SystemExit) as exited:
                 start_soak.blocked_run(root, args, "synthetic insufficient volume space")
             self.assertEqual(3, exited.exception.code)
-            path = root / "artifacts/soak/gobale-soak-blocked/run.json"
+            path = root / "artifacts/soak/goomni-soak-blocked/run.json"
             before = path.read_bytes()
             with patch.object(start_soak, "docker") as docker:
                 self.assertEqual("blocked_insufficient_space", start_soak.collect(path)["status"])

@@ -18,8 +18,8 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/pkg/sqlite"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/pkg/sqlite"
 )
 
 type binding struct {
@@ -108,7 +108,7 @@ func receiver(db *sql.DB, expected binding) (http.Handler, error) {
 			}
 			ids[name] = value
 		}
-		eventHeaders := r.Header.Values("X-GoBale-Event-Id")
+		eventHeaders := r.Header.Values("X-GoOmni-Event-Id")
 		if len(eventHeaders) != 1 || eventHeaders[0] != ids["event_id"] {
 			http.Error(w, "event identity mismatch", 400)
 			return

@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,9 +30,9 @@ func TestVoiceRouteUsesScopedMediaDurableIdempotencyAndSchedule(t *testing.T) {
 	var calls atomic.Int32
 	srv, svc := setupAPIWithFactory(t, "", func(domains.Device) domains.Client { return &voiceRESTClient{calls: &calls} })
 	ctx := context.Background()
-	one, err := svc.CreateDevice(ctx, "one")
+	one, err := svc.CreateDevice(ctx, "one", domains.ProviderBale)
 	require.NoError(t, err)
-	_, err = svc.CreateDevice(ctx, "two")
+	_, err = svc.CreateDevice(ctx, "two", domains.ProviderBale)
 	require.NoError(t, err)
 	challenge, err := svc.StartAuth(ctx, "one", "+10000000000")
 	require.NoError(t, err)

@@ -11,9 +11,15 @@ import (
 	"time"
 )
 
-const AppVersion = "2.2.0"
+const AppVersion = "2.3.0"
 
 type Settings struct {
+	RubikaEnabled                                                                                 bool
+	RubikaDiscoveryEndpoint, RubikaAPIEndpoint, RubikaSocketEndpoint                              string
+	EitaaEnabled                                                                                  bool
+	EitaaEndpoint, EitaaUploadEndpoint, EitaaDownloadEndpoint, EitaaAPIHash                       string
+	EitaaAPIID                                                                                    int32
+	EitaaPollInterval                                                                             time.Duration
 	UIEnabled                                                                                     bool
 	UIPublicOrigin                                                                                string
 	Host                                                                                          string
@@ -31,7 +37,24 @@ type Settings struct {
 }
 
 func Load(v *viper.Viper) (Settings, error) {
-	s := Settings{Host: v.GetString("host"), Port: v.GetInt("port"), BasicAuth: v.GetString("basic-auth"), BasePath: v.GetString("base-path"), Database: v.GetString("database"), MediaRoot: v.GetString("media-root"), GRPCEndpoint: v.GetString("grpc-endpoint"), WebSocketEndpoint: v.GetString("ws-endpoint"), Origin: "https://web.bale.ai", APIKey: v.GetString("bale-api-key"), AppID: v.GetUint32("bale-app-id"), APIVersion: v.GetUint32("bale-api-version"), DeviceTitle: "GoBale", WebhookSecret: v.GetString("webhook-secret"), WebhookMergeGlobal: v.GetBool("webhook-device-merge-global"), MaxMediaBytes: v.GetInt64("max-media-bytes"), SendWait: 40 * time.Second}
+	s := Settings{Host: v.GetString("host"), Port: v.GetInt("port"), BasicAuth: v.GetString("basic-auth"), BasePath: v.GetString("base-path"), Database: v.GetString("database"), MediaRoot: v.GetString("media-root"), GRPCEndpoint: v.GetString("grpc-endpoint"), WebSocketEndpoint: v.GetString("ws-endpoint"), Origin: "https://web.bale.ai", APIKey: v.GetString("bale-api-key"), AppID: v.GetUint32("bale-app-id"), APIVersion: v.GetUint32("bale-api-version"), DeviceTitle: "GoOmni", WebhookSecret: v.GetString("webhook-secret"), WebhookMergeGlobal: v.GetBool("webhook-device-merge-global"), MaxMediaBytes: v.GetInt64("max-media-bytes"), SendWait: 40 * time.Second}
+	s.RubikaEnabled = v.GetBool("rubika-enabled")
+	s.RubikaDiscoveryEndpoint = v.GetString("rubika-discovery-endpoint")
+	s.RubikaAPIEndpoint = v.GetString("rubika-api-endpoint")
+	s.RubikaSocketEndpoint = v.GetString("rubika-socket-endpoint")
+	s.EitaaEnabled = v.GetBool("eitaa-enabled")
+	s.EitaaEndpoint = v.GetString("eitaa-endpoint")
+	s.EitaaUploadEndpoint = v.GetString("eitaa-upload-endpoint")
+	s.EitaaDownloadEndpoint = v.GetString("eitaa-download-endpoint")
+	s.EitaaAPIHash = v.GetString("eitaa-api-hash")
+	s.EitaaAPIID = v.GetInt32("eitaa-api-id")
+	s.EitaaPollInterval = v.GetDuration("eitaa-poll-interval")
+	if s.EitaaPollInterval == 0 {
+		s.EitaaPollInterval = 5 * time.Second
+	}
+	if s.EitaaPollInterval < time.Second || s.EitaaPollInterval > 5*time.Minute {
+		return s, fmt.Errorf("EITAA_POLL_INTERVAL must be between 1s and 5m")
+	}
 	s.UIEnabled = true
 	if v.IsSet("ui-enabled") {
 		s.UIEnabled = v.GetBool("ui-enabled")
@@ -96,7 +119,7 @@ func Load(v *viper.Viper) (Settings, error) {
 		s.Webhooks = append(s.Webhooks, target)
 	}
 	if len(s.Webhooks) > 0 && strings.TrimSpace(s.WebhookSecret) == "" {
-		return s, fmt.Errorf("BALE_WEBHOOK_SECRET required for global webhooks")
+		return s, fmt.Errorf("APP_WEBHOOK_SECRET required for global webhooks")
 	}
 	if s.MaxMediaBytes < 1 || s.MaxMediaBytes > 1<<30 {
 		return s, fmt.Errorf("APP_MAX_MEDIA_BYTES must be between 1 and 1073741824")

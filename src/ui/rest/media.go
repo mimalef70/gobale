@@ -2,6 +2,7 @@ package rest
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"mime"
@@ -16,8 +17,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/mediafile"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/mediafile"
 )
 
 func (s *Server) upload(c fiber.Ctx) error {
@@ -25,12 +26,11 @@ func (s *Server) upload(c fiber.Ctx) error {
 	if e != nil {
 		return e
 	}
-	select {
-	case s.mediaSlots <- struct{}{}:
-		defer func() { <-s.mediaSlots }()
-	default:
-		return domains.E("MEDIA_BUSY", "media transfer capacity reached", 503)
+	release, e := s.acquireMedia(c.Context(), d)
+	if e != nil {
+		return e
 	}
+	defer release()
 	var body io.Reader = c.Request().BodyStream()
 	if body == nil {
 		body = strings.NewReader(string(c.Body()))
@@ -95,12 +95,11 @@ func (s *Server) download(c fiber.Ctx) error {
 	if e != nil {
 		return e
 	}
-	select {
-	case s.mediaSlots <- struct{}{}:
-	default:
-		return domains.E("MEDIA_BUSY", "media transfer capacity reached", 503)
+	release, acquireErr := s.acquireMedia(c.Context(), d)
+	if acquireErr != nil {
+		return acquireErr
 	}
-	stream := &slotReader{release: func() { <-s.mediaSlots }}
+	stream := &slotReader{release: release}
 	handedOff := false
 	defer func() {
 		if !handedOff {
@@ -134,12 +133,11 @@ func (s *Server) downloadMessage(c fiber.Ctx) error {
 	if err = peer.Validate(); err != nil {
 		return err
 	}
-	select {
-	case s.mediaSlots <- struct{}{}:
-	default:
-		return domains.E("MEDIA_BUSY", "media transfer capacity reached", 503)
+	release, acquireErr := s.acquireMedia(c.Context(), d)
+	if acquireErr != nil {
+		return acquireErr
 	}
-	stream := &slotReader{release: func() { <-s.mediaSlots }}
+	stream := &slotReader{release: release}
 	handedOff := false
 	defer func() {
 		if !handedOff {
@@ -179,12 +177,11 @@ func (s *Server) fetchMedia(c fiber.Ctx) error {
 	if e != nil || u.Hostname() == "" || (u.Scheme != "https" && u.Scheme != "http") || u.User != nil {
 		return domains.E("INVALID_MEDIA_URL", "an HTTP(S) URL without credentials is required", 400)
 	}
-	select {
-	case s.mediaSlots <- struct{}{}:
-		defer func() { <-s.mediaSlots }()
-	default:
-		return domains.E("MEDIA_BUSY", "media transfer capacity reached", 503)
+	release, e := s.acquireMedia(c.Context(), d)
+	if e != nil {
+		return e
 	}
+	defer release()
 	transport := &http.Transport{Proxy: nil, DialContext: safeMediaDial, TLSHandshakeTimeout: 10 * time.Second, ResponseHeaderTimeout: 15 * time.Second, DisableKeepAlives: true}
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport, Timeout: 45 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
@@ -258,4 +255,21 @@ func (r *slotReader) Close() error {
 		}
 	})
 	return r.err
+}
+
+// Queue only the admission phase under a bounded context. A handed-off stream
+// keeps its existing lifetime and releases the permit when its reader closes.
+func (s *Server) acquireMedia(ctx context.Context, d domains.Device) (func(), error) {
+	wait, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+	providers, err := s.service.ActiveProviders(wait)
+	if err != nil {
+		return nil, err
+	}
+	s.mediaPool.SetProviders(providers)
+	release, err := s.mediaPool.AcquireFor(wait, d.Provider, d.ConnectionID)
+	if errors.Is(err, context.DeadlineExceeded) {
+		return nil, domains.E("REQUEST_TIMEOUT", "media capacity wait deadline exceeded", 504)
+	}
+	return release, err
 }

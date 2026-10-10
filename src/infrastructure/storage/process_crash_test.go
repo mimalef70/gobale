@@ -7,22 +7,23 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 // A child owns the actual SQLite connection and dies without Close/rollback.
 // Marker files contain only synthetic IDs. These are process crash tests, not
 // graceful close/open tests, and also run with the shipped purego SQLite driver.
 func TestProcessCrashDurableBoundaries(t *testing.T) {
-	for _, phase := range []string{"enqueue", "claim", "provider_observed", "receiver_committed", "schedule_materialized", "schedule_transactions"} {
+	for _, phase := range []string{"enqueue", "claim", "provider_observed", "receiver_committed", "schedule_materialized", "schedule_transactions", "batch_uncommitted", "batch_committed", "batch_transactions"} {
 		t.Run(phase, func(t *testing.T) {
 			root := t.TempDir()
 			command := exec.Command(os.Args[0], "-test.run=^TestProcessCrashChild$", "-test.count=1")
-			command.Env = append(os.Environ(), "GOBALE_CRASH_CHILD="+phase, "GOBALE_CRASH_ROOT="+root)
+			command.Env = append(os.Environ(), "GOOMNI_CRASH_CHILD="+phase, "GOOMNI_CRASH_ROOT="+root)
 			log, err := os.Create(filepath.Join(root, "child.log"))
 			if err != nil {
 				t.Fatal(err)
@@ -59,7 +60,7 @@ func TestProcessCrashDurableBoundaries(t *testing.T) {
 				}
 				time.Sleep(5 * time.Millisecond)
 			}
-			if phase == "schedule_transactions" {
+			if phase == "schedule_transactions" || phase == "batch_transactions" {
 				time.Sleep(15 * time.Millisecond)
 			}
 			if err = command.Process.Kill(); err != nil {
@@ -77,6 +78,28 @@ func TestProcessCrashDurableBoundaries(t *testing.T) {
 				t.Fatal(err)
 			}
 			switch phase {
+			case "batch_uncommitted", "batch_committed", "batch_transactions":
+				cp, e := st.ScopedCheckpoint(context.Background(), d.ConnectionID, "account")
+				if e != nil {
+					t.Fatal(e)
+				}
+				pages := 0
+				if cp != "" {
+					pages, e = strconv.Atoi(cp)
+					if e != nil {
+						t.Fatal(e)
+					}
+				}
+				var events, deliveries int
+				if e = st.db.QueryRow(`SELECT COUNT(*) FROM events`).Scan(&events); e != nil {
+					t.Fatal(e)
+				}
+				if e = st.db.QueryRow(`SELECT COUNT(*) FROM deliveries`).Scan(&deliveries); e != nil {
+					t.Fatal(e)
+				}
+				if events != pages*2 || deliveries != events || (phase == "batch_uncommitted" && pages != 0) || (phase != "batch_uncommitted" && pages == 0) {
+					t.Fatalf("non-atomic batch: pages=%d events=%d deliveries=%d", pages, events, deliveries)
+				}
 			case "enqueue", "claim", "provider_observed":
 				var state, rid string
 				if err = st.db.QueryRow(`SELECT state,json_extract(request,'$.request_id') FROM operations`).Scan(&state, &rid); err != nil {
@@ -143,17 +166,21 @@ func TestProcessCrashDurableBoundaries(t *testing.T) {
 }
 
 func TestProcessCrashChild(t *testing.T) {
-	phase := os.Getenv("GOBALE_CRASH_CHILD")
+	phase := os.Getenv("GOOMNI_CRASH_CHILD")
 	if phase == "" {
 		t.Skip("subprocess fixture")
 	}
-	root := os.Getenv("GOBALE_CRASH_ROOT")
+	root := os.Getenv("GOOMNI_CRASH_ROOT")
 	ctx := context.Background()
 	st, err := Open(filepath.Join(root, "gateway.db"), []byte(strings.Repeat("x", 32)))
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := st.CreateDevice(ctx, "crash-account")
+	provider := domains.ProviderBale
+	if strings.HasPrefix(phase, "batch_") {
+		provider = domains.ProviderEitaa
+	}
+	d, err := st.CreateDevice(ctx, "crash-account", provider)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -174,6 +201,42 @@ func TestProcessCrashChild(t *testing.T) {
 	}
 	request := domains.SendRequest{Peer: domains.Peer{Type: "user", ID: "77"}, Kind: "text", Text: "synthetic crash payload"}
 	switch phase {
+	case "batch_uncommitted", "batch_committed", "batch_transactions":
+		for i := 0; ; i++ {
+			first, second := event(fmt.Sprintf("page-%d-first", i), ""), event(fmt.Sprintf("page-%d-second", i), "")
+			expected := ""
+			if i > 0 {
+				expected = strconv.Itoa(i)
+			}
+			batch := domains.EventBatch{Events: []domains.Event{first, second}, Checkpoints: []domains.CheckpointTransition{{Scope: "account", Expected: expected, Next: strconv.Itoa(i + 1)}}}
+			targets := []WebhookTarget{{URL: "https://synthetic.invalid/hook", Secret: "synthetic"}}
+			if phase == "batch_uncommitted" {
+				tx, e := st.beginTx(ctx)
+				if e != nil {
+					t.Fatal(e)
+				}
+				if _, e = st.appendEventTx(ctx, tx, d, first, targets, false); e != nil {
+					t.Fatal(e)
+				}
+				if e = setCheckpointTx(ctx, tx, d.ConnectionID, "account", "1"); e != nil {
+					t.Fatal(e)
+				}
+				mark("ready", []byte("ready"))
+				select {}
+			}
+			if _, e := st.AppendBatch(ctx, d.ConnectionID, batch, targets); e != nil {
+				t.Fatal(e)
+			}
+			if i == 0 {
+				mark("ready", []byte("ready"))
+			}
+			if phase == "batch_committed" {
+				select {}
+			}
+			if i > 10000 {
+				t.Fatal("parent did not kill provider batch loop")
+			}
+		}
 	case "enqueue", "claim", "provider_observed":
 		op, _, e := st.Enqueue(ctx, d.ConnectionID, request, "synthetic-key", AdmissionLimits{Global: 1000})
 		if e != nil {

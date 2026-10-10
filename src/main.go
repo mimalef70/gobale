@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/mimalef70/gobale/src/cmd"
+	"github.com/mimalef70/goomni/src/cmd"
 	"os"
 )
 

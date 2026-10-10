@@ -11,8 +11,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
 	"github.com/stretchr/testify/require"
 )
 
@@ -242,15 +242,15 @@ func TestLegacyOrphanDiagnosticsRespectStartupBound(t *testing.T) {
 // Each child exits without defers, exercising OS-released locks and real SQLite
 // commit boundaries rather than approximating a crash by closing Manager.
 func TestMediaProcessCrashRecovery(t *testing.T) {
-	if phase := os.Getenv("GOBALE_MEDIA_TEST_CRASH"); phase != "" {
-		mediaCrashChild(t, phase, os.Getenv("GOBALE_MEDIA_TEST_ROOT"))
+	if phase := os.Getenv("GOOMNI_MEDIA_TEST_CRASH"); phase != "" {
+		mediaCrashChild(t, phase, os.Getenv("GOOMNI_MEDIA_TEST_ROOT"))
 		return
 	}
 	for _, phase := range []string{"staged", "published", "registered", "deleted-connection"} {
 		t.Run(phase, func(t *testing.T) {
 			base := t.TempDir()
 			command := exec.Command(os.Args[0], "-test.run=^TestMediaProcessCrashRecovery$")
-			command.Env = append(os.Environ(), "GOBALE_MEDIA_TEST_CRASH="+phase, "GOBALE_MEDIA_TEST_ROOT="+base)
+			command.Env = append(os.Environ(), "GOOMNI_MEDIA_TEST_CRASH="+phase, "GOOMNI_MEDIA_TEST_ROOT="+base)
 			output, err := command.CombinedOutput()
 			var exit *exec.ExitError
 			require.ErrorAs(t, err, &exit, string(output))
@@ -286,7 +286,7 @@ func mediaCrashChild(t *testing.T, phase, base string) {
 	ctx := context.Background()
 	store, err := storage.Open(filepath.Join(base, "fixture.db"), bytes.Repeat([]byte{7}, 32))
 	require.NoError(t, err)
-	d, err := store.CreateDevice(ctx, "synthetic")
+	d, err := store.CreateDevice(ctx, "synthetic", domains.ProviderBale)
 	require.NoError(t, err)
 	m, err := Open(filepath.Join(base, "media"), store.MediaFileRegistered)
 	require.NoError(t, err)

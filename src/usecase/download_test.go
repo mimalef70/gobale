@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 type downloadClient struct {
@@ -36,7 +36,7 @@ func TestDownloadUsesScopedEncryptedReferenceAndReaderOwnsContext(t *testing.T) 
 	one := mustDevice(t, s, "one")
 	two := mustDevice(t, s, "two")
 	peer := domains.Peer{Type: "user", ID: "42"}
-	media := domains.ProviderMedia{FileID: "99", AccessHash: "-7", Name: "file.txt", ContentType: "text/plain", Size: 5}
+	media := domains.ProviderMedia{Provider: domains.ProviderBale, Version: 1, FileID: "99", AccessHash: "-7", Name: "file.txt", ContentType: "text/plain", Size: 5}
 	if _, e := st.SaveProviderMedia(ctx, one.ConnectionID, peer, "10", media); e != nil {
 		t.Fatal(e)
 	}

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a reviewed GoBale release bundle without copying runtime data."""
+"""Build a reviewed GoOmni release bundle without copying runtime data."""
 import argparse
 import gzip
 import hashlib
@@ -17,9 +17,9 @@ from release_notes import release_metadata
 ROOT = Path(__file__).resolve().parents[1]
 PLATFORMS = {"linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64"}
 TOP_LEVEL = (
-    "readme.md", "LICENCE.txt", "CHANGELOG.md",
+    "README.md", "LICENCE.txt", "THIRD_PARTY_NOTICES.md", "CHANGELOG.md",
     "SECURITY.md", "CONTRIBUTING.md", "CODE_OF_CONDUCT.md", "SUPPORT.md", "AGENTS.md",
-    "docker-compose.yml",
+    "docker-compose.yml", "docker/README.md",
 )
 
 
@@ -37,10 +37,11 @@ def approved_files():
     paths = [ROOT / name for name in TOP_LEVEL]
     paths.extend(ROOT / name for name in (
         "docs/openapi.yaml", "docs/operations.md", "docs/webhook-payload.md",
-        "docs/consumer-integration.md",
+        "docs/consumer-integration.md", "docs/upgrade-goomni.md",
         "ui/README.md", "src/internal/balemeow/testdata/coverage/capabilities.json",
+        "src/internal/eitaameow/schema/LICENSE", "src/internal/rubikameow/LICENSE.reference",
     ))
-    for directory in ("assets",):
+    for directory in ("assets", "docs/providers"):
         paths.extend(sorted(p for p in (ROOT / directory).rglob("*")
                             if p.is_file() and p.relative_to(ROOT).as_posix() in candidates))
     paths.append(ROOT / "src/examples/webhookreceiver/main.go")
@@ -79,19 +80,22 @@ def main():
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     epoch = int(os.environ.get("SOURCE_DATE_EPOCH") or subprocess.check_output(
         ["git", "show", "-s", "--format=%ct", "HEAD"], cwd=ROOT, text=True).strip())
+    dirty = bool(subprocess.check_output(
+        ["git", "status", "--porcelain", "--untracked-files=normal"], cwd=ROOT, text=True).strip())
     manifest = {"version": args.version, "release_stage": metadata["release_stage"],
-                "revision": revision, "build": {"cgo": False, "tags": ["purego"], "trimpath": True}, "packages": []}
+                "revision": revision, "working_tree_dirty": dirty,
+                "build": {"cgo": False, "tags": ["purego"], "trimpath": True}, "packages": []}
     for platform in sorted(set(args.platform or PLATFORMS)):
         goos, goarch = platform.split("/")
-        name = f"gobale_{args.version}_{goos}_{goarch}.tar.gz"
+        name = f"goomni_{args.version}_{goos}_{goarch}.tar.gz"
         archive = output / name
-        with tempfile.TemporaryDirectory(prefix="gobale-release-") as temporary:
-            binary = Path(temporary) / "gobale"
+        with tempfile.TemporaryDirectory(prefix="goomni-release-") as temporary:
+            binary = Path(temporary) / "goomni"
             environment = dict(os.environ, CGO_ENABLED="0", GOOS=goos, GOARCH=goarch,
                                GOWORK="off", GOFLAGS="")
             subprocess.run(["go", "build", "-tags", "purego", "-trimpath", "-ldflags=-s -w", "-o", str(binary), "."],
                            cwd=ROOT / "src", env=environment, check=True)
-            entries = [(binary, "gobale"), (notices, "THIRD_PARTY_NOTICES.txt")] + [(path, path.relative_to(ROOT).as_posix()) for path in files]
+            entries = [(binary, "goomni"), (notices, "THIRD_PARTY_NOTICES.txt")] + [(path, path.relative_to(ROOT).as_posix()) for path in files]
             with archive.open("wb") as raw, gzip.GzipFile(filename="", mode="wb", fileobj=raw, mtime=epoch) as compressed:
                 with tarfile.open(fileobj=compressed, mode="w", format=tarfile.PAX_FORMAT) as tar:
                     for path, relative in entries:
@@ -99,7 +103,7 @@ def main():
                         info.uid = info.gid = 0
                         info.uname = info.gname = ""
                         info.mtime = epoch
-                        info.mode = 0o755 if relative == "gobale" else 0o644
+                        info.mode = 0o755 if relative == "goomni" else 0o644
                         with path.open("rb") as source:
                             tar.addfile(info, source)
             with tarfile.open(archive) as tar:

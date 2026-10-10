@@ -12,6 +12,7 @@ import (
 // replay checks this request, but never resets a device's later configuration.
 // WebhookSecret is input-only; never include this request in logs or responses.
 type ProvisionDeviceRequest struct {
+	Provider      Provider      `json:"provider"`
 	DeviceID      string        `json:"device_id"`
 	WebhookURL    string        `json:"webhook_url,omitempty"`
 	WebhookSecret string        `json:"webhook_secret,omitempty"`
@@ -29,7 +30,7 @@ func (r *ProvisionDeviceRequest) UnmarshalJSON(data []byte) error {
 	}
 	for name, value := range fields {
 		switch name {
-		case "device_id", "webhook_url", "webhook_secret", "webhook_events", "webhook_filter":
+		case "provider", "device_id", "webhook_url", "webhook_secret", "webhook_events", "webhook_filter":
 		default:
 			return E("INVALID_REQUEST", "unsupported provisioning field", 400)
 		}
@@ -62,6 +63,9 @@ func ValidateProvisioningKey(key string) error {
 }
 
 func (r ProvisionDeviceRequest) Validate() error {
+	if err := r.Provider.Validate(); err != nil {
+		return err
+	}
 	if !provisioningAlias.MatchString(r.DeviceID) {
 		return E("INVALID_DEVICE_ID", "device id must contain 1-64 letters, digits, dots, underscores or hyphens", 400)
 	}

@@ -16,7 +16,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/workpool"
 	"github.com/stretchr/testify/require"
 )
 
@@ -101,12 +102,11 @@ func TestMultipartSendJournalsFileRIDAndRetainsConnectionIdempotency(t *testing.
 	srv, svc := setupAPIWithFactory(t, "", func(d domains.Device) domains.Client {
 		return &multipartRESTClient{send: func(ctx context.Context, r domains.SendRequest) (domains.SendResult, error) {
 			// Shared provider media capacity must be free even with one slot.
-			select {
-			case srv.mediaSlots <- struct{}{}:
-				defer func() { <-srv.mediaSlots }()
-			case <-ctx.Done():
-				return domains.SendResult{}, ctx.Err()
+			release, err := srv.acquireMedia(ctx, d)
+			if err != nil {
+				return domains.SendResult{}, err
 			}
+			defer release()
 			ops, err := srv.store.ListOperations(ctx, d.ConnectionID, 10, 0)
 			require.NoError(t, err)
 			require.Len(t, ops, 1)
@@ -122,10 +122,10 @@ func TestMultipartSendJournalsFileRIDAndRetainsConnectionIdempotency(t *testing.
 			return domains.SendResult{MessageID: r.RequestID, Date: time.Now()}, nil
 		}}
 	})
-	srv.mediaSlots = make(chan struct{}, 1)
+	srv.mediaPool = workpool.New(1)
 	ctx := context.Background()
 	for _, id := range []string{"one", "two"} {
-		_, err := svc.CreateDevice(ctx, id)
+		_, err := svc.CreateDevice(ctx, id, domains.ProviderBale)
 		require.NoError(t, err)
 		ch, err := svc.StartAuth(ctx, id, "+10000000000")
 		require.NoError(t, err)
@@ -184,7 +184,7 @@ func TestMultipartSendJournalsFileRIDAndRetainsConnectionIdempotency(t *testing.
 
 func TestMultipartRejectsInvalidInputsWithoutRetainingUploads(t *testing.T) {
 	srv, svc := setupAPI(t, "")
-	d, err := svc.CreateDevice(context.Background(), "one")
+	d, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
 	valid := `{"peer":{"type":"user","id":"42"}}`
 	cases := []struct {
@@ -199,6 +199,7 @@ func TestMultipartRejectsInvalidInputsWithoutRetainingUploads(t *testing.T) {
 		{"wrong peer", `{"peer":{"type":"user","id":"bad"}}`, "bytes", "/send/file", nil, 400},
 		{"provided media", `{"peer":{"type":"user","id":"42"},"media_id":"other"}`, "bytes", "/send/file", nil, 400},
 		{"invalid schedule", `{"peer":{"type":"user","id":"42"},"scheduled_at":"2030-01-01T00:00:00Z","timezone":"not-a-zone"}`, "bytes", "/send/file", nil, 400},
+		{"removed recurrence alias", `{"peer":{"type":"user","id":"42"},"scheduled_at":"2030-01-01T00:00:00Z","timezone":"UTC","recurrence":"once"}`, "bytes", "/send/file", nil, 400},
 		{"unknown part", valid, "bytes", "/send/file", []string{"unknown", "value"}, 400},
 		{"legacy form", valid, "bytes", "/send/file", []string{"request", valid}, 400},
 		{"duplicate part", valid, "bytes", "/send/file", []string{"peer", `{"type":"user","id":"43"}`}, 400},

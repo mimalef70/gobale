@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-// LaunchOptions only packages data into a browser fragment; GoBale does not run
+// LaunchOptions only packages data into a browser fragment; GoOmni does not run
 // an iframe bridge. Version and Platform are explicit, not claimed host support.
 type LaunchOptions struct {
 	Version  string

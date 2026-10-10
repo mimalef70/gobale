@@ -75,7 +75,7 @@ function WebhookForm({
     try {
       let parsedFilter
       try {
-        parsedFilter = parseFilterDraft(filter)
+        parsedFilter = parseFilterDraft(filter, device.provider)
       } catch {
         throw new APIError(400, 'INVALID_WEBHOOK_FILTER', 'Invalid delivery filter')
       }
@@ -179,6 +179,7 @@ function WebhookForm({
             />
           </Field>
           <WebhookFilterFields
+            provider={device.provider}
             draft={filter}
             onChange={(next) => {
               setFilter(next)

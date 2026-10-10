@@ -10,7 +10,7 @@ export default defineConfig({
     {
       name: 'development-base',
       transformIndexHtml(html, context) {
-        return context.server ? html.replace('__GOBALE_UI_BASE__', '/ui') : html
+        return context.server ? html.replace('__GOOMNI_UI_BASE__', '/ui') : html
       },
     },
   ],
@@ -18,8 +18,8 @@ export default defineConfig({
     port: 5173,
     strictPort: true,
     proxy: {
-      '/ui/api': { target: process.env.GOBALE_DEV_PROXY ?? 'http://127.0.0.1:3000' },
-      '/ui/auth': { target: process.env.GOBALE_DEV_PROXY ?? 'http://127.0.0.1:3000' },
+      '/ui/api': { target: process.env.GOOMNI_DEV_PROXY ?? 'http://127.0.0.1:3000' },
+      '/ui/auth': { target: process.env.GOOMNI_DEV_PROXY ?? 'http://127.0.0.1:3000' },
     },
   },
   build: { outDir: '../src/ui/web/dist', emptyOutDir: true, sourcemap: false },

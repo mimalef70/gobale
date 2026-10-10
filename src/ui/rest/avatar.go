@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 func (s *Server) avatar(c fiber.Ctx) error {
@@ -23,12 +23,11 @@ func (s *Server) avatar(c fiber.Ctx) error {
 	if len(parts) != 2 || parts[0] != "user" {
 		return domains.E("INVALID_PEER", "avatar peer must be user:id", 400)
 	}
-	select {
-	case s.mediaSlots <- struct{}{}:
-	default:
-		return domains.E("MEDIA_BUSY", "media transfer capacity reached", 503)
+	release, acquireErr := s.acquireMedia(c.Context(), d)
+	if acquireErr != nil {
+		return acquireErr
 	}
-	stream := &slotReader{release: func() { <-s.mediaSlots }}
+	stream := &slotReader{release: release}
 	handedOff := false
 	defer func() {
 		if !handedOff {

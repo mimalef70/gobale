@@ -2,6 +2,7 @@ package rest
 
 import (
 	"context"
+	"github.com/mimalef70/goomni/src/domains"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -9,7 +10,7 @@ import (
 
 func TestStatusEndpointsIncludeImmutableIdentityAndSafeLoginSnapshot(t *testing.T) {
 	srv, svc := setupAPI(t, "")
-	d, err := svc.CreateDevice(context.Background(), "snapshot")
+	d, err := svc.CreateDevice(context.Background(), "snapshot", domains.ProviderBale)
 	require.NoError(t, err)
 	for _, path := range []string{"/app/status", "/devices/snapshot/status"} {
 		status, out := apiRequest(t, srv, "GET", path, d.ID, nil)

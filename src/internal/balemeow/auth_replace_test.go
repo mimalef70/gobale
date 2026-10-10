@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 )
 
 func TestFailedNativeChallengeReplacementCannotUsePreviousCode(t *testing.T) {

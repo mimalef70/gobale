@@ -20,9 +20,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	domainSend "github.com/mimalef70/gobale/src/domains/send"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/domains"
+	domainSend "github.com/mimalef70/goomni/src/domains/send"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
 )
 
 type fakeClient struct {
@@ -126,7 +126,7 @@ func testService(t *testing.T, options Options, factory domains.ClientFactory) (
 }
 func mustDevice(t *testing.T, s *Service, id string) domains.Device {
 	t.Helper()
-	d, e := s.CreateDevice(context.Background(), id)
+	d, e := s.CreateDevice(context.Background(), id, domains.ProviderBale)
 	if e != nil {
 		t.Fatal(e)
 	}
@@ -245,7 +245,7 @@ func TestWebhookRetryJitterHasBoundedNonzeroDelay(t *testing.T) {
 }
 
 func TestStatusPreservesOnlyReviewedDiagnosticCodes(t *testing.T) {
-	for _, code := range []string{"", "CONNECT_FAILED", "EVENT_PERSIST_FAILED", "RECOVERY_GAP", "WS_CLOSE_1006", "CONNECTION_CLOSED_1006"} {
+	for _, code := range []string{"", "CONNECT_FAILED", "EVENT_PERSIST_FAILED", "UPDATE_ACCEPTANCE_FAILED", "RECOVERY_GAP", "WS_CLOSE_1006", "CONNECTION_CLOSED_1006"} {
 		if got := cleanStatus(domains.ConnectionStatus{LastError: code}); got.LastError != code {
 			t.Fatalf("reviewed diagnostic was hidden: %q", code)
 		}
@@ -270,7 +270,7 @@ func TestExplicitInvalidDeviceNeverFallsBack(t *testing.T) {
 }
 func TestAccountIdentityCannotBeReboundAfterLogout(t *testing.T) {
 	ctx := context.Background()
-	f := &fakeClient{authSession: &domains.Session{UserID: "100", Token: "secret-one"}}
+	f := &fakeClient{authSession: &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "100", Token: "secret-one"}}
 	s, st := testService(t, Options{}, func(domains.Device) domains.Client { return f })
 	d := mustDevice(t, s, "alpha")
 	if _, e := s.StartAuth(ctx, d.ID, "+15550000100"); e != nil {
@@ -283,7 +283,7 @@ func TestAccountIdentityCannotBeReboundAfterLogout(t *testing.T) {
 		t.Fatal(e)
 	}
 	f.mu.Lock()
-	f.authSession = &domains.Session{UserID: "200", Token: "secret-two"}
+	f.authSession = &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "200", Token: "secret-two"}
 	f.mu.Unlock()
 	if _, e := s.StartAuth(ctx, d.ID, "+15550000200"); e != nil {
 		t.Fatal(e)
@@ -311,13 +311,13 @@ func TestWebhookPersistDeduplicateSignAndRetry(t *testing.T) {
 		if r.Header.Get("X-Hub-Signature-256") != want {
 			t.Errorf("bad signature")
 		}
-		if r.Header.Get("X-GoBale-Event-Id") == "" {
+		if r.Header.Get("X-GoOmni-Event-Id") == "" {
 			t.Error("missing event id")
 		}
-		if prior := capturedID.Load(); prior != nil && prior.(string) != r.Header.Get("X-GoBale-Delivery-Id") {
+		if prior := capturedID.Load(); prior != nil && prior.(string) != r.Header.Get("X-GoOmni-Delivery-Id") {
 			t.Error("retry changed delivery id")
 		}
-		capturedID.Store(r.Header.Get("X-GoBale-Delivery-Id"))
+		capturedID.Store(r.Header.Get("X-GoOmni-Delivery-Id"))
 		if calls.Add(1) == 1 {
 			w.WriteHeader(503)
 		} else {
@@ -563,7 +563,7 @@ func TestPersistedSessionsRestoreWithBoundedReconnectConcurrency(t *testing.T) {
 	})
 	for _, id := range []string{"a", "b", "c", "d", "e", "f"} {
 		d := mustDevice(t, s, id)
-		if e := st.SaveSession(ctx, d.ConnectionID, &domains.Session{UserID: id, Token: "test-token"}); e != nil {
+		if e := st.SaveSession(ctx, d.ConnectionID, &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: strconv.Itoa(int(id[0])), Token: "test-token"}); e != nil {
 			t.Fatal(e)
 		}
 	}
@@ -596,10 +596,10 @@ func TestSynthetic50AccountsRoutingAndWorkerBounds(t *testing.T) {
 	}
 	ctx := context.Background()
 	messagesPerAccount := 2
-	if value := os.Getenv("GOBALE_SYNTHETIC_MESSAGES_PER_ACCOUNT"); value != "" {
+	if value := os.Getenv("GOOMNI_SYNTHETIC_MESSAGES_PER_ACCOUNT"); value != "" {
 		n, err := strconv.Atoi(value)
 		if err != nil || n < 1 || n > 1000 {
-			t.Fatal("GOBALE_SYNTHETIC_MESSAGES_PER_ACCOUNT must be 1..1000")
+			t.Fatal("GOOMNI_SYNTHETIC_MESSAGES_PER_ACCOUNT must be 1..1000")
 		}
 		messagesPerAccount = n
 	}
@@ -671,7 +671,7 @@ func TestSynthetic50AccountsRoutingAndWorkerBounds(t *testing.T) {
 	for n := 1; n <= 50; n++ {
 		number := fmt.Sprint(n)
 		d := mustDevice(t, s, "account-"+number)
-		if e := st.SaveSession(ctx, d.ConnectionID, &domains.Session{UserID: number, Token: "synthetic-only"}); e != nil {
+		if e := st.SaveSession(ctx, d.ConnectionID, &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: number, Token: "synthetic-only"}); e != nil {
 			t.Fatal(e)
 		}
 		for m := 1; m <= messagesPerAccount; m++ {
@@ -717,7 +717,7 @@ func TestLogoutCancelsPendingWorkAndInvalidatesEarlierClaim(t *testing.T) {
 	f := &fakeClient{status: readyStatus(), logoutErr: errors.New("remote session revoke unconfirmed")}
 	s, st := testService(t, Options{}, func(domains.Device) domains.Client { return f })
 	d := mustDevice(t, s, "alpha")
-	if e := st.SaveSession(ctx, d.ConnectionID, &domains.Session{UserID: "100", Token: "private"}); e != nil {
+	if e := st.SaveSession(ctx, d.ConnectionID, &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "100", Token: "private"}); e != nil {
 		t.Fatal(e)
 	}
 	first, e := s.Send(ctx, d.ID, sendReq("first"), "one")

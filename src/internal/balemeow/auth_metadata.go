@@ -1,8 +1,8 @@
 package balemeow
 
 import (
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 	"strings"
 	"time"
 )
@@ -10,7 +10,7 @@ import (
 // authMetadata follows the reviewed web 173855 response. Field 8 is the resend
 // cooldown despite its legacy code_timeout name; code lifetime is field 9.
 func authMetadata(r *wire.StartPhoneAuthResponse, now time.Time) (domains.Challenge, error) {
-	out := domains.Challenge{ExpiresAt: now.Add(10 * time.Minute), SentCodeType: r.SentCodeType, NextSendCodeType: r.NextSendCodeType}
+	out := domains.Challenge{Delivery: "unknown", AvailableDeliveries: []string{"unknown"}, ExpiresAt: now.Add(10 * time.Minute), SentCodeType: r.SentCodeType, NextSendCodeType: r.NextSendCodeType}
 	if r.SentCodeType < 0 || r.NextSendCodeType < 0 || len(r.AvailableSendCodeTypes) > 32 {
 		return out, protocolError()
 	}

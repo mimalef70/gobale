@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/mimalef70/goomni/src/domains"
 	"io"
 	"net/http/httptest"
 	"os"
@@ -12,8 +13,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
-	"github.com/mimalef70/gobale/src/usecase"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/usecase"
 	"github.com/stretchr/testify/require"
 )
 
@@ -30,7 +31,7 @@ func TestMetricsKeepsCachedSnapshotWhenStorageFails(t *testing.T) {
 			require.NoError(t, st.Close())
 		}
 	})
-	_, err = svc.CreateDevice(context.Background(), "private-alias")
+	_, err = svc.CreateDevice(context.Background(), "private-alias", domains.ProviderBale)
 	require.NoError(t, err)
 	scanner := &mediaScanner{}
 	defer scanner.close()
@@ -55,11 +56,11 @@ func TestMetricsKeepsCachedSnapshotWhenStorageFails(t *testing.T) {
 	raw, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
 	body := string(raw)
-	require.Contains(t, body, "gobale_devices 1")
-	require.Contains(t, body, `gobale_metrics_snapshot_stale{component="queue"} 1`)
-	require.Contains(t, body, `gobale_metrics_snapshot_stale{component="disk"} 1`)
-	require.Contains(t, body, `gobale_metrics_snapshot_stale{component="media_disk"} 0`)
-	require.Contains(t, body, "gobale_db_pool_wait_seconds_total")
+	require.Contains(t, body, "goomni_devices 1")
+	require.Contains(t, body, `goomni_metrics_snapshot_stale{component="queue"} 1`)
+	require.Contains(t, body, `goomni_metrics_snapshot_stale{component="disk"} 1`)
+	require.Contains(t, body, `goomni_metrics_snapshot_stale{component="media_disk"} 0`)
+	require.Contains(t, body, "goomni_db_pool_wait_seconds_total")
 	require.NotContains(t, body, "private-alias")
 	require.NotContains(t, body, s.opts.MediaRoot)
 	req = httptest.NewRequest("GET", "/ready", nil)
@@ -83,8 +84,8 @@ func TestMetricsNeverScansMediaAtScrapeTime(t *testing.T) {
 	defer res.Body.Close()
 	raw, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
-	require.Contains(t, string(raw), "gobale_media_bytes 123")
-	require.Contains(t, string(raw), "gobale_media_free_bytes 456")
+	require.Contains(t, string(raw), "goomni_media_bytes 123")
+	require.Contains(t, string(raw), "goomni_media_free_bytes 456")
 	require.NotContains(t, string(raw), "private-root")
 }
 
@@ -112,8 +113,8 @@ func TestMissingMediaFilesystemKeepsPreviousCapacityWithoutStalingDatabase(t *te
 	defer res.Body.Close()
 	raw, err := io.ReadAll(res.Body)
 	require.NoError(t, err)
-	require.Contains(t, string(raw), `gobale_metrics_snapshot_stale{component="disk"} 0`)
-	require.Contains(t, string(raw), `gobale_metrics_snapshot_stale{component="media_disk"} 1`)
+	require.Contains(t, string(raw), `goomni_metrics_snapshot_stale{component="disk"} 0`)
+	require.Contains(t, string(raw), `goomni_metrics_snapshot_stale{component="media_disk"} 1`)
 	require.NotContains(t, string(raw), s.opts.MediaRoot)
 }
 

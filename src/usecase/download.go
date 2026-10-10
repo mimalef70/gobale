@@ -5,7 +5,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 // Download accepts only an account-scoped message reference. Provider file IDs
@@ -17,10 +17,18 @@ func (s *Service) Download(ctx context.Context, id string, peer domains.Peer, me
 	if err != nil {
 		return nil, domains.ProviderMedia{}, err
 	}
-	if !messageInt64(messageID) {
-		return nil, domains.ProviderMedia{}, domains.E("INVALID_MESSAGE_ID", "message_id must be a nonzero signed decimal int64", 400)
+	contract, err := s.provider(d.Provider)
+	if err != nil {
+		return nil, domains.ProviderMedia{}, err
 	}
-	if err = validMutationPeer(peer, peer.Type, false); err != nil {
+	validID := domains.ValidOpaqueID(messageID)
+	if identity, ok := contract.(domains.MessageIdentityContract); ok {
+		validID = validID && identity.ValidateMessageID(messageID)
+	}
+	if !validID {
+		return nil, domains.ProviderMedia{}, domains.E("INVALID_MESSAGE_ID", "message_id is invalid for this provider", 400)
+	}
+	if err = contract.ValidatePeer(peer); err != nil {
 		return nil, domains.ProviderMedia{}, err
 	}
 	descriptor, err := s.store.GetProviderMedia(ctx, d.ConnectionID, peer, messageID)

@@ -1,0 +1,3581 @@
+{
+  "provider": "rubika",
+  "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+  "methods": [
+    {
+      "source_method": "ExcludeFromProxy",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "excludeFromProxy"
+      ],
+      "reason": "ExcludeFromProxy: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "IncludeInProxy",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "includeInProxy"
+      ],
+      "reason": "IncludeInProxy: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "IsExcludedFromProxy",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "isExcludedFromProxy"
+      ],
+      "reason": "IsExcludedFromProxy: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "SetProxy",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "setProxy"
+      ],
+      "reason": "SetProxy: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "EnableProxy",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "enableProxy"
+      ],
+      "reason": "EnableProxy: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "DisableProxy",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "disableProxy"
+      ],
+      "reason": "DisableProxy: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "IsProxyEnabled",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "isProxyEnabled"
+      ],
+      "reason": "IsProxyEnabled: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "Connect",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "handShake"
+      ],
+      "reason": "Connect: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "Builder",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "builder"
+      ],
+      "reason": "Builder: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "GetUserInfo",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "getUserInfo"
+      ],
+      "reason": "GetUserInfo: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "GetMe",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "getUserInfo"
+      ],
+      "reason": "GetMe: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "SendCode",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "sendCode"
+      ],
+      "reason": "SendCode: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "ApplySignInResult",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-native-internal",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "session serialization"
+      ],
+      "reason": "ApplySignInResult: Versioned encrypted gateway session persistence replaces reference session files/strings; initial auth saves in the usecase before connection activation."
+    },
+    {
+      "source_method": "SendCodeExt",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "sendCode"
+      ],
+      "reason": "SendCodeExt: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "SignIn",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "signIn"
+      ],
+      "reason": "SignIn: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "SignInExt",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "signIn"
+      ],
+      "reason": "SignInExt: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "RegisterDevice",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "registerDevice"
+      ],
+      "reason": "RegisterDevice: Reference first-party app registration/push metadata; native OTP/session/socket implementation does not claim OS push registration."
+    },
+    {
+      "source_method": "RequestSendFile",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "requestSendFile"
+      ],
+      "reason": "RequestSendFile: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "GetChatsUpdates",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "getChatsUpdates"
+      ],
+      "reason": "GetChatsUpdates: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "DeleteMessages",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "deleteMessages"
+      ],
+      "reason": "DeleteMessages: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "ForwardMessages",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "forwardMessages"
+      ],
+      "reason": "ForwardMessages: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "EditMessage",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "editMessage"
+      ],
+      "reason": "EditMessage: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "GetMessagesByID",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "getMessagesByID"
+      ],
+      "reason": "GetMessagesByID: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "SetPinMessage",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "setPinMessage"
+      ],
+      "reason": "SetPinMessage: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "GetGroupInfo",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "getGroupInfo"
+      ],
+      "reason": "GetGroupInfo: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "GetChannelInfo",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "getChannelInfo"
+      ],
+      "reason": "GetChannelInfo: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "SendChatActivity",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "sendChatActivity"
+      ],
+      "reason": "sendChatActivity: encrypted fixture verifies finite observed Typing/Uploading/Recording activities; cancel and free text are rejected because current observed enum does not define them."
+    },
+    {
+      "source_method": "ActionOnMessageReaction",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "actionOnMessageReaction"
+      ],
+      "reason": "ActionOnMessageReaction: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "BanGroupMember",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "banGroupMember"
+      ],
+      "reason": "BanGroupMember: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "BanChannelMember",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "banChannelMember"
+      ],
+      "reason": "BanChannelMember: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "GetGroupAdminMembers",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "getGroupAdminMembers"
+      ],
+      "reason": "GetGroupAdminMembers: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "GetChannelAdminMembers",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "getChannelAdminMembers"
+      ],
+      "reason": "GetChannelAdminMembers: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "SeenChats",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "seenChats"
+      ],
+      "reason": "SeenChats: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "SetBlockUser",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "setBlockUser"
+      ],
+      "reason": "SetBlockUser: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "UnblockUser",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "setBlockUser"
+      ],
+      "reason": "UnblockUser: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "GetInfo",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "getUserInfo"
+      ],
+      "reason": "GetInfo: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "SendMessage",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "sendMessage"
+      ],
+      "reason": "SendMessage: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "Upload",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "requestSendFile"
+      ],
+      "reason": "Upload: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "DownloadFile",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-offline",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "GetFile.ashx"
+      ],
+      "reason": "DownloadFile: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "Start",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "start"
+      ],
+      "reason": "Start: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "Run",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "run"
+      ],
+      "reason": "Run: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "RunInBackground",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "runInBackground"
+      ],
+      "reason": "RunInBackground: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "AddHandler",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "addHandler"
+      ],
+      "reason": "AddHandler: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "OnMessage",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "onMessage"
+      ],
+      "reason": "OnMessage: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "OnMessageMatch",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "onMessageMatch"
+      ],
+      "reason": "OnMessageMatch: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "Disconnect",
+      "source_evidence": "executable-reference-method",
+      "implementation": "internal-reference",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "disconnect"
+      ],
+      "reason": "Disconnect: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "GetSessionString",
+      "source_evidence": "executable-reference-method",
+      "implementation": "implemented-native-internal",
+      "live_verified": false,
+      "reference": "Rubingo",
+      "source_commit": "39f780813e558f390a9404964e1d9ec80748e66f",
+      "wire_methods": [
+        "session serialization"
+      ],
+      "reason": "GetSessionString: Versioned encrypted gateway session persistence replaces reference session files/strings; initial auth saves in the usecase before connection activation."
+    },
+    {
+      "source_method": "__enter__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 33,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__enter__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__exit__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 36,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__exit__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__eq__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 44,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__eq__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__ge__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 62,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__ge__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__gt__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 72,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__gt__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__ne__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 79,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__ne__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__lt__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 89,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__lt__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__le__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 96,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__le__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__add__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 103,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__add__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__sub__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 113,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__sub__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__mul__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 120,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__mul__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__floordiv__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 127,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__floordiv__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__truediv__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 134,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__truediv__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__mod__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 141,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__mod__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__pow__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 148,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__pow__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__lshift__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 155,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__lshift__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__rshift__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 162,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__rshift__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__and__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 168,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__and__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__or__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 175,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__or__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__xor__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 182,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__xor__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__contains__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 189,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__contains__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__getitem__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 196,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__getitem__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__setitem__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 203,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__setitem__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "key_generation",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 248,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "key_generation: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "tmp_generation",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 262,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "tmp_generation: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "private_link_generation",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 272,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "private_link_generation: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "guid_generation",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 289,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "guid_generation: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "send_code",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 309,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "sendCode"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_code: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "sign_up",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 329,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "sign_up: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "sign_in",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 339,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "signIn"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "sign_in: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "log_in",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 369,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "log_in: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "register_device",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 378,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "registerDevice"
+      ],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "register_device: Reference first-party app registration/push metadata; native OTP/session/socket implementation does not claim OS push registration."
+    },
+    {
+      "source_method": "parsation",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 397,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "parsation: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "check_auth",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 443,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "check_auth: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "request_send_file",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 457,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "requestSendFile"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "request_send_file: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "upload_file",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 473,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "upload_file: Native bounded media path covers file/image/voice, inspected Ogg Opus audio and AVC MP4 video; no reference aliases, arbitrary URLs, fake duration or runtime transcoder."
+    },
+    {
+      "source_method": "get_thumb_inline",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 631,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_thumb_inline: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_image_size",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 660,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_image_size: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__get_chat_id",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 671,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__get_chat_id: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__get_message_id",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 691,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__get_message_id: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__bypass",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 712,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__bypass: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_updates",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 733,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_updates: Wrapper has no literal provider method of its own (alias, operator or parser helper); underlying method evidence is recorded separately."
+    },
+    {
+      "source_method": "send_message",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 741,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "sendMessage"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_message: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "edit_message",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 840,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "editMessage"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "edit_message: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "get_stickers_by_set_ids",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 907,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getStickersBySetIDs"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_stickers_by_set_ids: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "delete_messages",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 933,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "deleteMessages"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "delete_messages: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "get_messages_interval",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 965,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getMessagesInterval"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_messages_interval: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "get_object_by_username",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1003,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getObjectByUsername"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_object_by_username: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "get_messages_by_id",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1015,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getMessagesByID"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_messages_by_id: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "forward_messages",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1059,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "forwardMessages"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "forward_messages: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "seen_chats",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1105,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "seenChats"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "seen_chats: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "set_pin_message",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1160,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "setPinMessage"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "set_pin_message: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "set_block_user",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1201,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "setBlockUser"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "set_block_user: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "send_photo",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1239,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "sendMessage"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_photo: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "send_image",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1327,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_image: Native bounded media path covers file/image/voice, inspected Ogg Opus audio and AVC MP4 video; no reference aliases, arbitrary URLs, fake duration or runtime transcoder."
+    },
+    {
+      "source_method": "send_picture",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1335,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_picture: Native bounded media path covers file/image/voice, inspected Ogg Opus audio and AVC MP4 video; no reference aliases, arbitrary URLs, fake duration or runtime transcoder."
+    },
+    {
+      "source_method": "send_voice",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1343,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "sendMessage"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_voice: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "send_document",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1412,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "sendMessage"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_document: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "send_file",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1481,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_file: Native bounded media path covers file/image/voice, inspected Ogg Opus audio and AVC MP4 video; no reference aliases, arbitrary URLs, fake duration or runtime transcoder."
+    },
+    {
+      "source_method": "send_location",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1489,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "send_location: Wrapper has no literal provider method of its own (alias, operator or parser helper); underlying method evidence is recorded separately."
+    },
+    {
+      "source_method": "upload_avatar",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1537,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "uploadAvatar"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "upload_avatar: Finite selected-account operation with current web field names, explicit public projection and encrypted positive/negative/fault fixtures; no live interoperability claim."
+    },
+    {
+      "source_method": "get_chat_info",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1580,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_chat_info: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "send_gif",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1612,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "sendMessage"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_gif: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "update_profile",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1676,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "update_profile: Wrapper has no literal provider method of its own (alias, operator or parser helper); underlying method evidence is recorded separately."
+    },
+    {
+      "source_method": "get_avatars",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1705,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getAvatars"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_avatars: fresh account-scoped getAvatars main/thumbnail reference, private canonical-DC download and bounded JPEG/PNG/GIF inspection; avatar_test.go synthetic privacy, missing-avatar, invalid DC/size and byte-identity tests."
+    },
+    {
+      "source_method": "delete_avatar",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1731,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "deleteAvatar"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "delete_avatar: Finite selected-account operation with current web field names, explicit public projection and encrypted positive/negative/fault fixtures; no live interoperability claim."
+    },
+    {
+      "source_method": "get_file",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1759,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_file: Native bounded media path covers file/image/voice, inspected Ogg Opus audio and AVC MP4 video; no reference aliases, arbitrary URLs, fake duration or runtime transcoder."
+    },
+    {
+      "source_method": "download",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1883,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "download: Native bounded media path covers file/image/voice, inspected Ogg Opus audio and AVC MP4 video; no reference aliases, arbitrary URLs, fake duration or runtime transcoder."
+    },
+    {
+      "source_method": "method",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1887,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "method: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "set_setting",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1904,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "setSetting"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "set_setting: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "create_poll",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1933,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "createPoll"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "create_poll: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "vote_poll",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1968,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "votePoll"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "vote_poll: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "delete_chat_history",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1981,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "deleteChatHistory"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "delete_chat_history: Finite selected-account operation with current web field names, explicit public projection and encrypted positive/negative/fault fixtures; no live interoperability claim."
+    },
+    {
+      "source_method": "search_global_objects",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2013,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "searchGlobalObjects"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "search_global_objects: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "get_poll_status",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2037,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getPollStatus"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_poll_status: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "get_poll_option_voters",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2063,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getPollOptinVoters"
+      ],
+      "live_verified": false,
+      "implementation": "replaced-reference-typo",
+      "reason": "get_poll_option_voters: Pinned old reference misspells getPollOptinVoters; current reviewed web calls getPollOptionVoters, implemented by native poll.voters."
+    },
+    {
+      "source_method": "report_object",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2093,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "reportObject"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "report_object: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "get_link_from_app_url",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2133,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getLinkFromAppUrl"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_link_from_app_url: Finite selected-account operation with current web field names, explicit public projection and encrypted positive/negative/fault fixtures; no live interoperability claim."
+    },
+    {
+      "source_method": "send_chat_activity",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2161,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "sendChatActivity"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "sendChatActivity: encrypted fixture verifies finite observed Typing/Uploading/Recording activities; cancel and free text are rejected because current observed enum does not define them."
+    },
+    {
+      "source_method": "add_address_book",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2193,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "addAddressBook"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "add_address_book: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "delete_user_chat",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2221,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "deleteUserChat"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "delete_user_chat: Finite selected-account operation with current web field names, explicit public projection and encrypted positive/negative/fault fixtures; no live interoperability claim."
+    },
+    {
+      "source_method": "search_globl_messages",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2249,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "searchGlobalMessages"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "search_globl_messages: Finite selected-account operation with current web field names, explicit public projection and encrypted positive/negative/fault fixtures; no live interoperability claim."
+    },
+    {
+      "source_method": "get_contacts_last_online",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2289,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getContactsLastOnline"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_contacts_last_online: Finite selected-account operation with current web field names, explicit public projection and encrypted positive/negative/fault fixtures; no live interoperability claim."
+    },
+    {
+      "source_method": "get_abs_objects",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2317,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getAbsObjects"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_abs_objects: Finite selected-account operation with current web field names, explicit public projection and encrypted positive/negative/fault fixtures; no live interoperability claim."
+    },
+    {
+      "source_method": "get_message_updates",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2349,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getMessagesUpdates"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_message_updates: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "send_mention",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2377,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "sendMessage"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_mention: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "mention_text",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2426,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "sendMessage"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "mention_text: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "add_folder",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2462,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "addFolder"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "add_folder: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "send_messag_api_call",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2492,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "sendMessageAPICall"
+      ],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "send_messag_api_call: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "send_report",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2530,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "send_report: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "send_movie",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2556,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "sendMessage"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_movie: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "send_video",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2629,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_video: Native bounded media path covers file/image/voice, inspected Ogg Opus audio and AVC MP4 video; no reference aliases, arbitrary URLs, fake duration or runtime transcoder."
+    },
+    {
+      "source_method": "send_film",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2637,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_film: Native bounded media path covers file/image/voice, inspected Ogg Opus audio and AVC MP4 video; no reference aliases, arbitrary URLs, fake duration or runtime transcoder."
+    },
+    {
+      "source_method": "send_music",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2645,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "sendMessage"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_music: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "send_sound",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2719,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_sound: Native bounded media path covers file/image/voice, inspected Ogg Opus audio and AVC MP4 video; no reference aliases, arbitrary URLs, fake duration or runtime transcoder."
+    },
+    {
+      "source_method": "send_song",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2727,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "send_song: Native bounded media path covers file/image/voice, inspected Ogg Opus audio and AVC MP4 video; no reference aliases, arbitrary URLs, fake duration or runtime transcoder."
+    },
+    {
+      "source_method": "get_chat_last_message_id",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2735,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_chat_last_message_id: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_chat_last_text",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2755,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_chat_last_text: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_chat_last_object",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2769,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_chat_last_object: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_chat_first_message",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2783,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_chat_first_message: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_last_message",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2811,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_last_message: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_chat_last_message",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2825,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_chat_last_message: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_chat_last_author",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2829,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_chat_last_author: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_last_message_id",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2843,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_last_message_id: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_pending_object_owner",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2851,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getPendingObjectOwner"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "get_pending_object_owner: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "terminate_other_sessions",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2867,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "terminateOtherSessions"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "terminate_other_sessions: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "request_change_object_owner",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2878,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "requestChangeObjectOwner"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "request_change_object_owner: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "chat_possession_transition",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2894,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "chat_possession_transition: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "get_messages",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2905,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_messages: Wrapper has no literal provider method of its own (alias, operator or parser helper); underlying method evidence is recorded separately."
+    },
+    {
+      "source_method": "get_message",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2944,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_message: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_event",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2982,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_event: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_events",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2990,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_events: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_chat",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 2998,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_chat: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_base_info",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3007,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_base_info: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_user",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3018,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getUser"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "get_user: This old reference uses separate PWA API-v2 session_key/product endpoint, not native Messenger API6. Native own-account profile uses getUserInfo through account.info; no credential-format fallback is introduced."
+    },
+    {
+      "source_method": "search_query",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3028,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "searchQuery"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "search_query: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "get_search_structure",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3041,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getSearchStructure"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "get_search_structure: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "get_endpoint_view",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3049,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getEndpointView"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "get_endpoint_view: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "get_endpoint_data",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3058,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getEndpointData"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "get_endpoint_data: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "get_barcode_action",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3067,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getBarcodeAction"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "get_barcode_action: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "get_object",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3077,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_object: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_tag_list",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3087,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getTagList"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "get_tag_list: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "get_tag_objects",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3096,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getTagObjects"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "get_tag_objects: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "get_list",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3106,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_list: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "get_dcs",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3118,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_dcs: Wrapper has no literal provider method of its own (alias, operator or parser helper); underlying method evidence is recorded separately."
+    },
+    {
+      "source_method": "request_delete_account",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3124,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "requestDeleteAccount"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "request_delete_account: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "delete_account",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3143,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "delete_account: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "get_chat_ads",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3151,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getChatAds"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "get_chat_ads: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "send_reaction",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3163,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "send_reaction: Wrapper has no literal provider method of its own (alias, operator or parser helper); underlying method evidence is recorded separately."
+    },
+    {
+      "source_method": "set_message_timer",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3172,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "set_message_timer: Automatic provider message expiry contradicts the explicit no automatic history retention policy."
+    },
+    {
+      "source_method": "hyper_link",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 3182,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "hyper_link: Wrapper has no literal provider method of its own (alias, operator or parser helper); underlying method evidence is recorded separately."
+    },
+    {
+      "source_method": "params",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/UserMethods.py",
+      "source_line": 1892,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "params: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__enter__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 27,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__enter__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__exit__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 30,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__exit__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__link_scanner",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 39,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__link_scanner: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__get_chat_id",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 55,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__get_chat_id: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "ban_group_member",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 72,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "banGroupMember"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "ban_group_member: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "add_group_members",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 98,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "addGroupMembers"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "add_group_members: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "get_group_admin_members",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 135,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getGroupAdminMembers"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_group_admin_members: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "set_group_default_access",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 167,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "setGroupDefaultAccess"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "set_group_default_access: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "get_group_all_members",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 202,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getGroupAllMembers"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_group_all_members: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "get_group_link",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 235,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getGroupLink"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_group_link: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "set_group_link",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 265,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "setGroupLink"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "set_group_link: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "set_group_timer",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 297,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "editGroupInfo"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "set_group_timer: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "set_group_admin",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 337,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "setGroupAdmin"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "set_group_admin: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "join_group",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 380,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "joinGroup"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "join_group: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "group_preview_by_join_link",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 410,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "groupPreviewByJoinLink"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "group_preview_by_join_link: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "leave_group",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 440,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "leaveGroup"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "leave_group: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "create_objcet_voice_chat",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 472,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "create_objcet_voice_chat: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "set_object_voice_chat_setting",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 498,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "set_object_voice_chat_setting: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "discard_object_voice_chat",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 527,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "discard_object_voice_chat: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "set_action_chat",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 553,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "setActionChat"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "set_action_chat: Finite selected-account operation with current web field names, explicit public projection and encrypted positive/negative/fault fixtures; no live interoperability claim."
+    },
+    {
+      "source_method": "join_group_voice_chat",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 586,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "joinGroupVoiceChat"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "join_group_voice_chat: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "leave_group_voice_chat",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 615,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "leaveGroupVoiceChat"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "leave_group_voice_chat: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "set_group_voice_chat_setting",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 641,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "setGroupVoiceChatSetting"
+      ],
+      "live_verified": false,
+      "implementation": "out-of-scope",
+      "reason": "set_group_voice_chat_setting: Account ownership/security/signup, live call engine, reporting or broader super-app content endpoint outside the personal messaging expansion."
+    },
+    {
+      "source_method": "edit_group_info",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 669,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "editGroupInfo"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "edit_group_info: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "get_banned_chat_members",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 703,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "get_banned_chat_members: Wrapper has no literal provider method of its own (alias, operator or parser helper); underlying method evidence is recorded separately."
+    },
+    {
+      "source_method": "get_group_mention_list",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 730,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getGroupMentionList"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_group_mention_list: Finite selected-account operation with current web field names, explicit public projection and encrypted positive/negative/fault fixtures; no live interoperability claim."
+    },
+    {
+      "source_method": "delete_no_access_group_chat",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 758,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "deleteNoAccessGroupChat"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "delete_no_access_group_chat: Finite selected-account operation with current web field names, explicit public projection and encrypted positive/negative/fault fixtures; no live interoperability claim."
+    },
+    {
+      "source_method": "get_common_groups",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 781,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getCommonGroups"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_common_groups: Finite selected-account operation with current web field names, explicit public projection and encrypted positive/negative/fault fixtures; no live interoperability claim."
+    },
+    {
+      "source_method": "get_group_online_count",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/GroupMethods.py",
+      "source_line": 794,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getGroupOnlineCount"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_group_online_count: Finite selected-account operation with current web field names, explicit public projection and encrypted positive/negative/fault fixtures; no live interoperability claim."
+    },
+    {
+      "source_method": "__enter__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/ChannelMethods.py",
+      "source_line": 27,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__enter__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__exit__",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/ChannelMethods.py",
+      "source_line": 30,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__exit__: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "__get_chat_id",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/ChannelMethods.py",
+      "source_line": 35,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [],
+      "live_verified": false,
+      "implementation": "internal-reference",
+      "reason": "__get_chat_id: Reference convenience/operator/parser/proxy/raw-dispatch helper; the gateway supplies its own finite domain contracts, bounded transport and durable lifecycle rather than this wrapper API."
+    },
+    {
+      "source_method": "add_channel_members",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/ChannelMethods.py",
+      "source_line": 57,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "addChannelMembers"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "add_channel_members: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "get_channel_all_members",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/ChannelMethods.py",
+      "source_line": 79,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "getChannelAllMembers"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "get_channel_all_members: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "set_channel_action",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/ChannelMethods.py",
+      "source_line": 107,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "joinChannelAction"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "set_channel_action: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "add_channel",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/ChannelMethods.py",
+      "source_line": 140,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "addChannel"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "add_channel: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "edit_channnel_info",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/ChannelMethods.py",
+      "source_line": 176,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "editChannelInfo"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "edit_channnel_info: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "update_channel_username",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/ChannelMethods.py",
+      "source_line": 204,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "updateChannelUsername"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "update_channel_username: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "set_channel_admin",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/ChannelMethods.py",
+      "source_line": 230,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "setChannelAdmin"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "set_channel_admin: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "channel_preview_by_join_link",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/ChannelMethods.py",
+      "source_line": 267,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "channelPreviewByJoinLink"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "channel_preview_by_join_link: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    },
+    {
+      "source_method": "join_channel_by_link",
+      "reference": "Rubx",
+      "source_commit": "717e7b82046bfb0813d90812c48289a1bc6a82ce",
+      "source_file": "rb/ChannelMethods.py",
+      "source_line": 288,
+      "source_evidence": "reference-method-body",
+      "wire_methods": [
+        "joinChannelByLink"
+      ],
+      "live_verified": false,
+      "implementation": "implemented-offline",
+      "reason": "join_channel_by_link: Finite native request/projection path with synthetic encrypted RPC/socket/media regression coverage; wrapper aliases are not counted as distinct capabilities."
+    }
+  ],
+  "wire_methods": [
+    {
+      "method": "actionOnMessageReaction",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "actionOnStickerSet",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "addAddressBook",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "addChannel",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "addChannelMembers",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "addFolder",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "addGroup",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "addGroupMembers",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "banChannelMember",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "banGroupMember",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "channelPreviewByJoinLink",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "createPoll",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "deleteContact",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "deleteFolder",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "deleteMessages",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "editChannelInfo",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "editFolder",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "editGroupInfo",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "editMessage",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "forwardMessages",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getBannedChannelMembers",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getBannedGroupMembers",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getChannelAdminAccessList",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getChannelAdminMembers",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getChannelAllMembers",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getChannelInfo",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getChannelLink",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getChats",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getChatsUpdates",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getContacts",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getFolders",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getGroupAdminAccessList",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getGroupAdminMembers",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getGroupAllMembers",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getGroupDefaultAccess",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getGroupInfo",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getGroupLink",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getMessages",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getMessagesByID",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getMessagesInterval",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getMessagesUpdates",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getMyGifSet",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getMyStickerSets",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getObjectByUsername",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getPollOptionVoters",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getPollStatus",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getStickersBySetIDs",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getUserInfo",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "groupPreviewByJoinLink",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "joinChannelAction",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "joinChannelByLink",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "joinGroup",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "leaveGroup",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "logout",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "requestSendFile",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "searchChatMessages",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "searchGlobalObjects",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "seenChats",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "sendCode",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "sendMessage",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "setBlockUser",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "setChannelAdmin",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "setChannelLink",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "setGroupAdmin",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "setGroupDefaultAccess",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "setGroupLink",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "setPinMessage",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "signIn",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "updateChannelUsername",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "updateProfile",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "updateUsername",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "votePoll",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference or reviewed current public web call",
+      "test_scope": "finite native operation, lifecycle or recovery path; common and family-specific encrypted fixtures, not live interoperability",
+      "live_verified": false
+    },
+    {
+      "method": "getAvatars",
+      "implementation": "implemented-offline",
+      "source_evidence": "reviewed current web main/thumbnail references",
+      "test_scope": "avatar_test.go fresh account-scoped resolution, bounded inspected image download and missing/private normalization",
+      "live_verified": false
+    },
+    {
+      "method": "sendChatActivity",
+      "implementation": "implemented-offline",
+      "source_evidence": "current reviewed Web finite activity enum",
+      "test_scope": "encrypted fixture request and unsupported-activity rejection",
+      "live_verified": false
+    },
+    {
+      "method": "deleteAvatar",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference compared with reviewed current web invocation",
+      "test_scope": "finite encrypted native fixture with identity/privacy/fault validation; avatar writes also inspect source and journal stages",
+      "live_verified": false
+    },
+    {
+      "method": "deleteChatHistory",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference compared with reviewed current web invocation",
+      "test_scope": "finite encrypted native fixture with identity/privacy/fault validation; avatar writes also inspect source and journal stages",
+      "live_verified": false
+    },
+    {
+      "method": "deleteNoAccessGroupChat",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference compared with reviewed current web invocation",
+      "test_scope": "finite encrypted native fixture with identity/privacy/fault validation; avatar writes also inspect source and journal stages",
+      "live_verified": false
+    },
+    {
+      "method": "deleteUserChat",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference compared with reviewed current web invocation",
+      "test_scope": "finite encrypted native fixture with identity/privacy/fault validation; avatar writes also inspect source and journal stages",
+      "live_verified": false
+    },
+    {
+      "method": "getAbsObjects",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference compared with reviewed current web invocation",
+      "test_scope": "finite encrypted native fixture with identity/privacy/fault validation; avatar writes also inspect source and journal stages",
+      "live_verified": false
+    },
+    {
+      "method": "getCommonGroups",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference compared with reviewed current web invocation",
+      "test_scope": "finite encrypted native fixture with identity/privacy/fault validation; avatar writes also inspect source and journal stages",
+      "live_verified": false
+    },
+    {
+      "method": "getContactsLastOnline",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference compared with reviewed current web invocation",
+      "test_scope": "finite encrypted native fixture with identity/privacy/fault validation; avatar writes also inspect source and journal stages",
+      "live_verified": false
+    },
+    {
+      "method": "getGroupMentionList",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference compared with reviewed current web invocation",
+      "test_scope": "finite encrypted native fixture with identity/privacy/fault validation; avatar writes also inspect source and journal stages",
+      "live_verified": false
+    },
+    {
+      "method": "getGroupOnlineCount",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference compared with reviewed current web invocation",
+      "test_scope": "finite encrypted native fixture with identity/privacy/fault validation; avatar writes also inspect source and journal stages",
+      "live_verified": false
+    },
+    {
+      "method": "getLinkFromAppUrl",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference compared with reviewed current web invocation",
+      "test_scope": "finite encrypted native fixture with identity/privacy/fault validation; avatar writes also inspect source and journal stages",
+      "live_verified": false
+    },
+    {
+      "method": "searchGlobalMessages",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference compared with reviewed current web invocation",
+      "test_scope": "finite encrypted native fixture with identity/privacy/fault validation; avatar writes also inspect source and journal stages",
+      "live_verified": false
+    },
+    {
+      "method": "setActionChat",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference compared with reviewed current web invocation",
+      "test_scope": "finite encrypted native fixture with identity/privacy/fault validation; avatar writes also inspect source and journal stages",
+      "live_verified": false
+    },
+    {
+      "method": "uploadAvatar",
+      "implementation": "implemented-offline",
+      "source_evidence": "pinned MIT reference compared with reviewed current web invocation",
+      "test_scope": "finite encrypted native fixture with identity/privacy/fault validation; avatar writes also inspect source and journal stages",
+      "live_verified": false
+    }
+  ],
+  "official_web_observations": [
+    {
+      "url": "https://web.rubika.ir/main-es2015.6421623571994c9dd619.js",
+      "sha256": "47b302b9166ed8c9138f9d959e9107c53dcb78c9447f8281715f657b68080acb",
+      "scope": "read-only protocol observations: state cursors, pagination, updates, forward rnd, communication families; no copied implementation"
+    },
+    {
+      "url": "https://m.rubika.ir/static/js/main.4fda2e41.js",
+      "sha256": "8d91bd40a97fe7bfba1314f540244d0966b095ea869d1febca04eac0ff0f8444",
+      "scope": "read-only API6 authentication/crypto behavior comparison; no copied implementation"
+    }
+  ],
+  "evidence": {
+    "date": "2026-10-10",
+    "scope": "synthetic API6 crypto/auth/RPC/socket/recovery/media and communication-family fixtures; normal/race tests",
+    "capacity": "100 distinct synthetic account credentials; 200 handshakes, 400 RPCs, 200 socket events, 200 checkpoint commits, max concurrency permits 4; two connection cycles. Not live-account or sustained capacity.",
+    "test_files": [
+      "auth_metadata_test.go",
+      "avatar_mutations_test.go",
+      "avatar_test.go",
+      "capacity_test.go",
+      "client_test.go",
+      "communication_test.go",
+      "extended_test.go",
+      "media_test.go"
+    ],
+    "final_targeted_gates": {
+      "date": "2026-10-10",
+      "commands": [
+        "cd src && go test -race ./internal/eitaameow ./internal/rubikameow ./infrastructure/storage -count=1",
+        "cd src && go test -tags purego ./internal/eitaameow ./internal/rubikameow ./infrastructure/storage -count=1"
+      ],
+      "result": "passed",
+      "scope": "synthetic native providers and durable storage, including distinct Eitaa classic-chat and channel-backed supergroup namespaces; not live provider verification"
+    }
+  },
+  "limitations": [
+    "No live Rubika personal-account result is recorded.",
+    "Recovery persists provider account and peer state, with explicit OldState/baseline gaps; initial historical import and exhaustive recovery completeness are not claimed.",
+    "No reviewed current closePoll/stopPoll method was found; poll.close remains unavailable.",
+    "Voice is verified Ogg Opus, audio is Ogg Opus and video is inspected unfragmented AVC MP4; arbitrary codecs/transcoding are not implemented.",
+    "Unknown sends remain unknown; socket events and matching message content are not acknowledgement proofs.",
+    "Inventories list wrappers and protocol methods separately; neither row count nor route count is a compatibility percentage.",
+    "The reviewed Web client uses update.timestamp as UI trackBy, without a witnessed monotonic ordering comparison. Conflicting attachment edits with no proven revision order withhold download_supported instead of exposing stale bytes; new references remain available.",
+    "Dedicated read receipts are not emitted. Reviewed chat state has last_seen_my_mid / last_seen_peer_mid watermarks; only last_seen_my_mid is currently retained by native chat-state projection. No per-message reader or read timestamp is inferred."
+  ],
+  "incoming_updates": [
+    {
+      "variants": [
+        "message_updates New",
+        "message_updates Edit",
+        "message_updates Delete"
+      ],
+      "implementation": "implemented-offline",
+      "evidence": "Encrypted socket and getMessagesUpdates fixtures; exact object GUID and message identity, provider edit/delete timestamp retained, no reconciliation proof inferred.",
+      "live_verified": false
+    },
+    {
+      "variants": [
+        "chat_updates",
+        "getChatsUpdates changes/deletions"
+      ],
+      "implementation": "implemented-offline",
+      "evidence": "Finite chat-state projections and provider state/checkpoint CAS; observed timestamps are labeled.",
+      "live_verified": false
+    },
+    {
+      "variants": [
+        "dedicated read receipt events"
+      ],
+      "implementation": "not-implemented",
+      "evidence": "The reviewed Web bundle merges chat_updates and compares chat.last_seen_my_mid / last_seen_peer_mid against message IDs. Native chat-state projection currently retains last_seen_my_mid only; it does not emit per-message or peer-read receipt events. A dedicated receipt contract needs explicit cumulative-watermark semantics, replay identity and a decision on group reader coverage; no standalone read_updates/seen_updates stream was found in this bundle. This is a receive-contract limitation, not proof that receipt support is impossible.",
+      "live_verified": false
+    },
+    {
+      "variants": [
+        "other socket/recovery update families"
+      ],
+      "implementation": "explicit-unsupported",
+      "evidence": "No full receive-family claim. Unrecognized frames are surfaced as unsupported coverage diagnostics, independently of provider-expired recovery states; private raw provider objects are not forwarded.",
+      "live_verified": false
+    }
+  ],
+  "controlled_live_smoke": {
+    "date": "2026-10-10",
+    "account_scope": "one operator-controlled account; self-chat writes and service-chat read-only checks",
+    "reference": "acceptance.md#controlled-live-smoke-after-protocol-fixes",
+    "full_provider_acceptance": false,
+    "passed": [
+      "native SMS sign-in and device registration",
+      "own profile",
+      "restart without OTP",
+      "self text, idempotent replay, edit and forward",
+      "browser-origin self message, durable event and valid signed webhook",
+      "local event text search",
+      "file send and byte-identical download after history registration",
+      "Ogg Opus voice send, byte-identical download and independent decoding",
+      "web voice playback control reached the synthetic 0.6-second duration",
+      "scheduled self text; occurrence succeeded",
+      "service chat.info and history: three reviewed text messages",
+      "post-fix self send and browser-origin self message -> durable event -> signed webhook; legacy warning separated from gap"
+    ],
+    "limits": [
+      "one account only; no cross-account live acceptance",
+      "password, logout, outage recovery, group/channel administration and other operation variants remain live-unverified",
+      "reference wrappers retain live_verified=false; the workflow observations do not verify every wrapper variant",
+      "Bot/Service conversation protocol has offline coverage; only Service info/history were checked live. Bot live tests were explicitly excluded by the operator. Service writes are not live-verified. Legacy unclassified recovery evidence is retained."
+    ]
+  },
+  "conversation_peer_support": {
+    "date": "2026-10-10",
+    "peer_types": {
+      "user": "u0",
+      "group": "g0",
+      "channel": "c0",
+      "bot": "b0",
+      "service": "s0"
+    },
+    "operations": [
+      "chat.info",
+      "chat.history",
+      "chat.messages",
+      "chat.search",
+      "chat.get_by_ids",
+      "peers.get",
+      "chat.action",
+      "chat.history.clear",
+      "chat.remove (user/bot/service)",
+      "text/media/reply/edit/delete/forward/pin/read through shared message contracts"
+    ],
+    "evidence": "official_web_observations; synthetic native contract/recovery/projection tests; controlled Service info/history reads",
+    "limits": [
+      "No bot administration API, financial flows or raw RPC access",
+      "Provider permissions apply, including service write restrictions",
+      "No arbitrary history import or new full-inbox live acceptance claim"
+    ]
+  },
+  "controlled_follow_up": [
+    {
+      "date": "2026-10-10",
+      "scope": "Two operator-controlled accounts; source working tree; no full-provider or capacity acceptance.",
+      "reference": "acceptance.md",
+      "passed": [
+        "Member/admin/banned ID/type projection; member-ID checked ban/unban/add/send",
+        "Avatar opaque-ID list; initially-empty profile set/list/remove restored empty",
+        "Sender-contact card both directions, including without user_id; exact recipient reads and local contact event projection",
+        "Folder edit and preview/leave/join; chat-setting acknowledgements (full effects unverified)"
+      ]
+    }
+  ]
+}

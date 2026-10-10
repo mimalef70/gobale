@@ -8,7 +8,8 @@ import (
 	"sync/atomic"
 	"testing"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/workpool"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,10 +32,10 @@ func TestAvatarHTTPAuthScopeBinaryAndSlotRelease(t *testing.T) {
 	srv, svc := setupAPIWithFactory(t, "", func(d domains.Device) domains.Client {
 		return &avatarRESTClient{account: d.ID, calls: &calls}
 	})
-	srv.mediaSlots = make(chan struct{}, 1)
-	_, err := svc.CreateDevice(context.Background(), "one")
+	srv.mediaPool = workpool.New(1)
+	_, err := svc.CreateDevice(context.Background(), "one", domains.ProviderBale)
 	require.NoError(t, err)
-	_, err = svc.CreateDevice(context.Background(), "two")
+	_, err = svc.CreateDevice(context.Background(), "two", domains.ProviderBale)
 	require.NoError(t, err)
 	for _, tc := range []struct {
 		device, query string
@@ -66,7 +67,7 @@ func TestAvatarHTTPAuthScopeBinaryAndSlotRelease(t *testing.T) {
 			require.Contains(t, res.Header.Get("Content-Disposition"), "inline")
 			require.True(t, strings.HasPrefix(string(body), "image-"))
 		}
-		require.Empty(t, srv.mediaSlots)
+		require.Zero(t, srv.mediaPool.Active())
 	}
 	require.EqualValues(t, 4, calls.Load())
 }

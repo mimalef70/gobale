@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/domains/send"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/domains/send"
 	"github.com/stretchr/testify/require"
 )
 

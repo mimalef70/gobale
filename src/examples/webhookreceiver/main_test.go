@@ -41,7 +41,7 @@ func receiverRequest(body []byte, secret string) *http.Request {
 	mac := hmac.New(sha256.New, []byte(secret))
 	_, _ = mac.Write(body)
 	request.Header.Set("X-Hub-Signature-256", "sha256="+hex.EncodeToString(mac.Sum(nil)))
-	request.Header.Set("X-GoBale-Event-Id", "synthetic-event")
+	request.Header.Set("X-GoOmni-Event-Id", "synthetic-event")
 	return request
 }
 
@@ -125,8 +125,8 @@ func TestReceiverRejectsSignatureAndHeaderSpoofing(t *testing.T) {
 		{"invalid signature", func(r *http.Request) { r.Header.Set("X-Hub-Signature-256", "sha256=invalid") }, 401},
 		{"duplicate signature", func(r *http.Request) { r.Header.Add("X-Hub-Signature-256", r.Header.Get("X-Hub-Signature-256")) }, 401},
 		{"tampered raw body", func(r *http.Request) { r.Body = io.NopCloser(bytes.NewReader(append([]byte(" "), body...))) }, 401},
-		{"missing event header", func(r *http.Request) { r.Header.Del("X-GoBale-Event-Id") }, 400},
-		{"duplicate event header", func(r *http.Request) { r.Header.Add("X-GoBale-Event-Id", "synthetic-event") }, 400},
+		{"missing event header", func(r *http.Request) { r.Header.Del("X-GoOmni-Event-Id") }, 400},
+		{"duplicate event header", func(r *http.Request) { r.Header.Add("X-GoOmni-Event-Id", "synthetic-event") }, 400},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			request := receiverRequest(body, expected.Secret)

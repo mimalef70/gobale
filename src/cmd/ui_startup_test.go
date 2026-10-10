@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/mimalef70/gobale/src/config"
+	"github.com/mimalef70/goomni/src/config"
 	"github.com/stretchr/testify/require"
 )
 

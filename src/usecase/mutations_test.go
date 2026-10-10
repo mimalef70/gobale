@@ -3,9 +3,10 @@ package usecase
 import (
 	"context"
 	"encoding/json"
+	"github.com/mimalef70/goomni/src/infrastructure/providers/bale"
 	"testing"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 func TestGenericMutationIsJournaledBeforeCallAndIdempotent(t *testing.T) {
@@ -35,7 +36,7 @@ func TestGenericMutationIsJournaledBeforeCallAndIdempotent(t *testing.T) {
 			t.Error(err)
 		}
 		persisted, err := st.GetOperation(ctx, d.ConnectionID, operation.ID)
-		if err != nil || persisted.State != "sending" || request["request_id"] != persisted.Request.RequestID || !positiveInt64(persisted.Request.RequestID) {
+		if err != nil || persisted.State != "sending" || request["request_id"] != persisted.Request.RequestID || !bale.ValidMessageID(persisted.Request.RequestID) {
 			t.Fatalf("call was not durably identified: %+v %s %v", persisted, body, err)
 		}
 		return json.RawMessage(`{"peer":{"type":"group","id":"78"},"title":"Team","not_added_user_ids":[]}`), nil

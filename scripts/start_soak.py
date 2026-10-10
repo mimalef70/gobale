@@ -65,7 +65,7 @@ def validate_evidence(evidence, expected, duration, disk_budget):
     result = evidence.get("result") or {}
     if not isinstance(result, dict) or evidence.get("status") != "passed" or result.get("passed") is not True or evidence.get("harness") != "mixed":
         raise ValueError("disk evidence must be a passed run")
-    for key in ("binary_sha256", "source_sha256", "image_id", "architecture", "seed", "event_rate", "send_rate", "synthetic_accounts", "queue_limit", "connection_queue_limit"):
+    for key in ("binary_sha256", "source_sha256", "image_id", "architecture", "seed", "event_rate", "send_rate", "synthetic_accounts", "providers", "queue_limit", "connection_queue_limit"):
         if evidence.get(key) != expected.get(key):
             raise ValueError("disk evidence differs in " + key)
     for report_key, record_key in (("accounts", "synthetic_accounts"), ("event_rate", "event_rate"), ("send_rate", "send_rate"), ("seed", "seed"), ("queue_limit", "queue_limit"), ("connection_queue_limit", "connection_queue_limit")):
@@ -82,6 +82,8 @@ def valid_result(record, state, result):
     if record.get("harness") == "native":
         return str(result.get("measurement_scope", "")).startswith("local protocol fixture,") and type(result.get("accounts")) is int and result.get("accounts") == record["synthetic_accounts"] and type(result.get("updates")) is int and result.get("updates") == record["synthetic_accounts"] and result.get("connect_workers") == 4
     if not str(result.get("measurement_scope", "")).startswith("synthetic provider,"):
+        return False
+    if record.get("providers") and result.get("providers") != record["providers"]:
         return False
     expected = {"accounts": record["synthetic_accounts"], "event_rate": record["event_rate"], "send_rate": record["send_rate"], "seed": record["seed"],
                 "duration_seconds": seconds(record["duration"]), "warmup_seconds": seconds(record["warmup"]),
@@ -153,14 +155,15 @@ def main():
     parser.add_argument("--duration", default="1h")
     parser.add_argument("--warmup", default="10m")
     parser.add_argument("--accounts", type=int, default=300)
+    parser.add_argument("--providers", choices=["bale", "bale,eitaa,rubika"], default="bale", help="Synthetic provider distribution; equal counts in a mixed run")
     parser.add_argument("--rate", type=int, default=60)
     parser.add_argument("--send-rate", type=int, default=10)
     parser.add_argument("--seed", type=int, default=1)
     parser.add_argument("--max-disk-gib", type=int, default=16)
     parser.add_argument("--disk-evidence", type=Path, help="Passed one-hour run.json, required for runs of 24h or longer")
     parser.add_argument("--binary", type=Path, help="Reuse a frozen Linux REST test binary from a prior run")
-    parser.add_argument("--image", default="gobale:dev")
-    parser.add_argument("--name", default="gobale-soak-" + datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d-%H%M%S"))
+    parser.add_argument("--image", default="goomni:dev")
+    parser.add_argument("--name", default="goomni-soak-" + datetime.datetime.now(datetime.timezone.utc).strftime("%Y%m%d-%H%M%S"))
     parser.add_argument("--wait", action="store_true", help="Wait for exit and save the final verdict")
     parser.add_argument("--native", action="store_true", help="Run the short real-client/local-WebSocket fixture instead of mixed REST workload")
     parser.add_argument("--collect", type=Path, help="Collect final status for an existing run.json")
@@ -176,10 +179,12 @@ def main():
     duration, warmup = seconds(args.duration), seconds(args.warmup)
     if not 1 <= duration <= 48 * 3600 or not 1 <= args.accounts <= 1000 or not 1 <= args.rate <= 10000 or not 5 <= args.send_rate <= 1000 or not 0 <= args.seed <= 1000000 or not 1 <= args.max_disk_gib <= 1024:
         parser.error("invalid duration, account count, rates, seed or disk budget")
-    if not re.fullmatch(r"gobale-soak-[a-z0-9-]{1,64}", args.name):
-        parser.error("name must begin gobale-soak- and use lowercase letters, digits or hyphens")
+    if not re.fullmatch(r"goomni-soak-[a-z0-9-]{1,64}", args.name):
+        parser.error("name must begin goomni-soak- and use lowercase letters, digits or hyphens")
     root = Path(__file__).resolve().parents[1]
     disk_budget = args.max_disk_gib * 1024**3
+    if args.providers != "bale" and (args.native or args.accounts % 3):
+        parser.error("mixed providers require a REST workload and account count divisible by three")
     if args.native and args.binary:
         parser.error("native transport fixture builds its own separate frozen binary")
     if not args.native and duration >= 24 * 3600 and (not args.disk_evidence or not args.binary):
@@ -219,7 +224,7 @@ def main():
         raise SystemExit("Source changed during build/copy; run not started")
     binary_digest = file_hash(binary)
     expected = {"source_sha256": fingerprint, "binary_sha256": binary_digest, "image_id": info["Id"], "architecture": arch,
-                "synthetic_accounts": args.accounts, "event_rate": args.rate, "send_rate": args.send_rate, "seed": args.seed}
+                "synthetic_accounts": args.accounts, "providers": args.providers.split(","), "event_rate": args.rate, "send_rate": args.send_rate, "seed": args.seed}
     if not args.native:
         expected.update(queue_limit=QUEUE_LIMIT, connection_queue_limit=CONNECTION_QUEUE_LIMIT)
     if not args.native and duration >= 24 * 3600:
@@ -233,24 +238,26 @@ def main():
                "--mount", f"type=bind,src={binary},dst=/app/capacity.test,readonly", "--mount", f"type=volume,src={volume},dst=/app/storages",
                "-e", "TMPDIR=/app/storages", "-e", "GOMAXPROCS=4"]
     try:
-        preflight = docker("run", "--rm", *common, "-e", "GOBALE_CAPACITY_PREFLIGHT=1", "-e", f"GOBALE_SOAK_MAX_DISK_BYTES={disk_budget}",
+        preflight = docker("run", "--rm", *common, "-e", "GOOMNI_CAPACITY_PREFLIGHT=1", "-e", f"GOOMNI_SOAK_MAX_DISK_BYTES={disk_budget}",
                            "--entrypoint", "/app/capacity.test", info["Id"], "-test.run=^TestCapacityResourcePreflight$", "-test.v", "-test.timeout=30s")
     except subprocess.CalledProcessError as error:
-        reports = [json.loads(line.removeprefix("GOBALE_CAPACITY_PREFLIGHT_BLOCKED ")) for line in error.output.splitlines() if line.startswith("GOBALE_CAPACITY_PREFLIGHT_BLOCKED ")]
+        reports = [json.loads(line.removeprefix("GOOMNI_CAPACITY_PREFLIGHT_BLOCKED ")) for line in error.output.splitlines() if line.startswith("GOOMNI_CAPACITY_PREFLIGHT_BLOCKED ")]
         if reports:
             blocked_run(root, args, "Docker volume free disk is below budget plus 2 GiB reserve", dict(expected, preflight=reports[0], volume=volume))
         raise
-    reports = [json.loads(line.removeprefix("GOBALE_CAPACITY_PREFLIGHT ")) for line in preflight.splitlines() if line.startswith("GOBALE_CAPACITY_PREFLIGHT ")]
+    reports = [json.loads(line.removeprefix("GOOMNI_CAPACITY_PREFLIGHT ")) for line in preflight.splitlines() if line.startswith("GOOMNI_CAPACITY_PREFLIGHT ")]
     if len(reports) != 1 or reports[0].get("binary_sha256") != binary_digest or reports[0].get("architecture") != arch:
         raise SystemExit("Preflight binary/architecture evidence mismatch; run not started")
     if source_hash(root) != fingerprint or file_hash(binary) != binary_digest:
         raise SystemExit("Source/binary changed during preflight; run not started")
     command = ["run", "-d", "--name", args.name, *common]
     if args.native:
-        command.extend(["-e", "GOBALE_NATIVE_CAPACITY=1"])
+        command.extend(["-e", "GOOMNI_NATIVE_CAPACITY=1"])
+    elif args.providers != "bale":
+        command.extend(["-e", "GOOMNI_CAPACITY_PROVIDERS=" + args.providers])
     for key, value in {"DURATION": args.duration, "WARMUP": args.warmup, "ACCOUNTS": args.accounts, "RATE": args.rate, "SEND_RATE": args.send_rate,
                        "SEED": args.seed, "BURST_DURATION": "60s", "MAX_DISK_BYTES": disk_budget, "RESULT": "/app/storages/result.json"}.items():
-        command.extend(["-e", f"GOBALE_SOAK_{key}={value}"])
+        command.extend(["-e", f"GOOMNI_SOAK_{key}={value}"])
     test_name = "TestOptionalNativeCapacity" if args.native else "TestOptionalCapacity"
     timeout = 900 if args.native else duration + warmup + 900
     command.extend(["--entrypoint", "/app/capacity.test", info["Id"], f"-test.run=^{test_name}$", "-test.count=1", f"-test.timeout={timeout}s", "-test.v"])
@@ -261,9 +268,10 @@ def main():
               "duration": args.duration, "warmup": args.warmup, "image_id": info["Id"], "architecture": arch, "harness": "native" if args.native else "mixed",
               "image_role": "isolated runtime base only; entrypoint is the recorded test binary",
               "commit": subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=root, text=True).strip(),
+              "working_tree_dirty": bool(subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=normal"], cwd=root, text=True).strip()),
               "binary_sha256": binary_digest, "source_sha256": fingerprint, "preflight": reports[0],
               "cpus": 4, "memory_bytes": 8 * 1024**3, "max_test_disk_bytes": disk_budget, "network": "none", "synthetic_accounts": args.accounts,
-              "event_rate": args.rate, "send_rate": args.send_rate, "seed": args.seed, "command": ["docker", *command], "status": "running"}
+              "providers": args.providers.split(","), "event_rate": args.rate, "send_rate": args.send_rate, "seed": args.seed, "command": ["docker", *command], "status": "running"}
     if not args.native:
         record.update(queue_limit=QUEUE_LIMIT, connection_queue_limit=CONNECTION_QUEUE_LIMIT)
     record_path = out / "run.json"

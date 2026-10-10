@@ -8,10 +8,11 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
-const provisioningSchema = `CREATE TABLE device_provisioning(idempotency_key TEXT PRIMARY KEY,payload_hash BLOB NOT NULL,connection_id TEXT NOT NULL UNIQUE REFERENCES devices(connection_id),created_at INTEGER NOT NULL)`
+const provisioningV7Schema = `CREATE TABLE device_provisioning(idempotency_key TEXT PRIMARY KEY,payload_hash BLOB NOT NULL,connection_id TEXT NOT NULL UNIQUE REFERENCES devices(connection_id),created_at INTEGER NOT NULL)`
+const provisioningSchema = `CREATE TABLE device_provisioning(idempotency_key TEXT PRIMARY KEY,payload_hash BLOB NOT NULL,hash_version INTEGER NOT NULL CHECK(hash_version IN (1,2)),connection_id TEXT NOT NULL UNIQUE REFERENCES devices(connection_id),created_at INTEGER NOT NULL)`
 
 // The fingerprint includes the webhook secret. Derive a separate HMAC key so
 // reading the database does not permit testing guesses of that secret.
@@ -22,14 +23,43 @@ func deriveProvisioningKey(encryptionKey []byte) []byte {
 }
 
 func (s *Store) provisioningHash(request domains.ProvisionDeviceRequest) ([]byte, error) {
+	return s.provisioningHashVersion(request, 2)
+}
+
+func (s *Store) provisioningHashVersion(request domains.ProvisionDeviceRequest, version int) ([]byte, error) {
 	// Struct serialization fixes field order and omits empty events consistently.
 	// Filter fields likewise treat nil and empty sets as the same configuration.
-	body, err := json.Marshal(request)
+	var body []byte
+	var err error
+	switch version {
+	case 1:
+		if request.Provider != domains.ProviderBale {
+			return nil, providerMismatch()
+		}
+		// Exact schema-7 field order/tags: adding Provider to the current request
+		// must not invalidate a previously committed provisioning key.
+		legacy := struct {
+			DeviceID      string                `json:"device_id"`
+			WebhookURL    string                `json:"webhook_url,omitempty"`
+			WebhookSecret string                `json:"webhook_secret,omitempty"`
+			WebhookEvents []string              `json:"webhook_events,omitempty"`
+			WebhookFilter domains.WebhookFilter `json:"webhook_filter,omitempty"`
+		}{request.DeviceID, request.WebhookURL, request.WebhookSecret, request.WebhookEvents, request.WebhookFilter}
+		body, err = json.Marshal(legacy)
+	case 2:
+		body, err = json.Marshal(request)
+	default:
+		return nil, invalidPrivateData("provisioning fingerprint")
+	}
 	if err != nil {
 		return nil, err
 	}
 	mac := hmac.New(sha256.New, s.provisioningKey)
-	_, _ = mac.Write([]byte("gobale:device-provisioning-request:v1\x00"))
+	if version == 1 {
+		_, _ = mac.Write([]byte("gobale:device-provisioning-request:v1\x00"))
+	} else {
+		_, _ = mac.Write([]byte("gobale:device-provisioning-request:v2\x00"))
+	}
 	_, _ = mac.Write(body)
 	return mac.Sum(nil), nil
 }
@@ -39,6 +69,9 @@ func (s *Store) provisioningHash(request domains.ProvisionDeviceRequest) ([]byte
 // permanently retain their connection identity even after device deletion.
 func (s *Store) ProvisionDevice(ctx context.Context, request domains.ProvisionDeviceRequest, key string) (domains.Device, bool, error) {
 	var empty domains.Device
+	if !validProvider(request.Provider) {
+		return empty, false, invalidProvider()
+	}
 	if err := domains.ValidateProvisioningKey(key); err != nil {
 		return empty, false, err
 	}
@@ -56,9 +89,11 @@ func (s *Store) ProvisionDevice(ctx context.Context, request domains.ProvisionDe
 	defer s.rollbackTx(tx)
 	var previousHash []byte
 	var connection string
-	err = tx.QueryRowContext(ctx, `SELECT payload_hash,connection_id FROM device_provisioning WHERE idempotency_key=?`, key).Scan(&previousHash, &connection)
+	var hashVersion int
+	err = tx.QueryRowContext(ctx, `SELECT payload_hash,hash_version,connection_id FROM device_provisioning WHERE idempotency_key=?`, key).Scan(&previousHash, &hashVersion, &connection)
 	if err == nil {
-		if !hmac.Equal(hash, previousHash) {
+		replayHash, hashErr := s.provisioningHashVersion(request, hashVersion)
+		if hashErr != nil || !hmac.Equal(replayHash, previousHash) {
 			return empty, false, domains.E("IDEMPOTENCY_CONFLICT", "idempotency key was already used for a different provisioning request", 409)
 		}
 		var deleted sql.NullInt64
@@ -105,10 +140,10 @@ func (s *Store) ProvisionDevice(ctx context.Context, request domains.ProvisionDe
 	if err != nil {
 		return empty, false, err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO devices(connection_id,alias,created_at,webhook_url,webhook_secret,webhook_events,webhook_filter,webhook_revision) VALUES(?,?,?,?,?,?,?,1)`, connection, request.DeviceID, created, request.WebhookURL, secret, eventsJSON, filterJSON); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO devices(connection_id,alias,provider,created_at,webhook_url,webhook_secret,webhook_events,webhook_filter,webhook_revision) VALUES(?,?,?,?,?,?,?,?,1)`, connection, request.DeviceID, request.Provider, created, request.WebhookURL, secret, eventsJSON, filterJSON); err != nil {
 		return empty, false, err
 	}
-	if _, err = tx.ExecContext(ctx, `INSERT INTO device_provisioning(idempotency_key,payload_hash,connection_id,created_at) VALUES(?,?,?,?)`, key, hash, connection, created); err != nil {
+	if _, err = tx.ExecContext(ctx, `INSERT INTO device_provisioning(idempotency_key,payload_hash,hash_version,connection_id,created_at) VALUES(?,?,2,?,?)`, key, hash, connection, created); err != nil {
 		return empty, false, err
 	}
 	device, err := s.scanDevice(tx.QueryRowContext(ctx, `SELECT `+deviceColumns+` FROM devices WHERE connection_id=?`, connection))

@@ -5,6 +5,7 @@ import "time"
 // Message is the consumer projection of a message or edit event. Structured
 // provider content remains in Event.Payload; unknown actors stay unknown.
 type Message struct {
+	Partial           bool           `json:"partial"`
 	ID                string         `json:"id"`
 	ChatID            string         `json:"chat_id"`
 	From              string         `json:"from"`
@@ -21,6 +22,18 @@ type Message struct {
 	EditorID          string         `json:"editor_id,omitempty"`
 	ForwardedFrom     *MessageOrigin `json:"forwarded_from,omitempty"`
 	Media             *MessageMedia  `json:"media,omitempty"`
+}
+
+// MessagePatch contains only reviewed changes, never a fabricated full message.
+// A nil Body leaves text unchanged; a non-nil empty Body explicitly clears it.
+// Unknown attachments must be refreshed, not replaced from an absent field.
+type MessagePatch struct {
+	ID                string  `json:"id"`
+	ChatID            string  `json:"chat_id"`
+	OriginalMessageID string  `json:"original_message_id"`
+	Partial           bool    `json:"partial"`
+	Body              *string `json:"body,omitempty"`
+	Supported         bool    `json:"supported"`
 }
 
 type MessageOrigin struct {
@@ -40,4 +53,31 @@ type MessageMedia struct {
 	MIMEType          string `json:"mime_type"`
 	Size              int64  `json:"size"`
 	DownloadSupported bool   `json:"download_supported"`
+}
+
+// ValidateMessageProjection applies to newly accepted adapter projections only.
+// Historical persisted bodies keep their original identity and signed bytes.
+func (e Event) ValidateMessageProjection() error {
+	invalid := func() error {
+		return E("INVALID_MESSAGE_PROJECTION", "provider message projection has inconsistent identity or shape", 502)
+	}
+	if e.Message != nil && e.MessagePatch != nil {
+		return invalid()
+	}
+	if e.Message != nil {
+		m := e.Message
+		if (e.Type != "message" && e.Type != "message.edited") || m.Partial || !ValidOpaqueID(e.MessageID) || m.ID != e.MessageID || !ValidOpaqueID(e.Peer.ID) || m.ChatID != e.Peer.ID {
+			return invalid()
+		}
+		if e.Type == "message.edited" && m.OriginalMessageID != e.MessageID {
+			return invalid()
+		}
+	}
+	if e.MessagePatch != nil {
+		p := e.MessagePatch
+		if e.Type != "message.edited" || e.Media != nil || !p.Partial || !ValidOpaqueID(e.MessageID) || p.ID != e.MessageID || p.OriginalMessageID != e.MessageID || !ValidOpaqueID(e.Peer.ID) || p.ChatID != e.Peer.ID || p.Supported != (p.Body != nil) {
+			return invalid()
+		}
+	}
+	return nil
 }

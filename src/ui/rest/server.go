@@ -1,4 +1,4 @@
-// Package rest exposes the GoBale HTTP contract through application usecases.
+// Package rest exposes the GoOmni HTTP contract through application usecases.
 package rest
 
 import (
@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	pkgError "github.com/mimalef70/gobale/src/pkg/error"
+	pkgError "github.com/mimalef70/goomni/src/pkg/error"
 	"io"
 	"net/http"
 	"strconv"
@@ -19,20 +19,21 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/mimalef70/gobale/src/config"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/mediafile"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
-	"github.com/mimalef70/gobale/src/pkg/utils"
-	"github.com/mimalef70/gobale/src/ui/web"
-	"github.com/mimalef70/gobale/src/usecase"
+	"github.com/mimalef70/goomni/src/config"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/mediafile"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/infrastructure/workpool"
+	"github.com/mimalef70/goomni/src/pkg/utils"
+	"github.com/mimalef70/goomni/src/ui/web"
+	"github.com/mimalef70/goomni/src/usecase"
 )
 
 type Options struct {
 	UIEnabled                               bool
 	UIPublicOrigin                          string
 	UIAssets                                *web.Bundle
-	MediaSlots                              chan struct{}
+	MediaPool                               *workpool.Pool
 	MediaManager                            *mediafile.Manager
 	BasicAuth, BasePath, Version, MediaRoot string
 	MaxMediaBytes                           int64
@@ -44,7 +45,7 @@ type Server struct {
 	service     *usecase.Service
 	store       *storage.Store
 	opts        Options
-	mediaSlots  chan struct{}
+	mediaPool   *workpool.Pool
 	mediaOnce   sync.Once
 	mediaErr    error
 	operational serverMetrics
@@ -67,12 +68,12 @@ func New(service *usecase.Service, store *storage.Store, opts Options) (*Server,
 	if opts.RequestTimeout <= 0 {
 		opts.RequestTimeout = 45 * time.Second
 	}
-	slots := opts.MediaSlots
-	if slots == nil {
-		slots = make(chan struct{}, 4)
+	pool := opts.MediaPool
+	if pool == nil {
+		pool = workpool.New(4)
 	}
-	s := &Server{service: service, store: store, opts: opts, mediaSlots: slots}
-	s.App = fiber.New(fiber.Config{AppName: "GoBale", BodyLimit: int(opts.MaxMediaBytes + multipartRequestLimit + multipartOverheadLimit), StreamRequestBody: true, DisablePreParseMultipartForm: true, ReadTimeout: 60 * time.Second, WriteTimeout: 60 * time.Second, ErrorHandler: s.handleError})
+	s := &Server{service: service, store: store, opts: opts, mediaPool: pool}
+	s.App = fiber.New(fiber.Config{AppName: "GoOmni", BodyLimit: int(opts.MaxMediaBytes + multipartRequestLimit + multipartOverheadLimit), StreamRequestBody: true, DisablePreParseMultipartForm: true, ReadTimeout: 60 * time.Second, WriteTimeout: 60 * time.Second, ErrorHandler: s.handleError})
 	s.App.Use(s.recoverRequest, s.requestDeadline)
 	r := s.App.Group(opts.BasePath)
 	if opts.UIEnabled {
@@ -89,17 +90,14 @@ func New(service *usecase.Service, store *storage.Store, opts Options) (*Server,
 		c.Set("X-Content-Type-Options", "nosniff")
 		got := sha256.Sum256([]byte(c.Get("Authorization")))
 		if subtle.ConstantTimeCompare(got[:], expected[:]) != 1 {
-			c.Set("WWW-Authenticate", `Basic realm="GoBale"`)
+			c.Set("WWW-Authenticate", `Basic realm="GoOmni"`)
 			return domains.E("UNAUTHORIZED", "authentication required", 401)
 		}
 		return c.Next()
 	})
 	s.registerAdminRoutes(r)
-	r.Get("/app/capabilities", func(c fiber.Ctx) error { return success(c, publicOperationDefinitions()) })
+	r.Get("/app/capabilities", s.capabilities)
 	r.Post("/operations/:operation", func(c fiber.Ctx) error {
-		if _, ok := domains.OperationDefinition(c.Params("operation")); !ok {
-			return domains.Unsupported(c.Params("operation"))
-		}
 		return s.provider(c.Params("operation"))(c)
 	})
 	r.Get("/app/status", s.status)
@@ -166,6 +164,11 @@ func (s *Server) registerAdminRoutes(r fiber.Router) {
 		return success(c, map[string]any{"status": "ready"})
 	})
 	r.Get("/app/info", s.info)
+	r.Get("/app/providers", func(c fiber.Ctx) error { return success(c, s.service.Providers()) })
+	r.Get("/devices/:device_id/capabilities", s.withPathDevice(func(c fiber.Ctx) error {
+		v, err := s.service.DeviceCapabilities(c.Context(), c.Params("device_id"))
+		return result(c, publicCapabilities(v), err)
+	}))
 	r.Get("/devices", s.devices)
 	r.Get("/app/devices", s.devices)
 	r.Post("/devices", s.createDevice)
@@ -606,6 +609,22 @@ func (s *Server) provider(operation string) fiber.Handler {
 		if e != nil {
 			return e
 		}
+		definitions, err := s.service.Capabilities(d.Provider)
+		if err != nil {
+			return err
+		}
+		var definition domains.OperationContract
+		found := false
+		for _, v := range publicCapabilities(definitions) {
+			if v.Operation == operation {
+				definition = v
+				found = true
+				break
+			}
+		}
+		if !found {
+			return domains.Unsupported(operation)
+		}
 		payload := map[string]any{}
 		if c.Request().Header.ContentLength() > 0 || c.Request().BodyStream() != nil {
 			if e = decode(c, &payload); e != nil {
@@ -616,9 +635,9 @@ func (s *Server) provider(operation string) fiber.Handler {
 			}
 		}
 		for k, v := range c.Queries() {
-			if k != "device_id" {
+			if k != "device_id" && !(k == "source" && operation == "chat.list") {
 				if _, ok := payload[k]; !ok {
-					if contract, ok := publicOperationDefinition(operation); ok {
+					if contract := definition; contract.Request.Properties != nil {
 						field, exists := contract.Request.Properties[k]
 						if !exists {
 							return domains.E("INVALID_REQUEST", "unsupported query field", 400)
@@ -668,11 +687,13 @@ func (s *Server) provider(operation string) fiber.Handler {
 			}
 			payload["peer"] = domains.Peer{Type: parts[0], ID: parts[1]}
 		}
-		if err := nativeOperationArguments(operation, payload); err != nil {
-			return err
+		if d.Provider == domains.ProviderBale {
+			if err := nativeOperationArguments(operation, payload); err != nil {
+				return err
+			}
 		}
 		raw, _ := json.Marshal(payload)
-		if domains.IsExtendedMutation(operation) {
+		if definition.Mode == "mutation" {
 			op, err := s.service.Mutate(c.Context(), d.ID, operation, raw, c.Get("Idempotency-Key"))
 			if err != nil {
 				return err
@@ -731,7 +752,7 @@ func operationQueryValue(field domains.FieldSchema, value string) (any, error) {
 	}
 }
 func (s *Server) info(c fiber.Ctx) error {
-	return success(c, map[string]any{"name": "GoBale", "version": s.opts.Version, "release_stage": config.ReleaseStage(s.opts.Version), "provider": "bale", "capabilities": map[string]any{"multi_device": true, "per_device_webhook": true, "durable_outbox": true, "scheduled_sends": true, "short_restart_recovery_verified": true, "live_accounts_tested": 2}, "protocol_note": "Native implementation; provider capability verification is documented separately"})
+	return success(c, map[string]any{"name": "GoOmni", "version": s.opts.Version, "release_stage": config.ReleaseStage(s.opts.Version), "providers": s.service.Providers(), "capabilities": map[string]any{"multi_provider": true, "multi_device": true, "per_device_webhook": true, "durable_outbox": true, "scheduled_sends": true}, "protocol_note": "Native implementation; provider capability verification is documented separately"})
 }
 
 type ProviderRoute struct{ Method, Path, Operation string }

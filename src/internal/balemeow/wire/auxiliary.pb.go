@@ -2394,7 +2394,7 @@ const file_wire_auxiliary_proto_rawDesc = "" +
 	"\x0fexpiration_type\x18\v \x01(\x05R\x0eexpirationType\x12%\n" +
 	"\x0eexception_type\x18\f \x01(\x05R\rexceptionType\"-\n" +
 	"\x10StoryAddResponse\x12\x19\n" +
-	"\bstory_id\x18\x01 \x01(\tR\astoryIdB8Z6github.com/mimalef70/gobale/src/internal/balemeow/wireb\x06proto3"
+	"\bstory_id\x18\x01 \x01(\tR\astoryIdB8Z6github.com/mimalef70/goomni/src/internal/balemeow/wireb\x06proto3"
 
 var (
 	file_wire_auxiliary_proto_rawDescOnce sync.Once

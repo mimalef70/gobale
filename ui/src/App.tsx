@@ -155,7 +155,7 @@ function LoginPanel({
             <i />
           </div>
         </div>
-        <small>GoBale · REST API · Native Go</small>
+        <small>GoOmni · REST API · Native Go</small>
       </section>
       <section className="login-side">
         <div className="login-preferences">
@@ -203,10 +203,10 @@ function LoginPanel({
           </div>
         </div>
         <footer className="login-footer">
-          <a href="https://mimalef70.github.io/gobale/" target="_blank" rel="noreferrer">
+          <a href="https://mimalef70.github.io/goomni/" target="_blank" rel="noreferrer">
             {t('docs')}
           </a>
-          <span>GoBale</span>
+          <span>GoOmni</span>
         </footer>
       </section>
     </main>
@@ -281,7 +281,7 @@ function Shell({ logout }: { logout(): Promise<void> }) {
           ))}
         </nav>
         <div className="sidebar-footer">
-          <a href="https://mimalef70.github.io/gobale/" target="_blank" rel="noreferrer">
+          <a href="https://mimalef70.github.io/goomni/" target="_blank" rel="noreferrer">
             <BookOpen size={17} />
             {t('docs')}
           </a>
@@ -334,7 +334,7 @@ function Shell({ logout }: { logout(): Promise<void> }) {
           )}
         </main>
         <footer className="workspace-footer">
-          <span dir="ltr">GoBale</span>
+          <span dir="ltr">GoOmni</span>
           <span>{t('admin')}</span>
         </footer>
       </div>

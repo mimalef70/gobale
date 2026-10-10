@@ -14,8 +14,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -125,7 +125,7 @@ func (c *Client) authenticate(ctx context.Context, challengeID, secret string, p
 	_ = json.Unmarshal(c.snapshotCookies(), &privateData)
 	privateData.SelfAccessHash = strconv.FormatInt(response.User.AccessHash, 10)
 	storedData, _ := json.Marshal(privateData)
-	session := &domains.Session{UserID: strconv.FormatUint(uint64(response.User.Id), 10), Token: response.Jwt.Value, DeviceHash: ch.deviceHash, Phone: ch.phone, Data: storedData}
+	session := &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: strconv.FormatUint(uint64(response.User.Id), 10), Token: response.Jwt.Value, DeviceHash: ch.deviceHash, Phone: ch.phone, Data: storedData}
 	c.mu.Lock()
 	if c.session != nil && c.session.UserID != session.UserID {
 		c.mu.Unlock()

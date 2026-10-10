@@ -4,8 +4,8 @@
 help: ## Show development commands.
 	@awk 'BEGIN {FS = ":.*## "} /^[a-z-]+:.*## / {printf "%-16s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-build: ui-build ## Build the embedded UI and bin/gobale.
-	cd src && go build -trimpath -o ../bin/gobale .
+build: ui-build ## Build the embedded UI and bin/goomni.
+	cd src && go build -trimpath -o ../bin/goomni .
 
 ui-build: ## Build and verify version-coupled embedded browser assets.
 	python3 scripts/build_ui.py
@@ -52,11 +52,15 @@ fuzz: ## Exercise bounded protocol, voice, and Mini App parsers.
 	cd src && go test ./internal/balemeow -run='^$$' -fuzz='^FuzzOggOpus$$' -fuzztime=15s -parallel=2
 	cd src && go test ./internal/balemeow -run='^$$' -fuzz='^FuzzOpusPacket$$' -fuzztime=15s -parallel=2
 	cd src && go test ./pkg/miniapp -run='^$$' -fuzz='^FuzzParseUnverified$$' -fuzztime=15s -parallel=2
+	cd src && go test ./internal/eitaameow -run='^$$' -fuzz='^FuzzTLDecoder$$' -fuzztime=15s -parallel=2
+	cd src && go test ./internal/rubikameow -run='^$$' -fuzz='^FuzzEncryptedResponse$$' -fuzztime=15s -parallel=2
+	cd src && go test ./internal/mediautil -run='^$$' -fuzz='^FuzzNativeVideoPreview$$' -fuzztime=15s -parallel=2
+	cd src && go test ./internal/mediautil -run='^$$' -fuzz='^FuzzMP3Inspection$$' -fuzztime=15s -parallel=2
 
 check: fmt-check test vet purego contracts ## Run the main local verification suite.
 
-docker-smoke: ## Test a separately built gobale:dev image without a Bale account.
-	python3 scripts/docker_smoke.py gobale:dev
+docker-smoke: ## Test a separately built goomni:dev image without a Bale account.
+	python3 scripts/docker_smoke.py goomni:dev
 
 release: ## Publish a reviewed, committed VERSION and wait for public verification.
 	python3 scripts/release.py --version "$(VERSION)"

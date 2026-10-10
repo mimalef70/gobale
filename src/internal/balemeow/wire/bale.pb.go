@@ -9627,7 +9627,7 @@ const file_wire_bale_proto_rawDesc = "" +
 	"\vgiving_type\x18\x05 \x01(\x05R\n" +
 	"givingType\"(\n" +
 	"\vJSONMessage\x12\x19\n" +
-	"\braw_json\x18\x01 \x01(\tR\arawJsonB8Z6github.com/mimalef70/gobale/src/internal/balemeow/wireb\x06proto3"
+	"\braw_json\x18\x01 \x01(\tR\arawJsonB8Z6github.com/mimalef70/goomni/src/internal/balemeow/wireb\x06proto3"
 
 var (
 	file_wire_bale_proto_rawDescOnce sync.Once

@@ -1,9 +1,9 @@
-# Contributing to GoBale
+# Contributing to GoOmni
 
 Focused fixes, reproducible protocol findings and clearer integration examples
 are welcome. Open an issue before a substantial API or architecture change.
 
-Develop and test against the checked-out source. GoBale 2.0 changes the machine
+Develop and test against the checked-out source. The GoOmni source conversion changes the machine
 API contract; follow the [upgrade guide](docs/operations.md#backup-restore-and-upgrades)
 when moving from 1.x. Use the matching tag's documentation when working on a
 published release. The `main` branch can advance beyond that release; use a
@@ -33,8 +33,8 @@ make ui-e2e
 
 `make help` lists individual checks. The pure-Go SQLite build does not need a C
 compiler. Normal tests use synthetic identities, fake providers and temporary
-databases; no Bale account or running gateway is required. `make vuln` queries
-the public Go vulnerability database, without connecting to Bale accounts.
+databases; no messenger account or running gateway is required. `make vuln` queries
+the public Go vulnerability database, without connecting to messenger accounts.
 
 Read [AGENTS.md](AGENTS.md) for architecture, protocol invariants, documentation
 generation, privacy rules, current acceptance gaps and the release procedure.
@@ -60,7 +60,7 @@ make contracts
 ```
 
 Keep the native capability ledger's dates, evidence scope and unresolved limits.
-A passing fake-provider test is not live Bale verification. The complete settings
+A passing fake-provider test is not live messenger verification. The complete settings
 reference lives in [Operations](docs/operations.md#configuration-reference);
 keep README examples brief and link to it instead of duplicating the table.
 
@@ -69,7 +69,7 @@ The Pages workflow deploys documentation from `main`, so the hosted contract can
 be newer than the latest release. A push to `main` runs CI; it does not publish
 release archives or container images. Release publication requires the explicit
 tag and manual workflow dispatch described in [AGENTS.md](AGENTS.md#release-procedure).
-After preparing and committing a reviewed version, `make release VERSION=2.2.0`
+After preparing and committing a reviewed version, `make release VERSION=2.3.0`
 coordinates main CI, documentation, tag CI and the release workflow. It stops on
 failed gates and never moves existing tags or overwrites published assets. The
 final jobs anonymously download all release assets and both registry indexes,
@@ -89,12 +89,12 @@ are still required after publication.
 Build a separate image from the checkout and run the synthetic restart smokes:
 
 ```sh
-docker build --file docker/golang.Dockerfile --tag gobale:dev .
+docker build --file docker/golang.Dockerfile --tag goomni:dev .
 make docker-smoke
 ```
 
 The Docker build includes the UI and uses the pure-Go SQLite variant. The smoke
-script needs no Bale account and creates temporary containers and volumes; it
+script needs no messenger account and creates temporary containers and volumes; it
 does not test an existing deployment. CI runs the Linux amd64 smoke and separately
 cross-builds Linux arm64. Cross-building alone does not verify arm64 runtime
 behavior. Capacity fixtures and their disk/resource requirements are described
@@ -113,7 +113,7 @@ build real assets; never check generated assets or `node_modules` into Git.
 placeholder. They do not require Node or claim that the placeholder is a UI.
 `make ui-check` runs typecheck, lint and component tests. Install browser engines
 with `cd ui && npx playwright install chromium firefox webkit`; `make ui-e2e`
-uses synthetic data and a separate temporary database, never existing Bale accounts.
+uses synthetic data and a separate temporary database, never existing messenger accounts.
 The build-tagged `src/internal/uitestserver` is test infrastructure, not a service mode.
 For the local Vite workflow and its backend prerequisites, see
 [`ui/README.md`](ui/README.md#development). On Linux, Playwright may also require

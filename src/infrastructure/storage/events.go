@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 // WebhookTarget is a routing snapshot. Device targets fetch the latest secret
@@ -20,6 +20,7 @@ type WebhookTarget struct {
 	Secret   string
 	Revision int64
 	Device   bool
+	Events   []string
 	// CurrentDevice is a routing plan resolved under the event transaction.
 	CurrentDevice bool
 	MergeGlobal   bool
@@ -39,8 +40,22 @@ func scopedEventID(conn string, e domains.Event) string {
 		e.Checkpoint = ""
 		// The fallback identity predates HTTP projection changes. Preserve its
 		// representation even for synthetic events without a native source ID.
-		type identityRecord domains.Event
-		b, _ := json.Marshal(identityRecord(e))
+		type identityRecord struct {
+			ID           string                `json:"event_id"`
+			Type         string                `json:"event"`
+			AccountID    string                `json:"device_id"`
+			SessionID    string                `json:"session_id"`
+			InstanceID   string                `json:"instance_id,omitempty"`
+			Peer         domains.Peer          `json:"peer"`
+			MessageID    string                `json:"message_id,omitempty"`
+			SenderID     string                `json:"sender_id,omitempty"`
+			Direction    string                `json:"direction,omitempty"`
+			Time         time.Time             `json:"timestamp"`
+			Payload      json.RawMessage       `json:"payload"`
+			Message      *domains.Message      `json:"message,omitempty"`
+			MessagePatch *domains.MessagePatch `json:"message_patch,omitempty"`
+		}
+		b, _ := json.Marshal(identityRecord{e.ID, e.Type, e.AccountID, e.SessionID, e.InstanceID, e.Peer, e.MessageID, e.SenderID, e.Direction, e.Time, e.Payload, e.Message, e.MessagePatch})
 		source = string(b)
 	}
 	sum := sha256.Sum256([]byte(conn + "\x00" + source))
@@ -88,7 +103,29 @@ func (s *Store) appendEvent(ctx context.Context, conn string, event domains.Even
 	if e != nil {
 		return false, e
 	}
+	created, e := s.appendEventTx(ctx, tx, d, event, targets, true)
+	if e != nil {
+		return false, e
+	}
+	if e = s.commitTx(tx); e != nil {
+		return false, e
+	}
+	return created, nil
+}
+
+func (s *Store) appendEventTx(ctx context.Context, tx *sql.Tx, d domains.Device, event domains.Event, targets []WebhookTarget, legacy bool) (bool, error) {
+	conn := d.ConnectionID
+	if event.Provider != "" && event.Provider != d.Provider {
+		return false, providerMismatch()
+	}
+	if event.AccountID != "" && d.AccountID != "" && event.AccountID != d.AccountID {
+		return false, domains.E("EVENT_ACCOUNT_MISMATCH", "event account does not match connection", 409)
+	}
+	if e := validateMediaRevision(d.Provider, event.Peer, event.Type, event.MediaRevision); e != nil {
+		return false, e
+	}
 	event.ID = scopedEventID(conn, event)
+	event.Provider = d.Provider
 	event.AccountID = d.AccountID
 	event.SessionID = d.ID
 	event.InstanceID = d.InstanceToken()
@@ -119,16 +156,19 @@ func (s *Store) appendEvent(ctx context.Context, conn string, event domains.Even
 		if err != nil {
 			return false, err
 		}
-		if _, e = s.reconcileOwnMessageTx(ctx, tx, conn, d.AccountID, storedEvent); e != nil {
+		if legacy && d.Provider == domains.ProviderBale {
+			_, e = s.reconcileOwnMessageTx(ctx, tx, conn, d.AccountID, storedEvent)
+		}
+		if e != nil {
 			return false, e
 		}
-		return false, s.commitTx(tx)
+		return false, nil
 	}
 	mediaAvailable := false
 	switch event.Type {
 	case "message", "message.edited":
 		if (event.Media != nil || event.Type == "message.edited") && event.MessageID != "" && event.Peer.ID != "" {
-			if mediaAvailable, e = s.saveProviderMediaTx(ctx, tx, conn, event.Peer, event.MessageID, event.Media, event.Time.UnixMilli()); e != nil {
+			if mediaAvailable, e = s.saveProviderMediaTx(ctx, tx, conn, event.Peer, event.MessageID, event.Media, event.Time.UnixMilli(), event.Type, event.MediaRevision); e != nil {
 				return false, e
 			}
 		}
@@ -146,12 +186,14 @@ func (s *Store) appendEvent(ctx context.Context, conn string, event domains.Even
 			}
 		}
 	case "message.deleted":
-		if _, e = s.saveProviderMediaTx(ctx, tx, conn, event.Peer, event.MessageID, nil, event.Time.UnixMilli()); e != nil {
+		if _, e = s.saveProviderMediaTx(ctx, tx, conn, event.Peer, event.MessageID, nil, event.Time.UnixMilli(), event.Type, event.MediaRevision); e != nil {
 			return false, e
 		}
 	}
-	if _, e = s.reconcileOwnMessageTx(ctx, tx, conn, d.AccountID, event); e != nil {
-		return false, e
+	if legacy && d.Provider == domains.ProviderBale {
+		if _, e = s.reconcileOwnMessageTx(ctx, tx, conn, d.AccountID, event); e != nil {
+			return false, e
+		}
 	}
 	targets = resolveWebhookTargets(d.Webhook, event, targets)
 	seen := map[string]bool{}
@@ -164,44 +206,65 @@ func (s *Store) appendEvent(ctx context.Context, conn string, event domains.Even
 			return false, e
 		}
 	}
-	if event.Checkpoint != "" {
-		if _, e = tx.ExecContext(ctx, `UPDATE devices SET checkpoint=? WHERE connection_id=?`, event.Checkpoint, conn); e != nil {
+	if legacy && event.Checkpoint != "" {
+		if e = setCheckpointTx(ctx, tx, conn, domains.DefaultCheckpointScope, event.Checkpoint); e != nil {
 			return false, e
 		}
 	}
-	return true, s.commitTx(tx)
+	return true, nil
 }
 
-// A native own-message echo proves acceptance even when the RPC response was
-// lost. Bale preserves the send RID as message ID. Reconcile only that exact
-// identity; matching text, dates or an unbound/foreign sender is not evidence.
-// Only ordinary sends and the reviewed message-producing operations below can
-// be proved by this echo. Other mutations and terminal decisions never change.
+// Match only reviewed provider evidence against the original durable request.
+// Storage owns the atomic transition; adapter policy owns proof semantics.
 func (s *Store) reconcileOwnMessageTx(ctx context.Context, tx *sql.Tx, conn, account string, event domains.Event) (bool, error) {
-	if event.Type != "message" || event.Direction != "outgoing" || account == "" || event.AccountID != account || event.SenderID != account || event.MessageID == "" || event.Peer.Validate() != nil || event.Time.UnixMilli() <= 0 {
+	provider, err := providerTx(ctx, tx, conn)
+	if err != nil {
+		return false, err
+	}
+	policy := acceptancePolicy(provider, domains.BaleMessageEchoProof)
+	if policy == nil || event.MessageID == "" {
 		return false, nil
+	}
+	rows, err := tx.QueryContext(ctx, `SELECT id,request FROM operations WHERE connection_id=? AND state IN ('sending','unknown') AND json_extract(request,'$.request_id')=? AND json_extract(request,'$.peer.type')=? AND json_extract(request,'$.peer.id')=?`, conn, event.MessageID, event.Peer.Type, event.Peer.ID)
+	if err != nil {
+		return false, err
+	}
+	ids := []string{}
+	for rows.Next() {
+		var id, raw string
+		if err = rows.Scan(&id, &raw); err != nil {
+			rows.Close()
+			return false, err
+		}
+		var request domains.SendRequest
+		if json.Unmarshal([]byte(raw), &request) != nil {
+			rows.Close()
+			return false, domains.E("INVALID_STORED_REQUEST", "stored operation could not be decoded", 500)
+		}
+		if policy(account, event, request) {
+			ids = append(ids, id)
+		}
+	}
+	err = rows.Err()
+	rows.Close()
+	if err != nil {
+		return false, err
 	}
 	result, err := marshal(domains.SendResult{MessageID: event.MessageID, Date: event.Time})
 	if err != nil {
 		return false, err
 	}
-	r, err := tx.ExecContext(ctx, `UPDATE operations SET state='succeeded',result=?,error_code='',error_message='',updated_at=?
- WHERE connection_id=? AND state IN ('sending','unknown')
- AND json_extract(request,'$.request_id')=?
- AND json_extract(request,'$.peer.type')=? AND json_extract(request,'$.peer.id')=?
- AND ((COALESCE(json_extract(request,'$.operation'),'')=''
-       AND COALESCE(json_extract(request,'$.kind'),'') IN ('','text','image','file','audio','video','voice'))
-      OR (json_extract(request,'$.kind')='operation'
-       AND json_extract(request,'$.operation') IN ('send.poll','send.sticker','send.contact','send.location','send.template')))`, result, now(), conn, event.MessageID, event.Peer.Type, event.Peer.ID)
-	if err != nil {
-		return false, err
+	for _, id := range ids {
+		if _, err = tx.ExecContext(ctx, `UPDATE operations SET state='succeeded',result=?,error_code='',error_message='',updated_at=? WHERE connection_id=? AND id=? AND state IN ('sending','unknown')`, result, now(), conn, id); err != nil {
+			return false, err
+		}
 	}
-	n, err := r.RowsAffected()
-	return n > 0, err
+	return len(ids) > 0, nil
 }
 
 func (s *Store) ListEvents(ctx context.Context, conn, peerKey string, limit, offset int) ([]domains.Event, error) {
-	if e := s.active(ctx, conn); e != nil {
+	provider, e := s.connectionProvider(ctx, conn)
+	if e != nil {
 		return nil, e
 	}
 	limit, offset = page(limit, offset)
@@ -228,12 +291,16 @@ func (s *Store) ListEvents(ctx context.Context, conn, peerKey string, limit, off
 		if e = json.Unmarshal([]byte(body), &event); e != nil {
 			return nil, e
 		}
+		if event.Provider == "" {
+			event.Provider = provider
+		}
 		result = append(result, event)
 	}
 	return result, rows.Err()
 }
 func (s *Store) ListChats(ctx context.Context, conn string, limit, offset int) ([]Chat, error) {
-	if e := s.active(ctx, conn); e != nil {
+	provider, e := s.connectionProvider(ctx, conn)
+	if e != nil {
 		return nil, e
 	}
 	limit, offset = page(limit, offset)
@@ -251,6 +318,9 @@ func (s *Store) ListChats(ctx context.Context, conn string, limit, offset int) (
 		}
 		if e = json.Unmarshal([]byte(body), &chat.LastEvent); e != nil {
 			return nil, e
+		}
+		if chat.LastEvent.Provider == "" {
+			chat.LastEvent.Provider = provider
 		}
 		chat.Peer = chat.LastEvent.Peer
 		result = append(result, chat)

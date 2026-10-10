@@ -15,7 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--image", default="gobale:dev")
+    parser.add_argument("--image", default="goomni:dev")
     parser.add_argument("--skip-soak", action="store_true", help="Run short gates only; never report 24h acceptance")
     parser.add_argument("--max-disk-gib", type=int, default=16, help="Explicit disk cap for mixed short gates and the one-hour run; 24h uses measured growth")
     parser.add_argument("--resume", type=Path, help="Resume a disk-blocked acceptance manifest, preserving its binary, image and short-stage cap")
@@ -66,7 +66,7 @@ def main():
     save()
     print(str(manifest), flush=True)
     for phase, accounts, duration, warmup in phases[completed:]:
-        run_name = "gobale-soak-" + name + "-" + phase
+        run_name = "goomni-soak-" + name + "-" + phase
         run_path = ROOT / "artifacts" / "soak" / run_name / "run.json"
         command = [sys.executable, str(ROOT / "scripts/start_soak.py"), "--wait", "--image", args.image, "--name", run_name,
                    "--accounts", str(accounts), "--duration", duration, "--warmup", warmup]

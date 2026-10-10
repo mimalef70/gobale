@@ -14,7 +14,7 @@ import (
 	"testing"
 
 	"github.com/coder/websocket"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 )
 
 func TestGroupPhotoUploadsScopedImageBeforeAvatarMutation(t *testing.T) {

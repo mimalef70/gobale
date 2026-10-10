@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import i18n from '../lib/i18n'
 import { setSession } from '../lib/api'
-import type { Device, Webhook } from '../lib/types'
+import type { Device, ProviderID, Webhook } from '../lib/types'
 import { WebhookSettings } from './webhook'
 
 beforeEach(async () => {
@@ -14,7 +14,7 @@ beforeEach(async () => {
 })
 afterEach(() => vi.unstubAllGlobals())
 
-function renderSettings() {
+function renderSettings(provider: ProviderID = 'bale') {
   let config: Webhook = {
     webhook_url: 'https://example.test/hook',
     webhook_events: ['message'],
@@ -37,6 +37,7 @@ function renderSettings() {
     }),
   )
   const device: Device = {
+    provider,
     id: 'synthetic',
     instance_id: 'synthetic-instance',
     created_at: '',
@@ -108,4 +109,29 @@ it('validates, edits and clears saved delivery filters through the scoped webhoo
     await user.click(screen.getByLabelText(label))
   await user.click(screen.getByRole('button', { name: 'Save changes' }))
   await waitFor(() => expect(patches[1]).toEqual({ webhook_filter: {} }))
+})
+
+it('submits Eitaa supergroup and classic-group filters without merging their IDs', async () => {
+  const patches = renderSettings('eitaa')
+  const user = userEvent.setup()
+  await user.click(await screen.findByText('Delivery filters', { exact: true }))
+  const peers = screen.getByLabelText('Include peers')
+  await user.clear(peers)
+  await user.type(peers, 'group:91\ngroup:channel_91')
+  await user.type(screen.getByLabelText('Include sender IDs'), '91')
+  await user.click(screen.getByRole('button', { name: 'Save changes' }))
+  await waitFor(() =>
+    expect(patches).toEqual([
+      {
+        webhook_filter: {
+          peers: [
+            { type: 'group', id: '91' },
+            { type: 'group', id: 'channel_91' },
+          ],
+          sender_ids: ['91'],
+          directions: ['incoming'],
+        },
+      },
+    ]),
+  )
 })

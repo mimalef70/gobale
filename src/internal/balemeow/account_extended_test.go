@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/coder/websocket"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -119,7 +120,11 @@ func TestAccountExtensionReadsAndCorrectFullUserSchema(t *testing.T) {
 		case "GetUserPrivacyStatus":
 			response = &wire.AccountPrivacyStatus{Status: 2}
 		case "GetParameters":
-			response = &wire.AccountSettingsResponse{Parameters: []*wire.AccountSetting{{Key: "app.web.theme", Value: "dark"}, {Key: "auth_token", Value: "must-not-leak"}}}
+			settings := []*wire.AccountSetting{{Key: "app.web.theme", Value: "dark"}, {Key: "auth_token", Value: "must-not-leak"}, {Key: strings.Repeat("internal", 95), Value: "must-not-leak"}}
+			for i := 0; i < 1851; i++ {
+				settings = append(settings, &wire.AccountSetting{Key: "app.web.setting." + strconv.Itoa(i), Value: "synthetic"})
+			}
+			response = &wire.AccountSettingsResponse{Parameters: settings}
 		case "GetAuthSessions":
 			response = &wire.AccountSessionsResponse{Sessions: []*wire.AccountAuthSession{{Id: 7, AuthHolder: 123, AppId: 42, AppTitle: "Desktop", DeviceTitle: "Synthetic", LastIpAddress: &wire.StringValue{Value: "must-not-leak"}}}}
 		default:
@@ -134,7 +139,7 @@ func TestAccountExtensionReadsAndCorrectFullUserSchema(t *testing.T) {
 	for _, tc := range []struct{ op, body, want string }{
 		{"account.info", `{}`, `"about":"bio"`}, {"users.get", `{"users":[{"type":"user","id":"42"}]}`, `"name":"Synthetic"`}, {"users.get", `{"users":[{"type":"user","id":"42"}],"full":true}`, `"is_contact":true`},
 		{"account.username.check", `{"username":"test"}`, `"available":true`}, {"account.blocked", `{}`, `"id":"42"`}, {"account.privacy", `{}`, `"presence":2`}, {"account.privacy.status", `{"type":1}`, `"status":2`},
-		{"account.settings", `{}`, `"redacted_count":1`}, {"account.sessions", `{}`, `"session_id":"7"`},
+		{"account.settings", `{}`, `"redacted_count":2`}, {"account.sessions", `{}`, `"session_id":"7"`},
 	} {
 		raw, e := c.accountExtendedCall(context.Background(), tc.op, json.RawMessage(tc.body))
 		if e != nil || !strings.Contains(string(raw), tc.want) || strings.Contains(string(raw), "must-not-leak") || strings.Contains(string(raw), "access_hash") {

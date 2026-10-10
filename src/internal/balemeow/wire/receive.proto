@@ -2,7 +2,7 @@
 // Separate union view avoids circular imports with optional RPC feature schemas.
 syntax = "proto3";
 package gobale.bale.reference;
-option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+option go_package = "github.com/mimalef70/goomni/src/internal/balemeow/wire";
 import "wire/bale.proto";
 import "wire/groups_extended.proto";
 import "wire/account_extended.proto";

@@ -1,8 +1,10 @@
-module github.com/mimalef70/gobale/src
+module github.com/mimalef70/goomni/src
 
 go 1.26.9
 
 require (
+	github.com/Eyevinn/hi264 v0.11.0
+	github.com/Eyevinn/mp4ff v0.59.0
 	github.com/coder/websocket v1.8.15
 	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
 	github.com/gofiber/fiber/v3 v3.4.0
@@ -13,6 +15,7 @@ require (
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.12.1
 	go.yaml.in/yaml/v3 v3.0.5
+	golang.org/x/crypto v0.57.0
 	golang.org/x/image v0.46.0
 	golang.org/x/sys v0.48.0
 	golang.org/x/term v0.46.0
@@ -44,7 +47,6 @@ require (
 	github.com/tinylib/msgp v1.6.4 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.72.0 // indirect
-	golang.org/x/crypto v0.57.0 // indirect
 	golang.org/x/net v0.60.0 // indirect
 	golang.org/x/text v0.42.0 // indirect
 	modernc.org/libc v1.73.4 // indirect

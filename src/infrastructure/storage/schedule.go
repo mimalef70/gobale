@@ -7,11 +7,11 @@ import (
 	"errors"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/domains/send"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/domains/send"
 )
 
-const scheduleColumns = `s.id,s.connection_id,d.alias,s.request,s.state,s.next_at,s.occurrence_count,s.created_at,(s.occurrence_count=(SELECT COUNT(*) FROM schedule_occurrences so WHERE so.connection_id=s.connection_id AND so.schedule_id=s.id))`
+const scheduleColumns = `s.id,s.connection_id,d.alias,d.provider,s.request,s.state,s.next_at,s.occurrence_count,s.created_at,(s.occurrence_count=(SELECT COUNT(*) FROM schedule_occurrences so WHERE so.connection_id=s.connection_id AND so.schedule_id=s.id))`
 const scheduleIdempotencySchema = `CREATE TABLE schedule_idempotency(connection_id TEXT NOT NULL REFERENCES devices(connection_id),idempotency_key TEXT NOT NULL,payload_hash TEXT NOT NULL,schedule_id TEXT NOT NULL UNIQUE REFERENCES schedules(id),PRIMARY KEY(connection_id,idempotency_key))`
 
 type rowQuerier interface {
@@ -68,7 +68,7 @@ func (s *Store) LookupScheduleIdempotent(ctx context.Context, conn string, reque
 func scanSchedule(row scanner) (v domains.Schedule, e error) {
 	var request string
 	var next, created int64
-	e = row.Scan(&v.ID, &v.ConnectionID, &v.DeviceID, &request, &v.State, &next, &v.Count, &created, &v.OccurrenceHistoryComplete)
+	e = row.Scan(&v.ID, &v.ConnectionID, &v.DeviceID, &v.Provider, &request, &v.State, &next, &v.Count, &created, &v.OccurrenceHistoryComplete)
 	if e != nil {
 		return v, dbError(e)
 	}

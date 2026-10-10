@@ -6,13 +6,13 @@ const dist = resolve(root, 'src/ui/web/dist')
 const hash = (data) => createHash('sha256').update(data).digest('hex')
 const settings = await readFile(resolve(root, 'src/config/settings.go'), 'utf8')
 const version = settings.match(/const AppVersion = "([^"]+)"/)?.[1]
-if (!version) throw new Error('GoBale AppVersion was not found')
+if (!version) throw new Error('GoOmni AppVersion was not found')
 // Ship notices for every runtime dependency, including fonts and transitives.
 // Read installed lockfile content only: no network request during packaging.
 const lock = JSON.parse(await readFile(resolve(root, 'ui/package-lock.json'), 'utf8'))
 const notices = [
-  'GoBale admin UI — third-party notices',
-  'GoBale is distributed under LICENCE.txt. The dependencies below retain their own licenses.',
+  'GoOmni admin UI — third-party notices',
+  'GoOmni is distributed under LICENCE.txt. The dependencies below retain their own licenses.',
 ]
 for (const [directory, metadata] of Object.entries(lock.packages).sort(([a], [b]) =>
   a.localeCompare(b),

@@ -1,0 +1,4262 @@
+{
+  "date": "2026-10-10",
+  "scope": "Two operator-controlled accounts per provider. Responses are not full semantic verification; failed attempts may include harness validation errors. No compatibility percentage is implied.",
+  "details": "acceptance.md",
+  "providers": {
+    "bale": {
+      "operations": [
+        {
+          "operation": "account.about",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.avatar",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.block",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.blocked",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "account.name",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.privacy",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "account.privacy.set",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.privacy.status",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.session.terminate",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.sessions",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "account.sessions.terminate",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.settings",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            },
+            {
+              "http": 502,
+              "code": "PROTOCOL_ERROR",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "account.settings.set",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.unblock",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.username",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.username.check",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "bot.callback",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "channel.create",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "channel.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "chat.clear",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "chat.delete",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "contacts.add",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "contacts.import",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "contacts.remove",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "contacts.rename",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "contacts.reset",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "contacts.resolve",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "folders.create",
+          "mode": "mutation",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 422,
+              "code": "PROVIDER_PERMISSION_DENIED",
+              "state": "failed",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "folders.delete",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "folders.edit",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "folders.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.admins",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 6
+            }
+          ]
+        },
+        {
+          "operation": "group.banned",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.default_permissions",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.default_permissions.set",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.demote",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            },
+            {
+              "http": 422,
+              "code": "PROVIDER_NOT_FOUND",
+              "state": "failed",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.history",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.join",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.join_public",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.leave",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.link.revoke",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.permissions",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.permissions.set",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.photo",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.photo.remove",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.pin",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.pins",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.preview",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.promote",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.restriction",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.transfer",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.unban",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.unpin",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.unpin_all",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.username",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.visibility",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "link.summary",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "message.pin",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.pins",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.reaction.remove",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.reaction.set",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.reaction.users",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.reactions",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.received",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "message.unpin",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            },
+            {
+              "http": 400,
+              "code": "INVALID_REQUEST",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.unpin_all",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "message.upvote",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "message.upvote.remove",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "message.upvoters",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "message.views",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.views.increment",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "miniapp.custom",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "miniapp.data",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "miniapp.hash",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "miniapp.menu",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "miniapp.url",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "poll.close",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "poll.full_results",
+          "mode": "read",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 403,
+              "code": "PROVIDER_PERMISSION_DENIED",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "poll.results",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "poll.vote",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            },
+            {
+              "http": 400,
+              "code": "INVALID_REQUEST",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "presence.contacts",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "presence.group",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "presence.group.count",
+          "mode": "read",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 429,
+              "code": "PROVIDER_RATE_LIMITED",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "presence.online",
+          "mode": "ephemeral",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "presence.stop",
+          "mode": "ephemeral",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "presence.typing",
+          "mode": "ephemeral",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "presence.users",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "report.dismiss",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "report.messages",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "report.peer",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "report.story",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "send.contact",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "send.location",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "send.poll",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "send.sticker",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "send.template",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "sticker.get",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "sticker.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "sticker.pack.add",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "sticker.pack.remove",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "story.add",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "story.delete",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "story.get",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "story.list",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "story.react",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "story.viewers",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "users.get",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "wallet.kifpools",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "wallet.list",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.create",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.invite",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.title",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.description",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.remove",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "message.edit",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.read",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            },
+            {
+              "http": 400,
+              "code": "INVALID_REQUEST",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.forward",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            },
+            {
+              "http": 400,
+              "code": "INVALID_REQUEST",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.delete",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "chat.history",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 22
+            },
+            {
+              "http": 404,
+              "code": "PEER_NOT_FOUND",
+              "state": null,
+              "count": 4
+            }
+          ]
+        },
+        {
+          "operation": "chat.messages",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "chat.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "chats",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.members",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 4
+            }
+          ]
+        },
+        {
+          "operation": "group.info",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 5
+            }
+          ]
+        },
+        {
+          "operation": "group.link",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "contacts.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "contacts.search",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.info",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "not_run": 70,
+        "read_response_observed": 31,
+        "write_acknowledged": 25,
+        "attempted_without_success": 3
+      }
+    },
+    "eitaa": {
+      "operations": [
+        {
+          "operation": "account.info",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "chat.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "group.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "channel.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "contacts.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "contacts.search",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "chat.history",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 29
+            },
+            {
+              "http": 404,
+              "code": "PEER_NOT_FOUND",
+              "state": null,
+              "count": 1
+            },
+            {
+              "http": 502,
+              "code": "PROVIDER_PROTOCOL_ERROR",
+              "state": null,
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "chat.messages",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "message.edit",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.delete",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.forward",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.read",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "send.location",
+          "mode": "mutation",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 202,
+              "code": "SEND_UNKNOWN",
+              "state": "unknown",
+              "count": 5
+            },
+            {
+              "http": 422,
+              "code": "INVALID_OPERATION_STAGE",
+              "state": "failed",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "send.contact",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "contacts.add",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "contacts.import",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "contacts.remove",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "contacts.resolve",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.block",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.unblock",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.blocked",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "account.name",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.about",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.username",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.create",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "channel.create",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.info",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 7
+            }
+          ]
+        },
+        {
+          "operation": "group.members",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 7
+            }
+          ]
+        },
+        {
+          "operation": "group.admins",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            },
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": null,
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "group.banned",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            },
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.name",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.add",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "group.remove",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.demote",
+          "mode": "mutation",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": "failed",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.ban",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.unban",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.promote",
+          "mode": "mutation",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": "failed",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.join_public",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.leave",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.username",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.link",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            },
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": "failed",
+              "count": 4
+            }
+          ]
+        },
+        {
+          "operation": "group.preview",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.join",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "folder.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "folder.set",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "folder.remove",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "poll.results",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "poll.vote",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "send.poll",
+          "mode": "mutation",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 422,
+              "code": "PROVIDER_REJECTED",
+              "state": "failed",
+              "count": 5
+            }
+          ]
+        },
+        {
+          "operation": "account.avatar",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.photo",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            },
+            {
+              "http": 202,
+              "code": "SEND_UNKNOWN",
+              "state": "unknown",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "message.album",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "poll.close",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "message.pin",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.unpin",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "chat.activity",
+          "mode": "mutation",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": "failed",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "chat.search",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.permissions",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.member.permissions",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "users.get",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "account.username.check",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "contacts.status",
+          "mode": "read",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": null,
+              "count": 1
+            },
+            {
+              "http": 502,
+              "code": "PROVIDER_REJECTED",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "contacts.ids",
+          "mode": "read",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": null,
+              "count": 1
+            },
+            {
+              "http": 502,
+              "code": "PROVIDER_REJECTED",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "contacts.saved",
+          "mode": "read",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": null,
+              "count": 1
+            },
+            {
+              "http": 502,
+              "code": "PROVIDER_REJECTED",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "messages.search",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "users.common_chats",
+          "mode": "read",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "poll.voters",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "message.read_participants",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "message.views",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.avatars",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 5
+            },
+            {
+              "http": 502,
+              "code": "PROVIDER_REJECTED",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "account.avatar.remove",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "account.avatar.clear",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.description",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            },
+            {
+              "http": 422,
+              "code": "PEER_NOT_FOUND",
+              "state": "failed",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.signatures",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.protect_content",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.username.available",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.online",
+          "mode": "read",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.participant",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.discussion.candidates",
+          "mode": "read",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": null,
+              "count": 1
+            },
+            {
+              "http": 502,
+              "code": "PROVIDER_REJECTED",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.discussion.set",
+          "mode": "mutation",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": "failed",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.discussion.unlink",
+          "mode": "mutation",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": "failed",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.slowmode",
+          "mode": "mutation",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": "failed",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.history_visibility",
+          "mode": "mutation",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": "failed",
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "group.upgrade",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.unpin_all",
+          "mode": "mutation",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 202,
+              "code": "SEND_UNKNOWN",
+              "state": "unknown",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.discussion.message",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.discussion.read",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "chat.archive",
+          "mode": "mutation",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": "failed",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.invites",
+          "mode": "read",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.invite.get",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.invite.create",
+          "mode": "mutation",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": "failed",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.invite.edit",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.invite.revoke",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.invite.delete",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.invites.delete_revoked",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.invites.admins",
+          "mode": "read",
+          "evidence": "attempted_without_success",
+          "responses": [
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.invite.importers",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        }
+      ],
+      "summary": {
+        "read_response_observed": 22,
+        "write_acknowledged": 30,
+        "attempted_without_success": 20,
+        "not_run": 25
+      }
+    },
+    "rubika": {
+      "operations": [
+        {
+          "operation": "account.info",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "contacts.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "folders.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "sticker.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "chat.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "group.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "channel.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "chat.history",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 21
+            },
+            {
+              "http": 502,
+              "code": "PROVIDER_HTTP_ERROR",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "chat.messages",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "chat.info",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 8
+            }
+          ]
+        },
+        {
+          "operation": "group.info",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 6
+            }
+          ]
+        },
+        {
+          "operation": "group.link",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 4
+            }
+          ]
+        },
+        {
+          "operation": "group.members",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 9
+            }
+          ]
+        },
+        {
+          "operation": "group.admins",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 5
+            }
+          ]
+        },
+        {
+          "operation": "group.banned",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "users.get",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.edit",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.delete",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.forward",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.read",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.pin",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.unpin",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "message.reaction",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "message.reaction.remove",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            },
+            {
+              "http": 422,
+              "code": "PROVIDER_INVALID_ARGUMENT",
+              "state": "failed",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.ban",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.unban",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "contacts.block",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "contacts.unblock",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "contacts.add",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "contacts.remove",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "contacts.resolve",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "search.global",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "chat.search",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "chat.get_by_ids",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 6
+            }
+          ]
+        },
+        {
+          "operation": "chat.activity",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "account.name",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.about",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.username",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.create",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "channel.create",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            },
+            {
+              "http": 422,
+              "code": "PROVIDER_INVALID_ARGUMENT",
+              "state": "failed",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.name",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.description",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.username",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.add",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.permissions",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            },
+            {
+              "http": 401,
+              "code": "AUTH_REQUIRED",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.promote",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            },
+            {
+              "http": 422,
+              "code": "PROVIDER_INVALID_ARGUMENT",
+              "state": "failed",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.demote",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            },
+            {
+              "http": 409,
+              "code": "AUTH_REQUIRED",
+              "state": "failed",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.default_permissions",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 3
+            },
+            {
+              "http": 501,
+              "code": "FEATURE_NOT_SUPPORTED",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.default_permissions.set",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.leave",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.join_public",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.link.revoke",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.join",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.preview",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.history",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "folders.add",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "folders.edit",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "folders.remove",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "poll.results",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "poll.vote",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "poll.voters",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "send.poll",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "sticker.get",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "sticker.pack.add",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "sticker.pack.remove",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "send.sticker",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "gif.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "send.gif",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "send.location",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "send.contact",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 4
+            },
+            {
+              "http": 422,
+              "code": "INVALID_OPERATION_STAGE",
+              "state": "failed",
+              "count": 1
+            },
+            {
+              "http": 422,
+              "code": "PROVIDER_INVALID_ARGUMENT",
+              "state": "failed",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "operation": "contacts.online",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "peers.get",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            },
+            {
+              "http": 400,
+              "code": "PROVIDER_INVALID_ARGUMENT",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "search.messages",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            },
+            {
+              "http": 502,
+              "code": "PROVIDER_PROTOCOL_ERROR",
+              "state": null,
+              "count": 2
+            }
+          ]
+        },
+        {
+          "operation": "group.common",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.online",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            },
+            {
+              "http": 400,
+              "code": "INVALID_PEER",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "group.mentions",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 1
+            },
+            {
+              "http": 400,
+              "code": "INVALID_PEER",
+              "state": null,
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "chat.action",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 6
+            }
+          ]
+        },
+        {
+          "operation": "chat.history.clear",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "chat.remove",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "group.chat.remove",
+          "mode": "mutation",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "link.resolve",
+          "mode": "read",
+          "evidence": "not_run",
+          "responses": []
+        },
+        {
+          "operation": "account.avatar",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "avatar.list",
+          "mode": "read",
+          "evidence": "read_response_observed",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": null,
+              "count": 3
+            }
+          ]
+        },
+        {
+          "operation": "group.photo",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        },
+        {
+          "operation": "avatar.remove",
+          "mode": "mutation",
+          "evidence": "write_acknowledged",
+          "responses": [
+            {
+              "http": 200,
+              "code": "SUCCESS",
+              "state": "succeeded",
+              "count": 1
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "read_response_observed": 32,
+        "write_acknowledged": 35,
+        "not_run": 18
+      }
+    }
+  },
+  "roundtrip_scope": {
+    "bale": [
+      "native OTP and restart without OTP",
+      "direct text both directions with recipient local event",
+      "private test group/channel history",
+      "recipient media download",
+      "one-time text/forward operation occurrences",
+      "short SIGKILL outage: one recipient event and valid signed webhook"
+    ],
+    "eitaa": [
+      "native OTP and restart without OTP",
+      "direct text both directions with recipient local event",
+      "private test group/channel history",
+      "recipient media download",
+      "one-time text/forward operation occurrences",
+      "short SIGKILL outage: one recipient event and valid signed webhook"
+    ],
+    "rubika": [
+      "native OTP and restart without OTP",
+      "direct text both directions with recipient local event",
+      "private test group/channel history",
+      "recipient media download",
+      "one-time text/forward operation occurrences",
+      "short SIGKILL outage: one recipient event and valid signed webhook"
+    ]
+  },
+  "offline_native_fixtures": {
+    "bale": {
+      "accounts": 100,
+      "passed": true,
+      "source_scope": "previous recorded fixture build; not rerun in this follow-up",
+      "scope": "independent native client fixture against local fake servers, Linux arm64, 4 CPU / 8 GiB; not live capacity",
+      "binary_sha256": "24a4a364e94514a1a9ea8bcce192d77c84bd64e9100ad13dc3cadee3ef4eb6c5"
+    },
+    "eitaa": {
+      "accounts": 100,
+      "passed": true,
+      "source_scope": "previous recorded fixture build; not rerun in this follow-up",
+      "scope": "independent native client fixture against local fake servers, Linux arm64, 4 CPU / 8 GiB; not live capacity",
+      "binary_sha256": "3353503b1b4cfd94a66d0adeb763f1c6ab96b2ab9ec7b3b26ecfb0f5ecb6c25b"
+    },
+    "rubika": {
+      "accounts": 100,
+      "passed": true,
+      "source_scope": "previous recorded fixture build; not rerun in this follow-up",
+      "scope": "independent native client fixture against local fake servers, Linux arm64, 4 CPU / 8 GiB; not live capacity",
+      "binary_sha256": "6c3c57b902531aa25b62055f19b83f3f15035fef5570019fd3a8b3897c76dd17"
+    }
+  },
+  "follow_up_observations": [
+    "Eitaa PNG profile/group photo normalized to 512-square JPEG; new group and initially-empty profile set/list/remove trials passed.",
+    "Rubika member/admin/banned identity projection corrected; controlled ban/unban/add verified by member ID.",
+    "Rubika avatar.list emits opaque IDs only; initially-empty profile set/list/remove restored empty state.",
+    "Eitaa two-image album with captions found on recipient; supergroup migration and permission writes acknowledged.",
+    "Rubika folder edit, preview/leave/join and chat-setting pairs acknowledged; full effects not all verified.",
+    "Eitaa existing supergroup invitation lookup, preview, secondary leave/join and subsequent send passed; new invitation creation remains unsupported.",
+    "Rubika sender-contact cards and exact-ID recipient reads passed in both directions after correcting contact_message receive layout.",
+    "Eitaa zero-ID supergroup migration notice becomes chat.migrated without a fabricated MID; blocked personal message recovered once from the original checkpoint without resend; final six-session/three-provider recipient-event smoke passed.",
+    "Eitaa controlled classic-group removal/re-addition verified by member ID and secondary sending; original membership restored."
+  ],
+  "limits": [
+    "One real 3600-second process outage and same-day history traversal passed in the later follow-up; multi-day expiry and exhaustive initial history remain unverified.",
+    "No live 300-account or completed 24-hour capacity claim.",
+    "Bale/Eitaa prior gap markers remain visible; Rubika overall recovery remains unverified.",
+    "Earlier Eitaa location random-ID mismatches and an unpin-all trial remain unknown. Fresh corrected static locations passed both directions; two/five-second videos retained video presentation, one-second clips returned as files. Polls remain rejected; archive, fresh invites, slow mode, history visibility and discussion linking returned unsupported constructors.",
+    "Rubika sender-contact cards passed in both directions, including without user_id; received contact_message projection corrected and exact-ID recipient reads passed. Other variants remain unverified.",
+    "Operations not run and response-only observations remain pending end-to-end acceptance.",
+    "Bot, financial, report and account-security mutations were not exercised."
+  ],
+  "source": {
+    "base_revision": "d3453cfba43a4670a2a55e29f1489e37ef07de04",
+    "working_tree_dirty": true,
+    "src_and_ui_source_sha256": "d1a2408e3d86e3259bcb27fbdb143009c9d90e8ce56f48bd71d0fbaf312143b7"
+  },
+  "unified_consumer_contract": {
+    "date": "2026-10-10",
+    "scope": "Two operator-controlled accounts per provider; private test conversations only. No consumer application integration, exhaustive feature or capacity claim.",
+    "matrix_binary_sha256": "f72fe154371305ce13d640deb3bb240ca2eba8b8b19e8bf85d00700d80ef2b34",
+    "matrix_passed": true,
+    "text_directions": [
+      {
+        "provider": "bale",
+        "sender": 1,
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "identity_matches": true
+      },
+      {
+        "provider": "bale",
+        "sender": 2,
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "identity_matches": true
+      },
+      {
+        "provider": "eitaa",
+        "sender": 1,
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "identity_matches": true
+      },
+      {
+        "provider": "eitaa",
+        "sender": 2,
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "identity_matches": true
+      },
+      {
+        "provider": "rubika",
+        "sender": 1,
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "identity_matches": true
+      },
+      {
+        "provider": "rubika",
+        "sender": 2,
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "identity_matches": true
+      }
+    ],
+    "edits": [
+      {
+        "provider": "bale",
+        "sender": 1,
+        "state": "succeeded",
+        "partial": false,
+        "recipient_event_count": 1,
+        "target_matches": true
+      },
+      {
+        "provider": "bale",
+        "sender": 2,
+        "state": "succeeded",
+        "partial": false,
+        "recipient_event_count": 1,
+        "target_matches": true
+      },
+      {
+        "provider": "eitaa",
+        "sender": 1,
+        "state": "succeeded",
+        "partial": false,
+        "recipient_event_count": 1,
+        "target_matches": true
+      },
+      {
+        "provider": "eitaa",
+        "sender": 2,
+        "state": "succeeded",
+        "partial": false,
+        "recipient_event_count": 1,
+        "target_matches": true
+      },
+      {
+        "provider": "rubika",
+        "sender": 1,
+        "state": "succeeded",
+        "partial": true,
+        "recipient_event_count": 1,
+        "target_matches": true
+      },
+      {
+        "provider": "rubika",
+        "sender": 2,
+        "state": "succeeded",
+        "partial": true,
+        "recipient_event_count": 1,
+        "target_matches": true
+      }
+    ],
+    "replies": [
+      {
+        "provider": "bale",
+        "state": "succeeded",
+        "reply_target_matches": true
+      },
+      {
+        "provider": "eitaa",
+        "state": "succeeded",
+        "reply_target_matches": true
+      },
+      {
+        "provider": "rubika",
+        "state": "succeeded",
+        "reply_target_matches": true
+      }
+    ],
+    "media": [
+      {
+        "provider": "bale",
+        "kind": "file",
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "byte_identical": true,
+        "image_decode": null,
+        "bytes": 31
+      },
+      {
+        "provider": "bale",
+        "kind": "image",
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "byte_identical": true,
+        "image_decode": null,
+        "bytes": 363
+      },
+      {
+        "provider": "bale",
+        "kind": "voice",
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "byte_identical": true,
+        "image_decode": null,
+        "bytes": 5837
+      },
+      {
+        "provider": "eitaa",
+        "kind": "file",
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "byte_identical": true,
+        "image_decode": null,
+        "bytes": 31
+      },
+      {
+        "provider": "eitaa",
+        "kind": "image",
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "byte_identical": false,
+        "image_decode": {
+          "max_channel_difference_8bit": 1,
+          "received_format": "jpeg",
+          "received_height": 90,
+          "received_width": 160,
+          "same_dimensions": true,
+          "source_format": "png",
+          "source_height": 90,
+          "source_width": 160
+        },
+        "bytes": 404
+      },
+      {
+        "provider": "eitaa",
+        "kind": "voice",
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "byte_identical": true,
+        "image_decode": null,
+        "bytes": 5837
+      },
+      {
+        "provider": "rubika",
+        "kind": "file",
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "byte_identical": true,
+        "image_decode": null,
+        "bytes": 31
+      },
+      {
+        "provider": "rubika",
+        "kind": "image",
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "byte_identical": true,
+        "image_decode": null,
+        "bytes": 363
+      },
+      {
+        "provider": "rubika",
+        "kind": "voice",
+        "state": "succeeded",
+        "recipient_event_count": 1,
+        "byte_identical": true,
+        "image_decode": null,
+        "bytes": 5837
+      }
+    ],
+    "interactions": [
+      {
+        "provider": "bale",
+        "feature": "typing",
+        "http": 200,
+        "acknowledged": true,
+        "effect_verified": false
+      },
+      {
+        "provider": "bale",
+        "feature": "typing_stop",
+        "http": 200,
+        "acknowledged": true,
+        "effect_verified": false
+      },
+      {
+        "provider": "eitaa",
+        "feature": "typing",
+        "advertised": false
+      },
+      {
+        "provider": "eitaa",
+        "feature": "typing_stop",
+        "advertised": false
+      },
+      {
+        "provider": "rubika",
+        "feature": "typing",
+        "http": 200,
+        "acknowledged": true,
+        "effect_verified": false
+      },
+      {
+        "provider": "rubika",
+        "feature": "typing_stop",
+        "advertised": false
+      }
+    ],
+    "webhooks": {
+      "total_at_snapshot": 628,
+      "invalid_signatures": 0
+    },
+    "notes": [
+      "Every recipient event target is scoped to its own immutable connection and full peer; Eitaa sender/recipient MIDs are not assumed identical.",
+      "Absent versus explicit empty edit body has synthetic regression coverage; live Rubika text edits used nonempty reviewed patches.",
+      "Eitaa photo re-encoding is recorded separately from byte-identical file/voice downloads.",
+      "Typing acknowledgements do not verify recipient visual effects. Eitaa current and reviewed non-threaded typing/cancel constructors were rejected; no active presets or automatic fallback.",
+      "The non-threaded typing experiment is not in production source. Historical gaps/unknown work remain unchanged."
+    ],
+    "final_build": {
+      "binary_sha256": "f5076cc137b8a3410d27c2c9b479812f7c1fe1e5a5383e373c8cd055d9fe0198",
+      "scope": "OpenAPI native-content description and coupled UI/config digest changed after the complete final2 matrix; native runtime logic unchanged. Final3 six-session restart plus three-provider fresh text/recipient-identity smoke passed.",
+      "passed": true,
+      "sessions": [
+        {
+          "provider": "bale",
+          "account": 1,
+          "auth": "authenticated",
+          "transport": "connected",
+          "recovery": "current"
+        },
+        {
+          "provider": "bale",
+          "account": 2,
+          "auth": "authenticated",
+          "transport": "connected",
+          "recovery": "gap_detected"
+        },
+        {
+          "provider": "eitaa",
+          "account": 1,
+          "auth": "authenticated",
+          "transport": "connected",
+          "recovery": "gap_detected"
+        },
+        {
+          "provider": "eitaa",
+          "account": 2,
+          "auth": "authenticated",
+          "transport": "connected",
+          "recovery": "gap_detected"
+        },
+        {
+          "provider": "rubika",
+          "account": 1,
+          "auth": "authenticated",
+          "transport": "connected",
+          "recovery": "degraded"
+        },
+        {
+          "provider": "rubika",
+          "account": 2,
+          "auth": "authenticated",
+          "transport": "connected",
+          "recovery": "degraded"
+        }
+      ],
+      "fresh_text": [
+        {
+          "provider": "bale",
+          "state": "succeeded",
+          "recipient_count": 1,
+          "identity_matches": true
+        },
+        {
+          "provider": "eitaa",
+          "state": "succeeded",
+          "recipient_count": 1,
+          "identity_matches": true
+        },
+        {
+          "provider": "rubika",
+          "state": "succeeded",
+          "recipient_count": 1,
+          "identity_matches": true
+        }
+      ],
+      "ready_http": 200
+    }
+  },
+  "recovery_history_followup": {
+    "date": "2026-10-10",
+    "scope": "Controlled two-account-per-provider recovery/history follow-up on macOS arm64; unreleased dirty source build; no Linux capacity claim",
+    "base_commit": "d3453cfba43a4670a2a55e29f1489e37ef07de04",
+    "source_ui_tree_sha256": "18c7ff9279a8ce2a1ea1586b00cab7cae3ce1adb04aa4b4c9b26982081297dc7",
+    "toolchain": "go version go1.26.9 darwin/arm64",
+    "openapi_sha256": "05c94de8fb393ca7ca4bf6f5af1212e887270d68aaf94198cdbd9dfbb4dc8a3a",
+    "binaries": [
+      {
+        "sha256": "2f94c4599175c3479d386ac18c99d9ff739e0a7cf8a72ad5ad2c5074e0f78a7d",
+        "scope": [
+          "process-outage direct messages, both Eitaa/Rubika accounts; Rubika history pagination"
+        ]
+      },
+      {
+        "sha256": "a92a86ed12c5c7577d3894b21c12be1b4c107ba5f28aa579aec69fa767976c2a",
+        "scope": [
+          "new Rubika group without peer checkpoints: first three messages recovered once on both accounts",
+          "three 5-row pages match one 15-row page for Eitaa/Rubika, both accounts"
+        ]
+      },
+      {
+        "sha256": "eeb7aae9776459335c46b5ae009eff13bc79124e0facd450cf417dcb64da0931",
+        "scope": [
+          "six session restart without OTP; six two-way direct text sends across all three providers",
+          "Eitaa/Rubika history pagination repeated on both accounts; readiness 200"
+        ]
+      },
+      {
+        "sha256": "c1fa34315510912213e92854f5a5ff6924ad63fa610c936fbc0b7efba93938cf",
+        "scope": [
+          "final review: sorted Eitaa page truncation and numeric provider-state progress checks",
+          "six session restart without OTP; six two-way direct text sends across all three providers",
+          "three 5-row pages match one 15-row page for Eitaa/Rubika, both accounts; readiness 200"
+        ]
+      }
+    ],
+    "final_binary_sha256": "c1fa34315510912213e92854f5a5ff6924ad63fa610c936fbc0b7efba93938cf",
+    "live_results": {
+      "short_process_outage": {
+        "providers": [
+          "eitaa",
+          "rubika"
+        ],
+        "messages_sent": 2,
+        "accounts_per_provider": 2,
+        "observations": 4,
+        "exactly_once_in_local_events": true,
+        "binary_sha256": "2f94c4599175c3479d386ac18c99d9ff739e0a7cf8a72ad5ad2c5074e0f78a7d"
+      },
+      "rubika_first_window": {
+        "accounts": 2,
+        "peer_checkpoints_before_outage": 0,
+        "messages_sent": 3,
+        "observed_once_per_account": true,
+        "binary_sha256": "a92a86ed12c5c7577d3894b21c12be1b4c107ba5f28aa579aec69fa767976c2a"
+      },
+      "final_restart": {
+        "restored_native_connections": 6,
+        "new_otp_required": false,
+        "two_way_text_sends": 6,
+        "matching_incoming_events": 6,
+        "ready_http": 200
+      },
+      "final_pagination": [
+        {
+          "provider": "eitaa",
+          "account": 1,
+          "pages": 3,
+          "items": 15,
+          "matches_large_page": true,
+          "no_duplicates": true
+        },
+        {
+          "provider": "eitaa",
+          "account": 2,
+          "pages": 3,
+          "items": 15,
+          "matches_large_page": true,
+          "no_duplicates": true
+        },
+        {
+          "provider": "rubika",
+          "account": 1,
+          "pages": 3,
+          "items": 15,
+          "matches_large_page": true,
+          "no_duplicates": true
+        },
+        {
+          "provider": "rubika",
+          "account": 2,
+          "pages": 3,
+          "items": 15,
+          "matches_large_page": true,
+          "no_duplicates": true
+        }
+      ],
+      "preexisting_unknown_operations": {
+        "count": 18,
+        "changed_count": 0
+      },
+      "webhook_snapshot": {
+        "deliveries": 764,
+        "invalid_signatures": 0,
+        "scope": "cumulative controlled capture; includes earlier trials, not just this follow-up"
+      },
+      "official_eitaa_web_checks": {
+        "typing": "INVALID_CONSTRUCTOR",
+        "poll": "MEDIA_INVALID",
+        "scope": "bounded current-format requests; no guessed fallback"
+      }
+    },
+    "offline_regressions": [
+      "first-window atomic commit failure and retry identity",
+      "foreign-peer rejection",
+      "continued peer rotation",
+      "later new messages after a retained gap",
+      "locally truncated and unsorted history boundaries",
+      "inclusive cursor deduplication",
+      "channel invalidation versus expired-state provenance",
+      "unsupported coverage without fabricated gap",
+      "non-advancing provider state rejected despite changed local metadata"
+    ],
+    "checks": {
+      "check": {
+        "exit_code": 0
+      },
+      "race": {
+        "exit_code": 0
+      },
+      "ui-check": {
+        "exit_code": 0,
+        "tests": 42
+      },
+      "ui-e2e": {
+        "exit_code": 0,
+        "tests": 33
+      },
+      "fuzz": {
+        "status": "passed",
+        "targets": 9,
+        "scope": "before final native review; fuzz parser code unchanged"
+      },
+      "vuln": {
+        "status": "passed",
+        "builds": [
+          "default",
+          "purego"
+        ],
+        "reachable_vulnerabilities": 0,
+        "required_module_advisories_not_called": 1,
+        "scope": "dependency inputs unchanged by final native review"
+      }
+    },
+    "initial_failure_retained": "Eitaa native limit=5 returned a stale window; the failed pagination comparison was retained before the bounded-50 fix",
+    "remaining_acceptance": [
+      "initial exhaustive history import",
+      "arbitrary long or expired recovery gaps",
+      "Eitaa optional-operation failures retained in dated response ledger",
+      "second-factor variants",
+      "Linux capacity and soak acceptance"
+    ],
+    "historical_warnings": "Retained as legacy_unclassified; actual expired-state and unresolved-peer reasons remain explicit. No inbox-completeness claim and no rewritten accepted deliveries."
+  },
+  "location_video_long_outage_followup": {
+    "date": "2026-10-10",
+    "scope": "Two identified operator-controlled accounts per provider; direct conversations and test groups; macOS arm64 native gateway; unreleased modified source build.",
+    "base_commit": "d3453cfba43a4670a2a55e29f1489e37ef07de04",
+    "binary_sha256": "73d3e0c4c44877aa93cd5d618d7af9a818b07a2d72ffee2808a92c7c2d9f0f5f",
+    "source_ui_tree_sha256": "a4632241ecb40a1cd1e406abab4e3b19bc235e7a61378e857981fe8235ccda1c",
+    "toolchain": "go1.26.9 darwin/arm64",
+    "eitaa_location": {
+      "wire_source": "Official Android InputGeoPoint 0xf3b7acc9, two doubles without flags; see sources.md",
+      "directions_tested": 2,
+      "succeeded_with_correlated_nonce": true,
+      "recipient_coordinates_received_once": true,
+      "official_web_coordinates_observed": true,
+      "prior_unknown_sends_reconciled": false
+    },
+    "eitaa_video": {
+      "five_second_with_audio": {
+        "source_account": 1,
+        "recipient_history_http": 200,
+        "video_found": true,
+        "location_coordinates_received_once": true,
+        "media_type": "video",
+        "download_supported": true,
+        "download_http": 200,
+        "byte_identical": true
+      },
+      "variants": [
+        {
+          "kind": "video-silent-fresh",
+          "found": true,
+          "media_type": "file",
+          "download_http": 200,
+          "byte_identical": true
+        },
+        {
+          "kind": "video-silent-five",
+          "found": true,
+          "media_type": "video",
+          "download_http": 200,
+          "byte_identical": true
+        },
+        {
+          "kind": "video-audio-one",
+          "found": true,
+          "media_type": "file",
+          "download_http": 200,
+          "byte_identical": true
+        },
+        {
+          "kind": "video-silent-two",
+          "found": true,
+          "media_type": "video",
+          "download_http": 200,
+          "byte_identical": true
+        }
+      ],
+      "official_web_two_second_playback": {
+        "duration_seconds": 2,
+        "width": 320,
+        "height": 180,
+        "ready_state": 4,
+        "playback_advanced": true
+      },
+      "official_web_one_second_silent_presentation": "file",
+      "limit": "Tested one-second clips with/without audio returned as files; not a universal minimum-duration rule or arbitrary playback guarantee."
+    },
+    "process_outage": {
+      "seconds": 3600.03,
+      "gateway_offline_counts_unchanged": true,
+      "native_connections_restored_without_otp": 6,
+      "providers_under_recovery_test": [
+        "eitaa",
+        "rubika"
+      ],
+      "acknowledged_texts": 75,
+      "eitaa_event_copies": 36,
+      "rubika_event_copies": 114,
+      "observed_event_copies": 150,
+      "missing": 0,
+      "duplicates": 0,
+      "wrong_scope": 0,
+      "rewound_checkpoints": 0,
+      "unknown_before": 18,
+      "unknown_changed": 0,
+      "eligible_deliveries": 98,
+      "delivered": 98,
+      "signed_captures": 98,
+      "invalid_signatures": 0,
+      "preexisting_unknown_state_and_updated_at_changed": 0
+    },
+    "history": [
+      {
+        "provider": "eitaa",
+        "account": 1,
+        "messages": 64,
+        "large_pages": 2,
+        "small_pages": 13,
+        "large_stop": "no_continuation",
+        "small_stop": "no_continuation",
+        "unique": true,
+        "small_matches_large": true,
+        "prior_history_retained": true
+      },
+      {
+        "provider": "eitaa",
+        "account": 2,
+        "messages": 64,
+        "large_pages": 2,
+        "small_pages": 13,
+        "large_stop": "no_continuation",
+        "small_stop": "no_continuation",
+        "unique": true,
+        "small_matches_large": true,
+        "prior_history_retained": true
+      },
+      {
+        "provider": "rubika",
+        "account": 1,
+        "messages": 68,
+        "large_pages": 4,
+        "small_pages": 15,
+        "large_stop": "no_continuation",
+        "small_stop": "no_continuation",
+        "unique": true,
+        "small_matches_large": true,
+        "prior_history_retained": true
+      },
+      {
+        "provider": "rubika",
+        "account": 2,
+        "messages": 68,
+        "large_pages": 4,
+        "small_pages": 15,
+        "large_stop": "no_continuation",
+        "small_stop": "no_continuation",
+        "unique": true,
+        "small_matches_large": true,
+        "prior_history_retained": true
+      }
+    ],
+    "offline_regressions": [
+      "Independent location media and complete-send wire literals; zero/foreign nonce remains unknown without retry",
+      "Video preview comes from actual decoded pixels, preserves original source bytes and journals the derived thumbnail ID before contact",
+      "Thumbnail ambiguity after accepted main upload remains unknown; failed stage persistence prevents provider writes",
+      "Eitaa 50-row server cap with placeholder count retains continuation for public limit 100",
+      "Expired Rubika mutation-state baseline preserves older new-message watermark, pages across restart and keeps historical gap warning"
+    ],
+    "checks": {
+      "check": {
+        "exit_code": 0
+      },
+      "race": {
+        "exit_code": 0
+      },
+      "fuzz": {
+        "exit_code": 0,
+        "targets": 9
+      },
+      "vuln": {
+        "exit_code": 0,
+        "reachable_vulnerabilities": 0,
+        "required_module_advisories_not_called": 1
+      }
+    },
+    "pending": [
+      "Months-old archives: available controlled direct/saved conversations contain only messages from this date.",
+      "Real multi-day expiry, network blackhole, and completeness of historical edits/deletions.",
+      "Exhaustive initial historical import, remaining poll/optional-operation limits and production capacity."
+    ],
+    "evidence": "Private journals, acknowledged browser sends, cold snapshot, signed receiver captures and decoded API comparisons retained in ignored artifacts/live-peykbridge-20261010/two-account; no session/message/identifier data distributed.",
+    "final_description_build": {
+      "binary_sha256": "ead903e05ba14baa3d3739152a02c2e3d2ee3f17c2746d9c83a56ba8eb1c2e39",
+      "change_scope": "Runtime Eitaa video-format description only; native algorithms unchanged from the one-hour/location/video tested binary.",
+      "make_check_exit_code": 0,
+      "make_race_exit_code": 0,
+      "restored_connections": 6,
+      "new_otp_required": false,
+      "ready_http": 200,
+      "updated_video_description_verified": true,
+      "history_reads": [
+        {
+          "provider": "eitaa",
+          "account": 1,
+          "http": 200,
+          "items": 50
+        },
+        {
+          "provider": "eitaa",
+          "account": 2,
+          "http": 200,
+          "items": 50
+        },
+        {
+          "provider": "rubika",
+          "account": 1,
+          "http": 200,
+          "items": 25
+        },
+        {
+          "provider": "rubika",
+          "account": 2,
+          "http": 200,
+          "items": 25
+        }
+      ],
+      "unknown_operations": 18,
+      "retained_recovery_warnings": "Eitaa/Rubika connections retain legacy_unclassified from earlier evidence; no synchronized-inbox claim."
+    }
+  }
+}

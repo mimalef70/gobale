@@ -1,5 +1,76 @@
 # Changelog
 
+## 2.3.0 — 2026-10-10
+
+**GoBale is now GoOmni.** One native Go binary serves independent Bale, Eitaa
+and Rubika accounts through a shared REST API, administrative panel and signed
+webhooks. The repository, module, CLI and images now use `goomni`. Existing
+release tags remain historical GoBale builds. No major version is increased.
+
+**Coordinated consumer upgrade required.** Follow the
+[upgrade guide](https://github.com/mimalef70/goomni/blob/v2.3.0/docs/upgrade-goomni.md)
+before replacing an existing deployment. Reuse the original database, media,
+volume and master key; do not run `init` or create an empty new volume.
+
+- Add immutable `provider` selection, provider registries, operation validation,
+  capability discovery, isolated encrypted sessions/media references and atomic
+  event/checkpoint batches. Existing and deleted accounts migrate to Bale in
+  storage schema 8. Connection IDs, guards, provisioning bindings, queued/unknown
+  operations, schedules and already signed webhook bytes are preserved.
+- Add native Go Eitaa and Rubika clients with phone/code/password login, session
+  restore, bounded receive/recovery, messaging/media, account and group/channel
+  operations. They are opt-in (`EITAA_ENABLED`, `RUBIKA_ENABLED`); capability
+  catalogues and dated evidence state each operation's actual coverage.
+- Share ordinary sends, uploads, replies, forwards, scheduling and operation
+  tracking across providers. Expose text/caption limits, optional interactions,
+  receipt semantics and avatar support. Normalize projected chat IDs and preserve
+  explicit sparse edits without inventing missing text, sender or timestamps.
+- Add provider selection/filtering and provider-aware authentication steps to
+  the English/Persian administrative panel. Keep its session, CSRF and immutable
+  instance protections. There is no consumer user model or chat console.
+- Journal compound upload/album/avatar stages before native writes; uncertain
+  results remain observable and are never blindly retried. Fair bounded workers
+  reserve progress across providers and connections. Logout/deletion preserve
+  accepted audit history and ambiguous work.
+- Correct Eitaa authorization/token renewal, peer namespaces, location encoding,
+  image/avatar preparation, real video previews and history continuation beyond
+  the observed 50-row server cap. Correct Rubika discovery/registration, contact
+  cards, sparse edits, member identities and independent message watermarks.
+  Separate unsupported update types from proven gaps and retained unclassified
+  historical warnings; a socket connection does not mean recovery is complete.
+- Rename current webhook identity headers to `X-GoOmni-Event-Id` and
+  `X-GoOmni-Delivery-Id`, metrics to `goomni_`, and gateway-wide webhook settings
+  to `APP_WEBHOOK*`. HMAC signing and stored delivery bytes retain their meaning.
+  New provisioning requests require a provider. New one-time schedules use `none`;
+  already accepted schedules retain their original bindings and behavior.
+- Ship the embedded UI, current OpenAPI, upgrade/integration/operations guides,
+  provider evidence and license notices in release archives. Publish matching
+  Linux amd64/arm64 images to Docker Hub and GHCR, with immutable version tags,
+  provenance/SBOM and anonymous asset/registry/restart verification. New installs
+  use `goomni.db` and a named `goomni-data` volume; upgrades select existing paths.
+
+### Verified scope and remaining limits
+
+- Dated controlled trials used two operator accounts per provider. They cover
+  native login/session restore, text/media, signed webhooks and selected group,
+  profile, scheduling and history operations. A real one-hour process outage
+  recovered all 75 Eitaa/Rubika test messages, with no missing or mis-scoped event
+  copies, checkpoint rewind or resend of the 18 pre-existing unknown operations.
+  These results identify their pre-release binaries separately from this release.
+- Eitaa static location passed in both directions. Tested two- and five-second
+  videos retained video presentation; tested one-second clips arrived as files,
+  also through the official Web client. Poll writes and typing/cancel remain
+  rejected by the tested server. Source-only reaction/sticker/GIF handlers are
+  excluded from advertised availability. Other contact/card/codec variants
+  retain their recorded limits.
+- Bale ordinary-user keyboard templates remain rejected. Mentions, unrestricted
+  history export, months-old archives, multi-day recovery and sustained Linux
+  live-account capacity remain acceptance gates. Synthetic 300-client fixtures
+  and short capacity runs do not establish 300 real accounts or a 24-hour soak.
+  Provider inventories distinguish source review, offline tests and controlled
+  live results. Uncertain media edits can withhold downloads instead of serving
+  potentially stale bytes. No financial mutations or call engine are added.
+
 ## 2.2.0 — 2026-10-09
 
 **Breaking public API and webhook changes.** Update send/name inputs, operation

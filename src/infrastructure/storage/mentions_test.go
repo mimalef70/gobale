@@ -2,7 +2,7 @@ package storage
 
 import (
 	"context"
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"github.com/stretchr/testify/require"
 	"path/filepath"
 	"strings"
@@ -15,7 +15,7 @@ func TestMentionIdempotencyAndSchedulePersistence(t *testing.T) {
 	st, err := Open(filepath.Join(t.TempDir(), "mention.db"), []byte(strings.Repeat("k", 32)))
 	require.NoError(t, err)
 	defer st.Close()
-	d, err := st.CreateDevice(ctx, "mention")
+	d, err := st.CreateDevice(ctx, "mention", domains.ProviderBale)
 	require.NoError(t, err)
 	request := domains.SendRequest{Peer: domains.Peer{Type: "user", ID: "77"}, Kind: "text", Text: "synthetic", Mentions: []string{"1"}}
 	op, _, err := st.Enqueue(ctx, d.ConnectionID, request, "same", AdmissionLimits{Global: 100})

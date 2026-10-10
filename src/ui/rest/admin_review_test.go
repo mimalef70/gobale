@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 	"github.com/stretchr/testify/require"
 )
 
@@ -20,9 +20,9 @@ func (f *revokedBrowserAccount) Connect(context.Context, *domains.Session, domai
 func TestAdminReviewProvider401KeepsValidAdministrativeSession(t *testing.T) {
 	srv, svc, st := integrationBrowserServer(t, "", true, func(domains.Device) domains.Client { return &revokedBrowserAccount{} })
 	ctx := context.Background()
-	d, err := svc.CreateDevice(ctx, "revoked")
+	d, err := svc.CreateDevice(ctx, "revoked", domains.ProviderBale)
 	require.NoError(t, err)
-	require.NoError(t, st.SaveSession(ctx, d.ConnectionID, &domains.Session{UserID: "1001", Token: "synthetic-revoked-session"}))
+	require.NoError(t, st.SaveSession(ctx, d.ConnectionID, &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "1001", Token: "synthetic-revoked-session"}))
 	session := integrationLogin(t, srv)
 	res, out := browserIntegrationRequest(t, srv, session, "POST", "/ui/api/devices/revoked/reconnect", nil, browserInstance(d), false)
 	require.Equal(t, 401, res.StatusCode, out)

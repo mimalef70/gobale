@@ -10,18 +10,18 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 var aliasPattern = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$`)
 
-const deviceColumns = `alias,connection_id,account_id,created_at,webhook_url,webhook_secret,webhook_events,webhook_revision,webhook_filter`
+const deviceColumns = `alias,connection_id,provider,account_id,created_at,webhook_url,webhook_secret,webhook_events,webhook_revision,webhook_filter`
 
 func (s *Store) scanDevice(row scanner) (d domains.Device, err error) {
 	var created int64
 	var secret []byte
 	var events, filter string
-	err = row.Scan(&d.ID, &d.ConnectionID, &d.AccountID, &created, &d.Webhook.URL, &secret, &events, &d.Webhook.Revision, &filter)
+	err = row.Scan(&d.ID, &d.ConnectionID, &d.Provider, &d.AccountID, &created, &d.Webhook.URL, &secret, &events, &d.Webhook.Revision, &filter)
 	if err != nil {
 		return d, dbError(err)
 	}
@@ -40,11 +40,14 @@ func (s *Store) scanDevice(row scanner) (d domains.Device, err error) {
 	}
 	return
 }
-func (s *Store) CreateDevice(ctx context.Context, id string) (domains.Device, error) {
+func (s *Store) CreateDevice(ctx context.Context, id string, provider domains.Provider) (domains.Device, error) {
+	if !validProvider(provider) {
+		return domains.Device{}, invalidProvider()
+	}
 	if !aliasPattern.MatchString(id) {
 		return domains.Device{}, domains.E("INVALID_DEVICE_ID", "device id must contain 1-64 letters, digits, dots, underscores or hyphens", 400)
 	}
-	d := domains.Device{ID: id, ConnectionID: newID(), CreatedAt: stamp(now()), Webhook: domains.WebhookConfig{Revision: 1, Events: []string{}}}
+	d := domains.Device{ID: id, Provider: provider, ConnectionID: newID(), CreatedAt: stamp(now()), Webhook: domains.WebhookConfig{Revision: 1, Events: []string{}}}
 	d.InstanceID = d.InstanceToken()
 	tx, e := s.db.BeginTx(ctx, nil)
 	if e != nil {
@@ -58,7 +61,7 @@ func (s *Store) CreateDevice(ctx context.Context, id string) (domains.Device, er
 	if n > 0 {
 		return d, domains.E("DEVICE_EXISTS", "device id already exists", 409)
 	}
-	_, e = tx.ExecContext(ctx, `INSERT INTO devices(connection_id,alias,created_at) VALUES(?,?,?)`, d.ConnectionID, d.ID, d.CreatedAt.UnixMilli())
+	_, e = tx.ExecContext(ctx, `INSERT INTO devices(connection_id,alias,provider,created_at) VALUES(?,?,?,?)`, d.ConnectionID, d.ID, d.Provider, d.CreatedAt.UnixMilli())
 	if e != nil {
 		return d, e
 	}
@@ -138,50 +141,91 @@ func (s *Store) BindAccount(ctx context.Context, conn, user string) error {
 	return tx.Commit()
 }
 func (s *Store) SaveSession(ctx context.Context, conn string, session *domains.Session) error {
+	return s.saveSession(ctx, conn, session, false)
+}
+
+// UpdateSession persists credential rotation only for an existing session.
+// Runtime generation guards must reject callbacks from a replaced client; this
+// storage check additionally prevents a late callback recreating logged-out data.
+func (s *Store) UpdateSession(ctx context.Context, conn string, session *domains.Session) error {
+	return s.saveSession(ctx, conn, session, true)
+}
+
+func (s *Store) saveSession(ctx context.Context, conn string, session *domains.Session, updateOnly bool) error {
 	if session == nil {
 		return domains.E("INVALID_SESSION", "session is required", 400)
-	}
-	plain, e := json.Marshal(session)
-	if e != nil {
-		return e
-	}
-	cipher, e := s.encrypt(plain, conn+":session")
-	if e != nil {
-		return e
 	}
 	tx, e := s.db.BeginTx(ctx, nil)
 	if e != nil {
 		return e
 	}
 	defer tx.Rollback()
+	provider, e := providerTx(ctx, tx, conn)
+	if e != nil {
+		return e
+	}
+	if session.Provider != provider {
+		return providerMismatch()
+	}
+	if session.Version < 1 {
+		return domains.E("INVALID_SESSION", "private session format version is required", 400)
+	}
+	plain, e := json.Marshal(session)
+	if e != nil {
+		return e
+	}
+	cipher, e := s.encodePrivate(provider, session.Version, plain, conn+":session")
+	if e != nil {
+		return e
+	}
 	if e = bindAccountTx(ctx, tx, conn, session.UserID); e != nil {
 		return e
 	}
-	if _, e = tx.ExecContext(ctx, `INSERT INTO sessions(connection_id,cipher) VALUES(?,?) ON CONFLICT(connection_id) DO UPDATE SET cipher=excluded.cipher`, conn, cipher); e != nil {
-		return e
+	if updateOnly {
+		result, err := tx.ExecContext(ctx, `UPDATE sessions SET cipher=? WHERE connection_id=?`, cipher, conn)
+		if err != nil {
+			return err
+		}
+		count, err := result.RowsAffected()
+		if err != nil {
+			return err
+		}
+		if count != 1 {
+			return domains.E("SESSION_NOT_FOUND", "session is no longer active", 409)
+		}
+	} else {
+		if _, e = tx.ExecContext(ctx, `INSERT INTO sessions(connection_id,cipher) VALUES(?,?) ON CONFLICT(connection_id) DO UPDATE SET cipher=excluded.cipher`, conn, cipher); e != nil {
+			return e
+		}
 	}
 	return tx.Commit()
 }
 func (s *Store) LoadSession(ctx context.Context, conn string) (*domains.Session, error) {
-	if e := s.active(ctx, conn); e != nil {
-		return nil, e
-	}
 	var ciphertext []byte
-	e := s.db.QueryRowContext(ctx, `SELECT cipher FROM sessions WHERE connection_id=?`, conn).Scan(&ciphertext)
+	var provider domains.Provider
+	var account string
+	e := s.db.QueryRowContext(ctx, `SELECT s.cipher,d.provider,d.account_id FROM devices d LEFT JOIN sessions s ON s.connection_id=d.connection_id WHERE d.connection_id=? AND d.deleted_at IS NULL`, conn).Scan(&ciphertext, &provider, &account)
 	if errors.Is(e, sql.ErrNoRows) {
-		return nil, nil
+		return nil, notFound()
 	}
 	if e != nil {
 		return nil, e
 	}
-	plain, e := s.decrypt(ciphertext, conn+":session")
+	if len(ciphertext) == 0 {
+		return nil, nil
+	}
+	envelope, e := s.decodePrivate(ciphertext, conn+":session", provider)
 	if e != nil {
 		return nil, e
 	}
 	var session domains.Session
-	if e = json.Unmarshal(plain, &session); e != nil {
-		return nil, e
+	if e = json.Unmarshal(envelope.Payload, &session); e != nil || session.UserID == "" || session.UserID != account {
+		return nil, invalidPrivateData("session")
 	}
+	if session.Provider != "" && session.Provider != provider || session.Version != 0 && session.Version != envelope.Version {
+		return nil, invalidPrivateData("session")
+	}
+	session.Provider, session.Version = provider, envelope.Version
 	return &session, nil
 }
 func (s *Store) ClearSession(ctx context.Context, conn string) error {

@@ -1,2 +1,2 @@
-# Build-time documentation tooling only; the GoBale runtime does not use Python.
+# Build-time documentation tooling only; the GoOmni runtime does not use Python.
 PyYAML==6.0.3

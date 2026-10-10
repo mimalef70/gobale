@@ -1,7 +1,7 @@
 import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   ArrowUpRight,
   CircleCheck,
@@ -11,7 +11,7 @@ import {
   Webhook,
   TriangleAlert,
 } from 'lucide-react'
-import type { Device, Overview } from '../lib/types'
+import type { Device, Overview, Provider, ProviderID } from '../lib/types'
 import { useRequestSignal } from '../lib/query'
 import { request } from '../lib/api'
 import { Button, Empty, ErrorNotice, Field, Modal, Status } from '../components/ui'
@@ -25,17 +25,24 @@ export function Accounts({ overview }: { overview: Overview }) {
   const cache = useQueryClient()
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState('')
+  const [providerFilter, setProviderFilter] = useState('')
+  const [provider, setProvider] = useState<ProviderID | ''>('')
+  const providers = useQuery({
+    queryKey: ['providers'],
+    queryFn: ({ signal }) => request<Provider[]>('app/providers', { signal }),
+  })
   const [createOpen, setCreateOpen] = useState(false)
   const [name, setName] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<unknown>()
-  const provision = useRef<{ name: string; key: string } | null>(null)
+  const provision = useRef<{ name: string; provider: ProviderID; key: string } | null>(null)
   const devices = overview.devices ?? []
   const attention = (d: Device) =>
     ['gap_detected', 'degraded'].includes(d.status.recovery) || d.deliveries.failed > 0
   const visible = devices.filter(
     (d) =>
-      `${d.id} ${d.account_id ?? ''}`.toLowerCase().includes(search.toLowerCase()) &&
+      `${d.id} ${d.account_id ?? ''} ${d.provider}`.toLowerCase().includes(search.toLowerCase()) &&
+      (!providerFilter || d.provider === providerFilter) &&
       (!filter ||
         (filter === 'connected'
           ? d.status.transport === 'connected'
@@ -49,17 +56,23 @@ export function Accounts({ overview }: { overview: Overview }) {
     setError(undefined)
     try {
       const alias = name.trim()
-      if (!provision.current || provision.current.name !== alias)
-        provision.current = { name: alias, key: crypto.randomUUID() }
+      if (!provider || !providers.data?.some((item) => item.id === provider && item.enabled)) return
+      if (
+        !provision.current ||
+        provision.current.name !== alias ||
+        provision.current.provider !== provider
+      )
+        provision.current = { name: alias, provider, key: crypto.randomUUID() }
       const device = await request<Device>('devices', {
         method: 'POST',
-        body: { device_id: alias },
+        body: { device_id: alias, provider },
         idempotencyKey: provision.current.key,
         signal: getSignal(),
       })
       await cache.invalidateQueries({ queryKey: ['overview'] })
       setCreateOpen(false)
       setName('')
+      setProvider('')
       provision.current = null
       navigate(deviceURL(device, 'login'))
     } catch (e) {
@@ -120,6 +133,18 @@ export function Accounts({ overview }: { overview: Overview }) {
             {t('allAccounts')} <span className="count">{devices.length}</span>
           </h2>
           <div className="filters">
+            <select
+              aria-label={t('allProviders')}
+              value={providerFilter}
+              onChange={(e) => setProviderFilter(e.target.value)}
+            >
+              <option value="">{t('allProviders')}</option>
+              {['bale', 'eitaa', 'rubika'].map((id) => (
+                <option key={id} value={id}>
+                  {t(`providerName.${id}`)}
+                </option>
+              ))}
+            </select>
             <div className="search">
               <Search size={16} aria-hidden />
               <input
@@ -181,6 +206,7 @@ export function Accounts({ overview }: { overview: Overview }) {
                           <Link className="account-name" dir="auto" to={deviceURL(d)}>
                             {d.id}
                           </Link>
+                          <small>{t(`providerName.${d.provider}`)}</small>
                           <small dir="ltr">{d.account_id || t('notConnected')}</small>
                         </div>
                       </div>
@@ -226,6 +252,25 @@ export function Accounts({ overview }: { overview: Overview }) {
         description={t('createHint')}
       >
         <form onSubmit={create}>
+          <Field id="connection-provider" label={t('provider')} hint={t('providerImmutable')}>
+            <select
+              id="connection-provider"
+              value={provider}
+              required
+              disabled={busy || providers.isPending}
+              aria-describedby="connection-provider-hint"
+              onChange={(e) => setProvider(e.target.value as ProviderID | '')}
+            >
+              <option value="">{t('chooseProvider')}</option>
+              {providers.data?.map((item) => (
+                <option key={item.id} value={item.id} disabled={!item.enabled}>
+                  {t(`providerName.${item.id}`)}
+                  {!item.enabled ? ` — ${t('providerUnavailable')}` : ''}
+                </option>
+              ))}
+            </select>
+          </Field>
+          <ErrorNotice error={providers.error} />
           <Field id="connection-name" label={t('connectionID')} hint={t('nameHint')}>
             <input
               id="connection-name"
@@ -235,7 +280,7 @@ export function Accounts({ overview }: { overview: Overview }) {
               required
               autoComplete="off"
               maxLength={64}
-              pattern="[A-Za-z0-9_-]+"
+              pattern="[A-Za-z0-9][A-Za-z0-9_.-]{0,63}"
               autoFocus
               aria-describedby="connection-name-hint"
             />
@@ -250,7 +295,13 @@ export function Accounts({ overview }: { overview: Overview }) {
             >
               {t('cancel')}
             </Button>
-            <Button busy={busy} type="submit">
+            <Button
+              busy={busy}
+              type="submit"
+              disabled={
+                !provider || !providers.data?.some((item) => item.id === provider && item.enabled)
+              }
+            >
               {t('create')}
             </Button>
           </div>

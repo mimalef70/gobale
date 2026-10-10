@@ -1239,7 +1239,7 @@ const file_wire_receive_proto_rawDesc = "" +
 	"\x0ereaction_by_me\x18\x04 \x01(\bR\freactionByMe\"\x8b\x01\n" +
 	"\x16ReactionPositionUpdate\x12/\n" +
 	"\x04peer\x18\x01 \x01(\v2\x1b.gobale.bale.reference.PeerR\x04peer\x12@\n" +
-	"\amessage\x18\x02 \x01(\v2&.gobale.bale.reference.MessagePositionR\amessageB8Z6github.com/mimalef70/gobale/src/internal/balemeow/wireb\x06proto3"
+	"\amessage\x18\x02 \x01(\v2&.gobale.bale.reference.MessagePositionR\amessageB8Z6github.com/mimalef70/goomni/src/internal/balemeow/wireb\x06proto3"
 
 var (
 	file_wire_receive_proto_rawDescOnce sync.Once

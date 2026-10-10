@@ -1,4 +1,4 @@
-// Package web validates and serves the admin UI embedded into a GoBale binary.
+// Package web validates and serves the admin UI embedded into a GoOmni binary.
 // Node is a build dependency only; no files are downloaded or executed at runtime.
 package web
 
@@ -22,8 +22,8 @@ import (
 //go:embed all:dist
 var embedded embed.FS
 
-const baseMarker = "__GOBALE_UI_BASE__"
-const buildHelp = "build the administrative UI with npm ci && npm run build in ui/ before building GoBale, or disable APP_UI_ENABLED"
+const baseMarker = "__GOOMNI_UI_BASE__"
+const buildHelp = "build the administrative UI with npm ci && npm run build in ui/ before building GoOmni, or disable APP_UI_ENABLED"
 
 type Manifest struct {
 	SchemaVersion int               `json:"schema_version"`

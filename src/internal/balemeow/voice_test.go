@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/coder/websocket"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protowire"
 )
@@ -209,7 +209,7 @@ func TestPrepareVoiceSourceRewindsAndCleansPrivateTemporaryFile(t *testing.T) {
 		got, err := io.ReadAll(prepared)
 		require.NoError(t, err)
 		require.Equal(t, body, got)
-		files, err := filepath.Glob(filepath.Join(dir, "gobale-voice-*"))
+		files, err := filepath.Glob(filepath.Join(dir, "goomni-voice-*"))
 		require.NoError(t, err)
 		if seekable {
 			require.Empty(t, files)
@@ -220,14 +220,14 @@ func TestPrepareVoiceSourceRewindsAndCleansPrivateTemporaryFile(t *testing.T) {
 			require.Equal(t, os.FileMode(0600), stat.Mode().Perm())
 		}
 		cleanup()
-		files, err = filepath.Glob(filepath.Join(dir, "gobale-voice-*"))
+		files, err = filepath.Glob(filepath.Join(dir, "goomni-voice-*"))
 		require.NoError(t, err)
 		require.Empty(t, files)
 	}
 	_, _, cleanup, err := prepareVoiceSource(context.Background(), io.NopCloser(bytes.NewReader([]byte("invalid"))), 7)
 	require.Equal(t, "INVALID_MEDIA", codeOf(err))
 	cleanup()
-	files, err := filepath.Glob(filepath.Join(dir, "gobale-voice-*"))
+	files, err := filepath.Glob(filepath.Join(dir, "goomni-voice-*"))
 	require.NoError(t, err)
 	require.Empty(t, files)
 	ctx, cancel := context.WithCancel(context.Background())

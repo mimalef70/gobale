@@ -22,24 +22,24 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
-	"github.com/mimalef70/gobale/src/pkg/sqlite"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/pkg/sqlite"
 )
 
 // TestOptionalSoak is deliberately opt-in: the ordinary suite never starts a
 // 24-hour job. Everything runs against fake providers and a loopback webhook.
-// Example: GOBALE_SOAK_DURATION=24h go test ./usecase -run TestOptionalSoak -count=1 -timeout 25h -v
-// Smoke: GOBALE_SOAK_DURATION=10s go test ./usecase -run TestOptionalSoak -count=1 -timeout 1m -v
+// Example: GOOMNI_SOAK_DURATION=24h go test ./usecase -run TestOptionalSoak -count=1 -timeout 25h -v
+// Smoke: GOOMNI_SOAK_DURATION=10s go test ./usecase -run TestOptionalSoak -count=1 -timeout 1m -v
 // The histogram reports measured upper bounds, not invented exact percentiles.
 func TestOptionalSoak(t *testing.T) {
-	raw := os.Getenv("GOBALE_SOAK_DURATION")
+	raw := os.Getenv("GOOMNI_SOAK_DURATION")
 	if raw == "" {
-		t.Skip("set GOBALE_SOAK_DURATION to enable the synthetic account soak")
+		t.Skip("set GOOMNI_SOAK_DURATION to enable the synthetic account soak")
 	}
 	duration, err := time.ParseDuration(raw)
 	if err != nil || duration < time.Second || duration > 48*time.Hour {
-		t.Fatal("GOBALE_SOAK_DURATION must be 1s..48h")
+		t.Fatal("GOOMNI_SOAK_DURATION must be 1s..48h")
 	}
 	integer := func(name string, fallback int) int {
 		value := os.Getenv(name)
@@ -52,25 +52,25 @@ func TestOptionalSoak(t *testing.T) {
 		}
 		return n
 	}
-	accounts := integer("GOBALE_SOAK_ACCOUNTS", 50)
+	accounts := integer("GOOMNI_SOAK_ACCOUNTS", 50)
 	if accounts > 1000 {
-		t.Fatal("GOBALE_SOAK_ACCOUNTS must be 1..1000")
+		t.Fatal("GOOMNI_SOAK_ACCOUNTS must be 1..1000")
 	}
-	steadyRate := integer("GOBALE_SOAK_RATE", 20)
-	burstRate := integer("GOBALE_SOAK_BURST_RATE", 100)
+	steadyRate := integer("GOOMNI_SOAK_RATE", 20)
+	burstRate := integer("GOOMNI_SOAK_BURST_RATE", 100)
 	burstDuration := 60 * time.Second
-	if value := os.Getenv("GOBALE_SOAK_BURST_DURATION"); value != "" {
+	if value := os.Getenv("GOOMNI_SOAK_BURST_DURATION"); value != "" {
 		burstDuration, err = time.ParseDuration(value)
 		if err != nil || burstDuration <= 0 {
-			t.Fatal("invalid GOBALE_SOAK_BURST_DURATION")
+			t.Fatal("invalid GOOMNI_SOAK_BURST_DURATION")
 		}
 	}
 	ctx := context.Background()
 	maxDiskBytes := int64(8 << 30)
-	if value := os.Getenv("GOBALE_SOAK_MAX_DISK_BYTES"); value != "" {
+	if value := os.Getenv("GOOMNI_SOAK_MAX_DISK_BYTES"); value != "" {
 		maxDiskBytes, err = strconv.ParseInt(value, 10, 64)
 		if err != nil || maxDiskBytes < 1<<20 || maxDiskBytes > 64<<30 {
-			t.Fatal("GOBALE_SOAK_MAX_DISK_BYTES must be 1 MiB..64 GiB")
+			t.Fatal("GOOMNI_SOAK_MAX_DISK_BYTES must be 1 MiB..64 GiB")
 		}
 	}
 	key := []byte(strings.Repeat("z", 32))
@@ -224,11 +224,11 @@ func TestOptionalSoak(t *testing.T) {
 	}
 	devices := make([]domains.Device, accounts)
 	for i := range devices {
-		devices[i], err = store.CreateDevice(ctx, fmt.Sprint("soak-", i))
+		devices[i], err = store.CreateDevice(ctx, fmt.Sprint("soak-", i), domains.ProviderBale)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if err = store.SaveSession(ctx, devices[i].ConnectionID, &domains.Session{UserID: strconv.Itoa(i + 1), Token: "synthetic-session"}); err != nil {
+		if err = store.SaveSession(ctx, devices[i].ConnectionID, &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: strconv.Itoa(i + 1), Token: "synthetic-session"}); err != nil {
 			t.Fatal(err)
 		}
 	}

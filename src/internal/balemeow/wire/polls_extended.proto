@@ -1,7 +1,7 @@
 // Reviewed against Bale Web 5.7.0 MainRoutes.7a95f5bcef.js and index module 51794.
 syntax = "proto3";
 package gobale.bale.reference;
-option go_package = "github.com/mimalef70/gobale/src/internal/balemeow/wire";
+option go_package = "github.com/mimalef70/goomni/src/internal/balemeow/wire";
 import "wire/bale.proto";
 
 message PollCreateRequest { PollMessage poll_message = 1; int64 create_at = 2; Peer ex_peer = 3; }

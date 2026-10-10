@@ -3,7 +3,7 @@ package storage
 import (
 	"context"
 
-	"github.com/mimalef70/gobale/src/domains"
+	"github.com/mimalef70/goomni/src/domains"
 )
 
 // DeliveryCounts reads all active connection queues in one database query.

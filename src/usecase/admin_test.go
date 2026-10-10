@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/infrastructure/storage"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/infrastructure/storage"
 )
 
 type adminAuthClient struct {
@@ -55,7 +55,7 @@ func (f *adminAuthClient) SubmitPassword(_ context.Context, _ string, password s
 	defer f.mu.Unlock()
 	f.password = password
 	f.status.Auth = "authenticated"
-	return &domains.Session{UserID: "1001", Token: "synthetic-session"}, nil
+	return &domains.Session{Provider: domains.ProviderBale, Version: 1, UserID: "1001", Token: "synthetic-session"}, nil
 }
 
 func TestOverviewFiftyAccountsDoesNotConstructOrCallProvider(t *testing.T) {

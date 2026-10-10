@@ -1,4 +1,4 @@
-// Package storage provides GoBale's single-owner, transactional SQLite journal.
+// Package storage provides GoOmni's single-owner, transactional SQLite journal.
 package storage
 
 import (
@@ -18,8 +18,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/pkg/sqlite"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/pkg/sqlite"
 	"golang.org/x/sys/unix"
 )
 
@@ -32,10 +32,12 @@ type Store struct {
 	provisioningKey []byte
 	closeMu         sync.Mutex
 	closed          bool
+	dispatchMu      sync.Mutex
+	sendConcurrency int
 }
 type scanner interface{ Scan(...any) error }
 
-const schemaVersion = 7
+const schemaVersion = 8
 
 // An unsuccessful startup has no caller-owned Store to retry closing. If its
 // bounded cleanup cannot drain, retain the owner until process exit rather than
@@ -95,7 +97,7 @@ func Open(path string, key []byte) (s *Store, err error) {
 	}
 	if err = unix.Flock(int(lock.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
 		lock.Close()
-		return nil, fmt.Errorf("database is already owned by another GoBale process: %w", err)
+		return nil, fmt.Errorf("database is already owned by another GoOmni process: %w", err)
 	}
 	lockTransferred := false
 	defer func() {
@@ -284,10 +286,10 @@ func (s *Store) migrate(ctx context.Context) error {
 		var check []byte
 		e = tx.QueryRowContext(ctx, `SELECT identity,version,key_check FROM gobale_meta WHERE id=1`).Scan(&identity, &version, &check)
 		if e != nil || identity != "gobale" {
-			return fmt.Errorf("refusing unrelated database; GoBale requires its own database")
+			return fmt.Errorf("refusing unrelated database; GoOmni requires its own database")
 		}
 		if version < 1 || version > schemaVersion {
-			return fmt.Errorf("unsupported GoBale schema version %d", version)
+			return fmt.Errorf("unsupported GoOmni schema version %d", version)
 		}
 		p, e := s.decrypt(check, "gobale-key-check-v1")
 		if e != nil || string(p) != "gobale" {
@@ -331,8 +333,13 @@ func (s *Store) migrate(ctx context.Context) error {
 			}
 		}
 		if version <= 6 {
-			if _, e = tx.ExecContext(ctx, provisioningSchema); e != nil {
+			if _, e = tx.ExecContext(ctx, provisioningV7Schema); e != nil {
 				return fmt.Errorf("migrate device provisioning: %w", e)
+			}
+		}
+		if version <= 7 {
+			if e = s.migrateProviders(ctx, tx); e != nil {
+				return fmt.Errorf("migrate provider storage: %w", e)
 			}
 		}
 		if _, e = tx.ExecContext(ctx, `UPDATE gobale_meta SET version=? WHERE id=1`, schemaVersion); e != nil {
@@ -342,7 +349,7 @@ func (s *Store) migrate(ctx context.Context) error {
 	}
 	for _, ddl := range schema {
 		if _, e = tx.ExecContext(ctx, ddl); e != nil {
-			return fmt.Errorf("initialize GoBale schema: %w", e)
+			return fmt.Errorf("initialize GoOmni schema: %w", e)
 		}
 	}
 	check, e := s.encrypt([]byte("gobale"), "gobale-key-check-v1")
@@ -357,7 +364,10 @@ func (s *Store) migrate(ctx context.Context) error {
 
 var schema = []string{
 	`CREATE TABLE gobale_meta(id INTEGER PRIMARY KEY CHECK(id=1),identity TEXT NOT NULL,version INTEGER NOT NULL,key_check BLOB NOT NULL)`,
-	`CREATE TABLE devices(connection_id TEXT PRIMARY KEY,alias TEXT NOT NULL,account_id TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,deleted_at INTEGER,webhook_url TEXT NOT NULL DEFAULT '',webhook_secret BLOB,webhook_events TEXT NOT NULL DEFAULT '[]',webhook_filter TEXT NOT NULL DEFAULT '{}',webhook_revision INTEGER NOT NULL DEFAULT 1,checkpoint TEXT NOT NULL DEFAULT '')`,
+	`CREATE TABLE devices(connection_id TEXT PRIMARY KEY,alias TEXT NOT NULL,provider TEXT NOT NULL CHECK(provider IN ('bale','eitaa','rubika')),account_id TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,deleted_at INTEGER,webhook_url TEXT NOT NULL DEFAULT '',webhook_secret BLOB,webhook_events TEXT NOT NULL DEFAULT '[]',webhook_filter TEXT NOT NULL DEFAULT '{}',webhook_revision INTEGER NOT NULL DEFAULT 1,checkpoint TEXT NOT NULL DEFAULT '')`,
+	immutableProviderTrigger,
+	checkpointSchema,
+	dispatchSchema,
 	`CREATE UNIQUE INDEX devices_live_alias ON devices(alias) WHERE deleted_at IS NULL`,
 	`CREATE TABLE sessions(connection_id TEXT PRIMARY KEY REFERENCES devices(connection_id),cipher BLOB NOT NULL)`,
 	`CREATE TABLE operations(id TEXT PRIMARY KEY,connection_id TEXT NOT NULL REFERENCES devices(connection_id),request TEXT NOT NULL,idempotency_key TEXT,payload_hash TEXT NOT NULL,state TEXT NOT NULL,result TEXT,error_code TEXT NOT NULL DEFAULT '',error_message TEXT NOT NULL DEFAULT '',created_at INTEGER NOT NULL,updated_at INTEGER NOT NULL,queue_order INTEGER NOT NULL DEFAULT 0,UNIQUE(connection_id,idempotency_key))`,
@@ -372,6 +382,7 @@ var schema = []string{
 	`CREATE INDEX schedules_due ON schedules(state,next_at)`,
 	`CREATE TABLE media(id TEXT PRIMARY KEY,connection_id TEXT NOT NULL REFERENCES devices(connection_id),name TEXT NOT NULL,content_type TEXT NOT NULL,size INTEGER NOT NULL,path TEXT NOT NULL,created_at INTEGER NOT NULL)`,
 	providerMediaSchema,
+	providerMediaOrderSchema,
 	scheduleIdempotencySchema,
 	deliveryActiveIndexes[0],
 	deliveryActiveIndexes[1],
@@ -386,6 +397,7 @@ var schema = []string{
 	eventOrderIndex,
 	mediaPathIndex,
 	provisioningSchema,
+	operationStageSchema,
 }
 
 func (s *Store) active(ctx context.Context, conn string) error {

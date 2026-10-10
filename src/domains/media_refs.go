@@ -14,6 +14,21 @@ func ReferencedMediaIDs(request SendRequest) ([]string, error) {
 		seen[request.MediaID] = true
 	}
 	switch request.Operation {
+	case "message.album":
+		var payload struct {
+			Items []struct {
+				MediaID string `json:"media_id"`
+			} `json:"items"`
+		}
+		if err := json.Unmarshal(request.Payload, &payload); err != nil || len(payload.Items) < 2 || len(payload.Items) > 10 {
+			return nil, E("INVALID_MEDIA_REFERENCE", "stored album references cannot be decoded", 500)
+		}
+		for _, item := range payload.Items {
+			if !ValidOpaqueID(item.MediaID) {
+				return nil, E("INVALID_MEDIA_REFERENCE", "stored album media reference is invalid", 500)
+			}
+			seen[item.MediaID] = true
+		}
 	case "account.avatar", "group.photo", "story.add":
 		var payload struct {
 			MediaID string `json:"media_id"`

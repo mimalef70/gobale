@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"github.com/mimalef70/gobale/src/domains"
-	"github.com/mimalef70/gobale/src/internal/balemeow/wire"
+	"github.com/mimalef70/goomni/src/domains"
+	"github.com/mimalef70/goomni/src/internal/balemeow/wire"
 	"google.golang.org/protobuf/proto"
 	"regexp"
 	"strconv"
@@ -468,16 +468,19 @@ func (c *Client) accountExtendedCall(ctx context.Context, op string, raw json.Ra
 		return json.Marshal(map[string]any{"type": *p.Type, "status": r.Status})
 	case "account.settings":
 		r := &wire.AccountSettingsResponse{}
-		if decode(data, r) != nil || len(r.Parameters) > 1024 {
+		if decode(data, r) != nil || len(r.Parameters) > 4096 {
 			return malformed()
 		}
 		out := map[string]string{}
 		omitted := 0
 		for _, v := range r.Parameters {
-			if v == nil || len(v.Key) > 128 || len(v.Value) > 32768 {
+			if v == nil || len(v.Key) > 1024 || len(v.Value) > 32768 {
 				return malformed()
 			}
-			if sensitiveSettingKey(v.Key) {
+			// Account config includes long internal/cache keys that are not
+			// editable public settings. Omit them without failing the entire
+			// bounded response or advertising opaque provider data.
+			if !settingKeyPattern.MatchString(v.Key) || sensitiveSettingKey(v.Key) {
 				omitted++
 				continue
 			}

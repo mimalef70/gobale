@@ -8,7 +8,7 @@ import (
 )
 
 func TestProvisioningValidation(t *testing.T) {
-	valid := ProvisionDeviceRequest{DeviceID: "channel-123", WebhookURL: "https://example.test/hook", WebhookSecret: "secret", WebhookEvents: []string{"message"}, WebhookFilter: WebhookFilter{Directions: []string{"incoming"}}}
+	valid := ProvisionDeviceRequest{Provider: ProviderBale, DeviceID: "channel-123", WebhookURL: "https://example.test/hook", WebhookSecret: "secret", WebhookEvents: []string{"message"}, WebhookFilter: WebhookFilter{Directions: []string{"incoming"}}}
 	if err := valid.Validate(); err != nil {
 		t.Fatal(err)
 	}
@@ -16,6 +16,8 @@ func TestProvisioningValidation(t *testing.T) {
 		name, code string
 		change     func(*ProvisionDeviceRequest)
 	}{
+		{"missing provider", "INVALID_PROVIDER", func(r *ProvisionDeviceRequest) { r.Provider = "" }},
+		{"unknown provider", "INVALID_PROVIDER", func(r *ProvisionDeviceRequest) { r.Provider = "other" }},
 		{"alias", "INVALID_DEVICE_ID", func(r *ProvisionDeviceRequest) { r.DeviceID = "../other" }},
 		{"alias length", "INVALID_DEVICE_ID", func(r *ProvisionDeviceRequest) { r.DeviceID = strings.Repeat("a", 65) }},
 		{"credentials in URL", "INVALID_WEBHOOK", func(r *ProvisionDeviceRequest) { r.WebhookURL = "https://user:secret@example.test/hook" }},
@@ -42,23 +44,23 @@ func TestProvisioningValidation(t *testing.T) {
 	if err := ValidateProvisioningKey(strings.Repeat("a", 256)); err != nil {
 		t.Fatal(err)
 	}
-	if err := json.Unmarshal([]byte(`{"device_id":"channel","webhook_filter":null}`), &ProvisionDeviceRequest{}); err == nil {
+	if err := json.Unmarshal([]byte(`{"provider":"bale","device_id":"channel","webhook_filter":null}`), &ProvisionDeviceRequest{}); err == nil {
 		t.Fatal("accepted null webhook filter")
 	}
 }
 
 func TestProvisioningJSONRejectsUnknownAliasesNullAndDuplicates(t *testing.T) {
 	for _, body := range []string{
-		`{"device_id":"channel","webhook_filters":{}}`,
-		`{"device_id":"channel","Device_ID":"other"}`,
+		`{"provider":"bale","device_id":"channel","webhook_filters":{}}`,
+		`{"provider":"bale","device_id":"channel","Device_ID":"other"}`,
 		`{"DeviceID":"channel"}`,
-		`{"device_id":"channel","Webhook_URL":"https://example.test"}`,
-		`{"device_id":"channel","device_id":"other"}`,
-		`{"device_id":null}`,
-		`{"device_id":"channel","webhook_url":null}`,
-		`{"device_id":"channel","webhook_secret":null}`,
-		`{"device_id":"channel","webhook_events":null}`,
-		`{"device_id":"channel","webhook_filter":null}`,
+		`{"provider":"bale","device_id":"channel","Webhook_URL":"https://example.test"}`,
+		`{"provider":"bale","device_id":"channel","device_id":"other"}`,
+		`{"provider":"bale","device_id":null}`,
+		`{"provider":"bale","device_id":"channel","webhook_url":null}`,
+		`{"provider":"bale","device_id":"channel","webhook_secret":null}`,
+		`{"provider":"bale","device_id":"channel","webhook_events":null}`,
+		`{"provider":"bale","device_id":"channel","webhook_filter":null}`,
 	} {
 		t.Run(body, func(t *testing.T) {
 			if err := json.Unmarshal([]byte(body), &ProvisionDeviceRequest{}); err == nil {
@@ -66,7 +68,7 @@ func TestProvisioningJSONRejectsUnknownAliasesNullAndDuplicates(t *testing.T) {
 			}
 		})
 	}
-	for _, body := range []string{`{"device_id":"channel"}`, `{"device_id":"channel","webhook_events":[],"webhook_filter":{}}`} {
+	for _, body := range []string{`{"provider":"bale","device_id":"channel"}`, `{"provider":"bale","device_id":"channel","webhook_events":[],"webhook_filter":{}}`} {
 		var request ProvisionDeviceRequest
 		if err := json.Unmarshal([]byte(body), &request); err != nil {
 			t.Fatal(err)
