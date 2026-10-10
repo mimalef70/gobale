@@ -364,7 +364,7 @@ goomni_api "$GATEWAY_URL/send/schedules/REPLACE_WITH_SCHEDULE_ID/occurrences"
 ```
 
 Choose a future RFC3339 timestamp and an IANA timezone. Recurrence supports `none`,
-`daily`, `weekly` and `monthly`; `once` is an alias for `none`. Each occurrence is
+`daily`, `weekly` and `monthly`; use `none` for a one-time schedule. Each occurrence is
 recorded together with its send operation. A `completed` schedule has no future
 occurrences; read each occurrence's operation to learn its send outcome.
 Pause/cancel stops future occurrences, not already-created send operations.
@@ -412,7 +412,7 @@ Bale to import the full historical inbox. For provider history use
 `GET /chat/{peer}/history` and follow the documented cursor/stop conditions.
 
 For application-managed account creation and login, start with `POST /devices`
-using a persisted `Idempotency-Key`, save its returned `id` and `instance_id`,
+using an explicit `provider` and a persisted `Idempotency-Key`, save its returned `id` and `instance_id`,
 and follow the phone/code/password challenge. Initial webhook configuration can
 be committed with the connection in that same request. The
 [consumer integration guide](docs/consumer-integration.md) covers this full flow,
