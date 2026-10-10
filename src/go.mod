@@ -6,7 +6,7 @@ require (
 	github.com/Eyevinn/hi264 v0.11.0
 	github.com/Eyevinn/mp4ff v0.59.0
 	github.com/coder/websocket v1.8.15
-	github.com/go-ozzo/ozzo-validation/v4 v4.3.0
+	github.com/go-ozzo/ozzo-validation/v4 v4.4.1
 	github.com/gofiber/fiber/v3 v3.4.0
 	github.com/google/uuid v1.6.0
 	github.com/mattn/go-sqlite3 v1.14.52
